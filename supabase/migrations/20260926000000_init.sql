@@ -3,12 +3,12 @@
 
 -- 1. Transition Cases
 CREATE TABLE IF NOT EXISTS transition_cases (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    senior_profile_id UUID,
+    id VARCHAR(255) PRIMARY KEY,
     transition_type VARCHAR(50) NOT NULL DEFAULT 'POST_HOSPITAL',
     urgency VARCHAR(20) NOT NULL DEFAULT 'URGENT',
     zip_code VARCHAR(10) NOT NULL,
     target_date DATE,
+    discharge_date DATE,
     housing_status VARCHAR(50),
     destination_status VARCHAR(50),
     budget NUMERIC(10, 2) DEFAULT 0.00,
@@ -16,10 +16,10 @@ CREATE TABLE IF NOT EXISTS transition_cases (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 2. Senior Profiles
+-- 2. Senior Profiles (1:1 with TransitionCase)
 CREATE TABLE IF NOT EXISTS senior_profiles (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    case_id UUID REFERENCES transition_cases(id) ON DELETE CASCADE,
+    id VARCHAR(255) PRIMARY KEY,
+    case_id VARCHAR(255) UNIQUE NOT NULL REFERENCES transition_cases(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     age_range VARCHAR(20),
     lives_alone BOOLEAN NOT NULL DEFAULT true,
@@ -32,15 +32,10 @@ CREATE TABLE IF NOT EXISTS senior_profiles (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Add foreign key back to senior_profile_id if applicable
-ALTER TABLE transition_cases 
-  ADD CONSTRAINT fk_transition_cases_senior_profile 
-  FOREIGN KEY (senior_profile_id) REFERENCES senior_profiles(id) ON DELETE SET NULL;
-
 -- 3. Case Members (Family & Collaborators)
 CREATE TABLE IF NOT EXISTS case_members (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    case_id UUID NOT NULL REFERENCES transition_cases(id) ON DELETE CASCADE,
+    id VARCHAR(255) PRIMARY KEY,
+    case_id VARCHAR(255) NOT NULL REFERENCES transition_cases(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     relationship VARCHAR(100),
     city VARCHAR(100),
@@ -53,8 +48,8 @@ CREATE TABLE IF NOT EXISTS case_members (
 
 -- 4. Tasks
 CREATE TABLE IF NOT EXISTS tasks (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    case_id UUID NOT NULL REFERENCES transition_cases(id) ON DELETE CASCADE,
+    id VARCHAR(255) PRIMARY KEY,
+    case_id VARCHAR(255) NOT NULL REFERENCES transition_cases(id) ON DELETE CASCADE,
     template_id VARCHAR(100),
     title VARCHAR(255) NOT NULL,
     description TEXT,
@@ -63,7 +58,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     priority INT NOT NULL DEFAULT 5,
     phase VARCHAR(30) NOT NULL DEFAULT 'RIGHT_NOW',
     due_date DATE,
-    assignee_id UUID REFERENCES case_members(id) ON DELETE SET NULL,
+    assignee_id VARCHAR(255) REFERENCES case_members(id) ON DELETE SET NULL,
     min_estimated_cost NUMERIC(10, 2) DEFAULT 0.00,
     max_estimated_cost NUMERIC(10, 2) DEFAULT 0.00,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -72,15 +67,15 @@ CREATE TABLE IF NOT EXISTS tasks (
 
 -- 5. Task Dependencies
 CREATE TABLE IF NOT EXISTS task_dependencies (
-    task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-    depends_on_task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    task_id VARCHAR(255) NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    depends_on_task_id VARCHAR(255) NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
     PRIMARY KEY (task_id, depends_on_task_id)
 );
 
 -- 6. Case Events (Audit & Activity Timeline)
 CREATE TABLE IF NOT EXISTS case_events (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    case_id UUID NOT NULL REFERENCES transition_cases(id) ON DELETE CASCADE,
+    id VARCHAR(255) PRIMARY KEY,
+    case_id VARCHAR(255) NOT NULL REFERENCES transition_cases(id) ON DELETE CASCADE,
     type VARCHAR(50) NOT NULL,
     actor_type VARCHAR(20) NOT NULL DEFAULT 'USER',
     actor_id VARCHAR(255),
@@ -90,7 +85,7 @@ CREATE TABLE IF NOT EXISTS case_events (
 
 -- 7. Cost Models
 CREATE TABLE IF NOT EXISTS cost_models (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id VARCHAR(255) PRIMARY KEY,
     category VARCHAR(100) NOT NULL,
     name VARCHAR(255) NOT NULL,
     min_cost NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
@@ -99,7 +94,6 @@ CREATE TABLE IF NOT EXISTS cost_models (
     conditions JSONB DEFAULT '{}'::jsonb
 );
 
--- Create Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_tasks_case_id ON tasks(case_id);
 CREATE INDEX IF NOT EXISTS idx_case_members_case_id ON case_members(case_id);
 CREATE INDEX IF NOT EXISTS idx_case_events_case_id ON case_events(case_id);

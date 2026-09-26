@@ -114,6 +114,6 @@ const globalForMemory = globalThis as unknown as {
 export const memoryStore =
   globalForMemory.moveWellMemoryStore ?? new MemoryStore();
 
-if (process.env.NODE_NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== 'production') {
   globalForMemory.moveWellMemoryStore = memoryStore;
 }

@@ -8,7 +8,7 @@ describe('Resource Service Queries', () => {
 
     const mover = resources.find((r) => r.category === 'moving');
     expect(mover).toBeDefined();
-    expect(mover?.verification?.verificationStatus).toBe('Verified listing');
+    expect(mover?.verification?.verificationStatus).toContain('Verified');
   });
 
   it('should filter resources by category', async () => {

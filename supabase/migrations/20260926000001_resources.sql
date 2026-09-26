@@ -3,7 +3,7 @@
 
 -- 1. Organizations
 CREATE TABLE IF NOT EXISTS organizations (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id VARCHAR(255) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT,
     website VARCHAR(255),
@@ -12,8 +12,8 @@ CREATE TABLE IF NOT EXISTS organizations (
 
 -- 2. Services
 CREATE TABLE IF NOT EXISTS services (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    id VARCHAR(255) PRIMARY KEY,
+    organization_id VARCHAR(255) NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     category VARCHAR(100) NOT NULL,
     description TEXT,
@@ -23,8 +23,8 @@ CREATE TABLE IF NOT EXISTS services (
 
 -- 3. Locations & Service Areas
 CREATE TABLE IF NOT EXISTS locations (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    id VARCHAR(255) PRIMARY KEY,
+    organization_id VARCHAR(255) NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     address VARCHAR(255),
     city VARCHAR(100) NOT NULL,
     state VARCHAR(50) NOT NULL,
@@ -35,8 +35,8 @@ CREATE TABLE IF NOT EXISTS locations (
 
 -- 4. Resource Verifications (Trust Model)
 CREATE TABLE IF NOT EXISTS resource_verifications (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+    id VARCHAR(255) PRIMARY KEY,
+    service_id VARCHAR(255) NOT NULL REFERENCES services(id) ON DELETE CASCADE,
     verification_status VARCHAR(50) NOT NULL DEFAULT 'Verified listing',
     verification_source VARCHAR(255) DEFAULT 'MoveWell Verification Team',
     last_verified_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
