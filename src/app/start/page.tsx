@@ -10,20 +10,24 @@ export default function IntakePage() {
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
 
+  const now = new Date();
+  const defaultDischarge = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const defaultTarget = new Date(now.getTime() + 12 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
   // Form State initialized with defaults pre-populated for convenience
   const [formData, setFormData] = useState({
     seniorName: 'Maria Thompson',
     ageRange: '78',
     livesAlone: true,
     transitionType: 'POST_HOSPITAL',
-    dischargeDate: '2026-11-01',
+    dischargeDate: defaultDischarge,
     stairsConstraint: true,
     mobilityConstraint: true,
     zipCode: '77004',
     homeType: 'Two-story house',
     ownsHome: true,
     destinationStatus: 'UNDECIDED',
-    targetDate: '2026-11-07',
+    targetDate: defaultTarget,
     budget: 8000,
     userName: 'Sarah',
     userCity: 'Chicago, IL',
@@ -178,11 +182,14 @@ export default function IntakePage() {
                       <button
                         key={type.id}
                         type="button"
+                        disabled={type.status !== 'Available'}
                         onClick={() => setFormData({ ...formData, transitionType: type.id })}
                         className={`p-3.5 rounded-2xl border text-left transition ${
                           formData.transitionType === type.id
                             ? 'border-brand-900 bg-brand-50/60 ring-2 ring-brand-900/20'
-                            : 'border-stone-200 hover:border-stone-300 bg-white'
+                            : type.status === 'Available'
+                            ? 'border-stone-200 hover:border-stone-300 bg-white'
+                            : 'border-stone-200 bg-stone-50 opacity-60 cursor-not-allowed'
                         }`}
                       >
                         <div className="flex items-center justify-between mb-0.5">
