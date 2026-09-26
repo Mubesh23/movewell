@@ -1,4 +1,4 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Type } from '@google/genai';
 import { AI_TOOLS_REGISTRY, ToolExecutionResult } from '../ai/tools';
 import { caseService } from './case-service';
 
@@ -10,7 +10,8 @@ export interface AIResponse {
 
 export class AIOrchestrator {
   public async processUserIntent(caseId: string, prompt: string): Promise<AIResponse> {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    // Restrict API key to server-side process.env.GEMINI_API_KEY
+    const apiKey = process.env.GEMINI_API_KEY;
 
     if (apiKey) {
       try {
@@ -35,24 +36,112 @@ User request: ${prompt}`,
               ],
             },
           ],
+          config: {
+            tools: [
+              {
+                functionDeclarations: [
+                  {
+                    name: 'update_case_context',
+                    description: 'Update the case budget or parameters',
+                    parameters: {
+                      type: Type.OBJECT,
+                      properties: {
+                        budget: { type: Type.NUMBER, description: 'Updated dollar budget limit' },
+                      },
+                    },
+                  },
+                  {
+                    name: 'assign_task',
+                    description: 'Assign a task in the plan to a family member or helper',
+                    parameters: {
+                      type: Type.OBJECT,
+                      properties: {
+                        assigneeName: { type: Type.STRING, description: 'Name of person to assign (e.g. Sarah, Jennifer)' },
+                        taskTitleQuery: { type: Type.STRING, description: 'Query to match task title (e.g. pack, move, discharge)' },
+                      },
+                      required: ['assigneeName'],
+                    },
+                  },
+                  {
+                    name: 'find_resources',
+                    description: 'Search for local verified senior transition services and community resources',
+                    parameters: {
+                      type: Type.OBJECT,
+                      properties: {
+                        category: { type: Type.STRING, description: 'Category: moving, storage, senior_move_management, donation, or ALL' },
+                        zipCode: { type: Type.STRING, description: 'Local 5-digit ZIP code' },
+                      },
+                    },
+                  },
+                  {
+                    name: 'complete_task',
+                    description: 'Mark a specific transition task as completed',
+                    parameters: {
+                      type: Type.OBJECT,
+                      properties: {
+                        taskId: { type: Type.STRING, description: 'ID of the task to mark completed' },
+                      },
+                    },
+                  },
+                  {
+                    name: 'get_plan',
+                    description: 'Fetch the active case transition plan overview',
+                    parameters: {
+                      type: Type.OBJECT,
+                      properties: {},
+                    },
+                  },
+                ],
+              },
+            ],
+          },
         });
 
-        const textResponse = response.text;
+        const toolResults: ToolExecutionResult[] = [];
+        const functionCalls = response.functionCalls;
+
+        if (functionCalls && functionCalls.length > 0) {
+          for (const call of functionCalls) {
+            const args = (call.args || {}) as Record<string, any>;
+            if (call.name === 'update_case_context' && typeof args.budget === 'number') {
+              toolResults.push(await AI_TOOLS_REGISTRY.update_case_context({ caseId, budget: args.budget }));
+            } else if (call.name === 'assign_task' && args.assigneeName) {
+              toolResults.push(
+                await AI_TOOLS_REGISTRY.assign_task({
+                  caseId,
+                  assigneeName: args.assigneeName,
+                  taskTitleQuery: args.taskTitleQuery || 'task',
+                })
+              );
+            } else if (call.name === 'find_resources') {
+              toolResults.push(
+                await AI_TOOLS_REGISTRY.find_resources({
+                  category: args.category || 'ALL',
+                  zipCode: args.zipCode || overview?.caseData.zipCode || '77004',
+                })
+              );
+            } else if (call.name === 'complete_task' && args.taskId) {
+              toolResults.push(await AI_TOOLS_REGISTRY.complete_task({ caseId, taskId: args.taskId }));
+            } else if (call.name === 'get_plan') {
+              toolResults.push(await AI_TOOLS_REGISTRY.get_plan({ caseId }));
+            }
+          }
+        }
+
+        const textResponse = response.text || (toolResults.length > 0 ? toolResults[0].message : '');
         if (textResponse) {
-          // Process text response alongside local tool execution if matched
-          const localResult = await this.processUserIntentLocal(caseId, prompt);
           return {
             message: textResponse,
-            toolResults: localResult.toolResults,
-            suggestedNextAction: localResult.suggestedNextAction,
+            toolResults,
+            suggestedNextAction: `Focus on ${overview?.urgentTask?.title || 'next plan priority'}.`,
           };
         }
       } catch (err) {
-        console.warn('Gemini API call failed, falling back to deterministic workflow engine:', err);
+        console.warn('Gemini API function call failed, falling back to local deterministic workflow engine:', err);
       }
     }
 
-    // Deterministic fallback when offline or no API key present
+    // Deterministic fallback strictly used when GEMINI_API_KEY is absent or API call fails
     return this.processUserIntentLocal(caseId, prompt);
   }
 
@@ -79,20 +168,13 @@ User request: ${prompt}`,
     if (
       lower.includes('assign') ||
       lower.includes('handle') ||
-      lower.includes('take care') ||
-      lower.includes('will') ||
-      lower.includes('can')
+      lower.includes('take care')
     ) {
       let assigneeName = 'Jennifer';
 
       const toMatch = prompt.match(/\bto\s+([a-zA-Z]+)\b/i) || prompt.match(/\b(?:assign|for)\s+([a-zA-Z]+)\b/i);
       if (toMatch && !['packing', 'task', 'tasks', 'budget', 'the', 'me'].includes(toMatch[1].toLowerCase())) {
         assigneeName = capitalize(toMatch[1]);
-      } else {
-        const nameMatch = prompt.match(/\b([A-Z][a-z]+|[a-z]+)\s+(?:will|can|is|should|handles|handle)\b/i);
-        if (nameMatch && !['who', 'what', 'it', 'family'].includes(nameMatch[1].toLowerCase())) {
-          assigneeName = capitalize(nameMatch[1]);
-        }
       }
 
       const taskQuery = lower.includes('pack')
