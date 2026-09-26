@@ -75,7 +75,7 @@ export default function DashboardPage() {
       <div className="min-h-screen bg-sand-100 flex items-center justify-center">
         <div className="text-center">
           <div className="w-10 h-10 border-4 border-brand-900 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-          <p className="text-sm font-semibold text-brand-950">Loading Maria&apos;s Transition Plan...</p>
+          <p className="text-sm font-semibold text-brand-950">Loading Transition Plan...</p>
         </div>
       </div>
     );
@@ -125,7 +125,7 @@ export default function DashboardPage() {
               </span>
             </div>
             <p className="text-xs sm:text-sm text-stone-600 font-medium">
-              Post-hospital discharge &bull; {caseData.zipCode} Houston, TX &bull; Two-story house
+              Post-hospital discharge &bull; ZIP {caseData.zipCode} &bull; {seniorProfile.homeType || 'Residential home'}
             </p>
           </div>
 
@@ -185,7 +185,9 @@ export default function DashboardPage() {
               <Calendar className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-base sm:text-lg font-bold text-stone-900 leading-tight">Nov 7, 2026</p>
+              <p className="text-base sm:text-lg font-bold text-stone-900 leading-tight">
+                {caseData.targetDate ? new Date(caseData.targetDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'TBD'}
+              </p>
               <p className="text-[11px] text-stone-500 font-medium uppercase tracking-wide">target date</p>
             </div>
           </div>
@@ -239,7 +241,7 @@ export default function DashboardPage() {
               <div className="bg-emerald-50 rounded-3xl p-6 border border-emerald-200 text-center">
                 <CheckCircle2 className="w-10 h-10 text-emerald-700 mx-auto mb-2" />
                 <h3 className="font-bold text-emerald-950 text-lg">Top priority tasks completed!</h3>
-                <p className="text-xs text-emerald-800">You are making steady progress on Maria&apos;s transition plan.</p>
+                <p className="text-xs text-emerald-800">You are making steady progress on {seniorProfile.name}&apos;s transition plan.</p>
               </div>
             )}
 
