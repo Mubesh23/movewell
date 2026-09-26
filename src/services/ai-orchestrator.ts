@@ -1,3 +1,4 @@
+import { GoogleGenAI } from '@google/genai';
 import { AI_TOOLS_REGISTRY, ToolExecutionResult } from '../ai/tools';
 import { caseService } from './case-service';
 
@@ -9,6 +10,53 @@ export interface AIResponse {
 
 export class AIOrchestrator {
   public async processUserIntent(caseId: string, prompt: string): Promise<AIResponse> {
+    const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+
+    if (apiKey) {
+      try {
+        const ai = new GoogleGenAI({ apiKey });
+        const overview = await caseService.getCaseOverview(caseId);
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                {
+                  text: `System Context: You are MoveWell AI, an empathetic senior transition coordinator helping a family navigate post-hospital discharge and senior moving.
+Case ID: ${caseId}
+Senior Name: ${overview?.seniorProfile.name || 'Senior'}
+Current Urgency: ${overview?.caseData.urgency || 'URGENT'}
+Current Progress: ${overview?.progressPercent || 0}%
+
+User request: ${prompt}`,
+                },
+              ],
+            },
+          ],
+        });
+
+        const textResponse = response.text;
+        if (textResponse) {
+          // Process text response alongside local tool execution if matched
+          const localResult = await this.processUserIntentLocal(caseId, prompt);
+          return {
+            message: textResponse,
+            toolResults: localResult.toolResults,
+            suggestedNextAction: localResult.suggestedNextAction,
+          };
+        }
+      } catch (err) {
+        console.warn('Gemini API call failed, falling back to deterministic workflow engine:', err);
+      }
+    }
+
+    // Deterministic fallback when offline or no API key present
+    return this.processUserIntentLocal(caseId, prompt);
+  }
+
+  public async processUserIntentLocal(caseId: string, prompt: string): Promise<AIResponse> {
     const lower = prompt.toLowerCase();
     const toolResults: ToolExecutionResult[] = [];
     const responseMessages: string[] = [];
@@ -93,22 +141,23 @@ export class AIOrchestrator {
 
     // Proactive Next Step Suggestion Engine based on active case overview
     const overview = await caseService.getCaseOverview(caseId);
+    const seniorName = overview?.seniorProfile.name || 'Senior';
     let proactiveSuggestion = '';
 
     if (overview) {
       const nextTask = overview.urgentTask || overview.tasks.find((t) => t.status === 'READY');
       if (nextTask) {
         if (nextTask.templateId === 'confirm-discharge-destination') {
-          proactiveSuggestion = `\n\n👉 Next recommended step: Confirming Maria's safe discharge destination (Nov 1). Would you like me to mark that complete or search Houston care options?`;
+          proactiveSuggestion = `\n\n👉 Next recommended step: Confirming ${seniorName}'s safe discharge destination. Would you like me to mark that complete or search Houston care options?`;
         } else if (nextTask.templateId === 'decide-temporary-vs-permanent') {
-          proactiveSuggestion = `\n\n👉 Next recommended step: Decide temporary vs. permanent housing for Maria. Should we look into short-term rehab or accessible single-story residences?`;
+          proactiveSuggestion = `\n\n👉 Next recommended step: Decide temporary vs. permanent housing for ${seniorName}. Should we look into short-term rehab or accessible single-story residences?`;
         } else if (nextTask.templateId === 'request-moving-estimates') {
-          proactiveSuggestion = `\n\n👉 Next recommended step: Request moving estimates in Houston 77004. Shall I list verified senior moving companies?`;
+          proactiveSuggestion = `\n\n👉 Next recommended step: Request moving estimates in Houston. Shall I list verified senior moving companies?`;
         } else {
           proactiveSuggestion = `\n\n👉 Next recommended step: Focus on "${nextTask.title}". Would you like me to assign it or find local assistance?`;
         }
       } else {
-        proactiveSuggestion = `\n\n👉 What would you like to work on next for Maria's transition?`;
+        proactiveSuggestion = `\n\n👉 What would you like to work on next for ${seniorName}'s transition?`;
       }
     }
 
@@ -124,7 +173,7 @@ export class AIOrchestrator {
     const overviewRes = await AI_TOOLS_REGISTRY.get_plan({ caseId });
     toolResults.push(overviewRes);
     return {
-      message: `MoveWell is managing Maria's post-hospital plan. Current progress is ${overviewRes.data?.progressPercent}%. Today's top priority is "${overviewRes.data?.urgentTask?.title}".${proactiveSuggestion}`,
+      message: `MoveWell is managing ${seniorName}'s post-hospital plan. Current progress is ${overviewRes.data?.progressPercent}%. Today's top priority is "${overviewRes.data?.urgentTask?.title}".${proactiveSuggestion}`,
       toolResults,
       suggestedNextAction: proactiveSuggestion.trim(),
     };
