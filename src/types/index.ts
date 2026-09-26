@@ -30,6 +30,12 @@ export type CaseMemberRole =
 
 export type HousingStatus = 'OWN' | 'RENT' | 'UNDECIDED';
 export type DestinationStatus = 'KNOWN' | 'UNKNOWN' | 'REHAB_FIRST' | 'RETURN_HOME' | 'UNDECIDED';
+export type HomeType =
+  | 'TWO_STORY'
+  | 'SINGLE_STORY'
+  | 'APARTMENT_CONDO'
+  | 'ASSISTED_LIVING'
+  | 'OTHER';
 
 export interface TransitionCase {
   id: string;
@@ -107,7 +113,9 @@ export type CaseEventType =
   | 'TASK_REOPENED'
   | 'BUDGET_UPDATED'
   | 'TARGET_DATE_CHANGED'
-  | 'PLAN_REGENERATED';
+  | 'PLAN_REGENERATED'
+  | 'CASE_MEMBER_ADDED'
+  | 'CASE_MEMBER_REMOVED';
 
 export interface CaseEvent {
   id: string;

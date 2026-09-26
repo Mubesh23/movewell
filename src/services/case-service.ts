@@ -1,7 +1,8 @@
 import { repository } from '../db/repository';
 import { costEngine } from './cost-engine';
 import { taskService } from './task-service';
-import { CaseOverview } from '../types';
+import { eventService } from './event-service';
+import { CaseMember, CaseOverview } from '../types';
 
 export class CaseService {
   public async getCaseOverview(caseId: string): Promise<CaseOverview | null> {
@@ -59,6 +60,57 @@ export class CaseService {
       daysUntilDischarge,
       urgentTask,
     };
+  }
+
+  public async addMember(
+    caseId: string,
+    data: {
+      name: string;
+      relationship?: string;
+      city?: string;
+      isLocal: boolean;
+      availability?: string;
+      role: CaseMember['role'];
+    }
+  ): Promise<CaseMember> {
+    const member: CaseMember = {
+      id: 'mbr-' + Math.random().toString(36).substring(2, 9),
+      caseId,
+      name: data.name,
+      relationship: data.relationship || undefined,
+      city: data.city || undefined,
+      isLocal: data.isLocal,
+      availability: data.availability || undefined,
+      role: data.role,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const saved = await repository.saveCaseMember(member);
+    await eventService.recordEvent(caseId, 'CASE_MEMBER_ADDED', {
+      memberId: saved.id,
+      name: saved.name,
+      role: saved.role,
+    });
+    return saved;
+  }
+
+  public async deleteMember(caseId: string, memberId: string): Promise<boolean> {
+    const tasks = await repository.getTasksByCaseId(caseId);
+    for (const task of tasks) {
+      if (task.assigneeId === memberId) {
+        task.assigneeId = undefined;
+        await repository.saveTask(task);
+      }
+    }
+
+    const success = await repository.deleteCaseMember(memberId);
+    if (success) {
+      await eventService.recordEvent(caseId, 'CASE_MEMBER_REMOVED', {
+        memberId,
+      });
+    }
+    return success;
   }
 }
 

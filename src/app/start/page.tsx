@@ -250,14 +250,19 @@ export default function IntakePage() {
 
                   <div>
                     <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1">
-                      Home Type
+                      Current Home Type
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={formData.homeType}
                       onChange={(e) => setFormData({ ...formData, homeType: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-brand-700 text-sm font-medium"
-                    />
+                      className="w-full px-4 py-3 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-brand-700 text-sm font-medium bg-white"
+                    >
+                      <option value="Two-story house">Two-story house</option>
+                      <option value="Single-story house">Single-story house</option>
+                      <option value="Apartment / Condo">Apartment / Condo</option>
+                      <option value="Assisted Living Facility">Assisted Living Facility</option>
+                      <option value="Other / Senior Housing">Other / Senior Housing</option>
+                    </select>
                   </div>
                 </div>
 

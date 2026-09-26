@@ -176,6 +176,20 @@ export class Repository {
     return member;
   }
 
+  async deleteCaseMember(id: string): Promise<boolean> {
+    memoryStore.caseMembers.delete(id);
+
+    if (supabase) {
+      const { error } = await supabase.from('case_members').delete().eq('id', id);
+      if (error) {
+        console.error('Supabase deleteCaseMember error:', error);
+        throw new Error(`Database deleteCaseMember failed: ${error.message}`);
+      }
+    }
+
+    return true;
+  }
+
   async getCaseMembers(caseId: string): Promise<CaseMember[]> {
     if (supabase) {
       const { data, error } = await supabase
