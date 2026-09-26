@@ -3,7 +3,6 @@ import { taskService } from '../services/task-service';
 import { resourceService } from '../services/resource-service';
 import { repository } from '../db/repository';
 import { eventService } from '../services/event-service';
-import { TaskPhase } from '../types';
 
 export interface ToolExecutionResult {
   toolName: string;
@@ -40,11 +39,16 @@ export const AI_TOOLS_REGISTRY = {
 
     await repository.saveCase(caseData);
 
-    await eventService.recordEvent(args.caseId, 'BUDGET_UPDATED', {
-      budget: caseData.budget,
-      targetDate: caseData.targetDate,
-      updatedBy: 'AI Assistant',
-    }, 'AI');
+    await eventService.recordEvent(
+      args.caseId,
+      'BUDGET_UPDATED',
+      {
+        budget: caseData.budget,
+        targetDate: caseData.targetDate,
+        updatedBy: 'AI Assistant',
+      },
+      'AI'
+    );
 
     return {
       toolName: 'update_case_context',
@@ -95,11 +99,15 @@ export const AI_TOOLS_REGISTRY = {
     }
 
     if (targetTasks.length === 0) {
-      targetTasks = [tasks[0]];
+      return {
+        toolName: 'assign_task',
+        success: false,
+        message: `Could not find a task matching "${args.taskTitleQuery || 'your request'}". Please specify the exact task title to assign.`,
+      };
     }
 
     for (const t of targetTasks) {
-      await taskService.assignTask(t.id, member.id, member.name);
+      await taskService.assignTask(t.id, member.id, member.name, args.caseId);
     }
 
     return {
@@ -111,7 +119,7 @@ export const AI_TOOLS_REGISTRY = {
   },
 
   complete_task: async (args: { caseId: string; taskId: string }): Promise<ToolExecutionResult> => {
-    const updated = await taskService.completeTask(args.taskId, 'AI Assistant');
+    const updated = await taskService.completeTask(args.taskId, 'AI Assistant', args.caseId);
     return {
       toolName: 'complete_task',
       success: true,
