@@ -63,9 +63,16 @@ export class TaskService {
     return updatedTasks;
   }
 
-  public async completeTask(taskId: string, actorName: string = 'Sarah'): Promise<TransitionTask> {
+  public async completeTask(
+    taskId: string,
+    actorName: string = 'Sarah',
+    expectedCaseId?: string
+  ): Promise<TransitionTask> {
     const task = await repository.getTaskById(taskId);
     if (!task) throw new Error(`Task ${taskId} not found`);
+    if (expectedCaseId && task.caseId !== expectedCaseId) {
+      throw new Error(`Task ${taskId} does not belong to case ${expectedCaseId}`);
+    }
 
     task.status = 'COMPLETED';
     task.updatedAt = new Date().toISOString();
@@ -84,9 +91,16 @@ export class TaskService {
     return (await repository.getTaskById(taskId))!;
   }
 
-  public async reopenTask(taskId: string, actorName: string = 'Sarah'): Promise<TransitionTask> {
+  public async reopenTask(
+    taskId: string,
+    actorName: string = 'Sarah',
+    expectedCaseId?: string
+  ): Promise<TransitionTask> {
     const task = await repository.getTaskById(taskId);
     if (!task) throw new Error(`Task ${taskId} not found`);
+    if (expectedCaseId && task.caseId !== expectedCaseId) {
+      throw new Error(`Task ${taskId} does not belong to case ${expectedCaseId}`);
+    }
 
     task.status = 'READY'; // Temporary, recalculation will set to BLOCKED if dependencies aren't met
     task.updatedAt = new Date().toISOString();
@@ -108,10 +122,14 @@ export class TaskService {
   public async assignTask(
     taskId: string,
     assigneeId: string,
-    assigneeName: string
+    assigneeName: string,
+    expectedCaseId?: string
   ): Promise<TransitionTask> {
     const task = await repository.getTaskById(taskId);
     if (!task) throw new Error(`Task ${taskId} not found`);
+    if (expectedCaseId && task.caseId !== expectedCaseId) {
+      throw new Error(`Task ${taskId} does not belong to case ${expectedCaseId}`);
+    }
 
     task.assigneeId = assigneeId;
     task.updatedAt = new Date().toISOString();

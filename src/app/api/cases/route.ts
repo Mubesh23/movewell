@@ -11,14 +11,18 @@ export async function POST(req: NextRequest) {
       const caseId = 'case-maria-' + Math.random().toString(36).substring(2, 7);
       const seniorProfileId = 'profile-maria';
 
+      const now = new Date();
+      const dischargeDateStr = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const targetDateStr = new Date(now.getTime() + 12 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
       const caseData: TransitionCase = {
         id: caseId,
         seniorProfileId,
         transitionType: 'POST_HOSPITAL',
         urgency: 'URGENT',
         zipCode: '77004', // Houston, TX
-        targetDate: '2026-11-07',
-        dischargeDate: '2026-11-01',
+        targetDate: targetDateStr,
+        dischargeDate: dischargeDateStr,
         housingStatus: 'OWN',
         destinationStatus: 'UNDECIDED',
         budget: 8000,
@@ -75,14 +79,18 @@ export async function POST(req: NextRequest) {
     const caseId = 'case-' + Math.random().toString(36).substring(2, 9);
     const seniorProfileId = 'prof-' + Math.random().toString(36).substring(2, 9);
 
+    const nowCustom = new Date();
+    const defaultDischarge = new Date(nowCustom.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const defaultTarget = new Date(nowCustom.getTime() + 12 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
     const caseData: TransitionCase = {
       id: caseId,
       seniorProfileId,
       transitionType: body.transitionType || 'POST_HOSPITAL',
       urgency: 'PLANNED',
       zipCode: body.zipCode || '77004',
-      targetDate: body.targetDate || '2026-11-07',
-      dischargeDate: body.dischargeDate || '2026-11-01',
+      targetDate: body.targetDate || defaultTarget,
+      dischargeDate: body.dischargeDate || defaultDischarge,
       housingStatus: body.housingStatus || 'OWN',
       destinationStatus: body.destinationStatus || 'UNDECIDED',
       budget: Number(body.budget) || 8000,

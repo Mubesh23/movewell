@@ -10,12 +10,12 @@ export async function PATCH(
     const { action, assigneeId, assigneeName, actorName } = body;
 
     if (action === 'COMPLETE') {
-      const updated = await taskService.completeTask(params.taskId, actorName || 'Sarah');
+      const updated = await taskService.completeTask(params.taskId, actorName || 'Sarah', params.caseId);
       return NextResponse.json({ success: true, data: updated });
     }
 
     if (action === 'REOPEN') {
-      const updated = await taskService.reopenTask(params.taskId, actorName || 'Sarah');
+      const updated = await taskService.reopenTask(params.taskId, actorName || 'Sarah', params.caseId);
       return NextResponse.json({ success: true, data: updated });
     }
 
@@ -26,7 +26,7 @@ export async function PATCH(
           { status: 400 }
         );
       }
-      const updated = await taskService.assignTask(params.taskId, assigneeId, assigneeName);
+      const updated = await taskService.assignTask(params.taskId, assigneeId, assigneeName, params.caseId);
       return NextResponse.json({ success: true, data: updated });
     }
 

@@ -38,7 +38,7 @@ export class CaseService {
     let daysUntilDischarge: number | undefined = undefined;
     if (caseData.dischargeDate) {
       const discharge = new Date(caseData.dischargeDate);
-      const today = new Date('2026-10-27'); // Standardized reference date for Maria scenario demo
+      const today = new Date();
       const diffMs = discharge.getTime() - today.getTime();
       daysUntilDischarge = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
     }

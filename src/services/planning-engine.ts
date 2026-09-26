@@ -24,7 +24,7 @@ export class PlanningEngine {
     if (transitionType === 'POST_HOSPITAL') {
       if (dischargeDate) {
         const discharge = new Date(dischargeDate);
-        const now = new Date('2026-10-27'); // Reference date matching Maria scenario context (Oct 27 -> Nov 1 discharge = 5 days)
+        const now = new Date();
         const diffDays = Math.ceil(
           (discharge.getTime() - now.getTime()) / (1000 * 3600 * 24)
         );
@@ -74,7 +74,7 @@ export class PlanningEngine {
     // Reference dates for calculating task due dates
     const dischargeDateObj = caseData.dischargeDate
       ? new Date(caseData.dischargeDate)
-      : new Date('2026-11-01');
+      : new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
 
     // Map templateId to actual Task ID
     const templateToTaskIdMap = new Map<string, string>();
