@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { MobileNav } from '@/components/layout/MobileNav';
+import { AIAssistant } from '@/components/assistant/AIAssistant';
 import { CaseOverview, TaskPhase, TransitionTask } from '@/types';
 import {
   CheckCircle2,
@@ -305,6 +306,7 @@ export default function TasksPage() {
         </div>
       </div>
 
+      <AIAssistant caseId={caseId} onPlanUpdated={fetchOverview} />
       <MobileNav caseId={caseId} />
     </div>
   );

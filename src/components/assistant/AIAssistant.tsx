@@ -1,31 +1,67 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Sparkles, Send, X, Bot, CheckCircle2, ChevronUp } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Sparkles, Send, X, Bot, CheckCircle2, Trash2 } from 'lucide-react';
 
 interface AIAssistantProps {
   caseId: string;
   onPlanUpdated?: () => void;
 }
 
+interface ChatMessage {
+  sender: 'user' | 'ai';
+  text: string;
+  toolConfirmations?: string[];
+  suggestionChip?: string;
+}
+
 export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [messages, setMessages] = useState<
-    { sender: 'user' | 'ai'; text: string; toolConfirmations?: string[]; suggestionChip?: string }[]
-  >([
-    {
-      sender: 'ai',
-      text: "Hello Sarah! I'm your MoveWell transition assistant. Tell me what needs changing (e.g., 'Jennifer can handle packing' or 'Set budget to $5,000').\n\n👉 Next recommended step: Confirming Maria's safe discharge destination (Nov 1).",
-      suggestionChip: 'Confirm discharge destination',
-    },
-  ]);
+
+  const initialWelcomeMessage: ChatMessage = {
+    sender: 'ai',
+    text: "Hello Sarah! I'm Grace, your MoveWell transition companion. I can help coordinate tasks, update budgets, or search verified Houston resources.\n\ne.g., 'Set budget to $5,000' or 'Jennifer will handle packing'.",
+    suggestionChip: 'Set budget to $5,000',
+  };
+
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(`movewell_chat_${caseId}`);
+        if (saved) return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to load chat history:', e);
+      }
+    }
+    return [initialWelcomeMessage];
+  });
+
+  // Sync state to localStorage whenever messages change
+  useEffect(() => {
+    if (typeof window !== 'undefined' && caseId) {
+      try {
+        localStorage.setItem(`movewell_chat_${caseId}`, JSON.stringify(messages));
+      } catch (e) {
+        console.error('Failed to save chat history:', e);
+      }
+    }
+  }, [messages, caseId]);
+
+  const handleClearHistory = () => {
+    const defaultList = [initialWelcomeMessage];
+    setMessages(defaultList);
+    if (typeof window !== 'undefined' && caseId) {
+      localStorage.removeItem(`movewell_chat_${caseId}`);
+    }
+  };
 
   const executePrompt = async (promptText: string) => {
     if (!promptText.trim() || loading) return;
 
-    setMessages((prev) => [...prev, { sender: 'user', text: promptText }]);
+    const userMessage: ChatMessage = { sender: 'user', text: promptText };
+    setMessages((prev) => [...prev, userMessage]);
     setLoading(true);
 
     try {
@@ -75,10 +111,10 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-20 md:bottom-6 right-6 z-50 bg-brand-900 hover:bg-brand-800 text-white font-bold text-xs py-3 px-4 rounded-full shadow-2xl transition flex items-center space-x-2 border-2 border-white/20 animate-bounce"
+        className="fixed bottom-20 md:bottom-6 right-6 z-50 bg-brand-900 hover:bg-brand-800 text-white font-bold text-xs py-3 px-4 rounded-full shadow-2xl transition flex items-center space-x-2 border-2 border-white/20"
       >
         <Sparkles className="w-4 h-4 text-amber-300" />
-        <span>Ask MoveWell AI</span>
+        <span>Ask Grace AI</span>
       </button>
     );
   }
@@ -88,17 +124,26 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
       {/* Header */}
       <div className="bg-brand-900 text-white px-4 py-3 flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <div className="w-7 h-7 rounded-lg bg-brand-800 flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-amber-300" />
+          <div className="w-7 h-7 rounded-lg bg-brand-800 flex items-center justify-center font-bold text-amber-300 text-xs">
+            G
           </div>
           <div>
-            <h4 className="font-bold text-xs">MoveWell AI Assistant</h4>
-            <p className="text-[10px] text-brand-200">Controlled tool orchestration</p>
+            <h4 className="font-bold text-xs">Grace &bull; MoveWell Companion</h4>
+            <p className="text-[10px] text-brand-200">Transition Assistant</p>
           </div>
         </div>
-        <button onClick={() => setIsOpen(false)} className="text-brand-200 hover:text-white">
-          <X className="w-4 h-4" />
-        </button>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={handleClearHistory}
+            title="Clear Chat History"
+            className="text-brand-200 hover:text-white transition p-1"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={() => setIsOpen(false)} className="text-brand-200 hover:text-white p-1">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Messages Feed */}
@@ -161,7 +206,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="e.g. Jennifer will handle packing..."
+          placeholder="Ask Grace (e.g. Set budget to $5,000)..."
           className="flex-1 px-3 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-brand-800"
         />
         <button

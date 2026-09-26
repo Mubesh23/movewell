@@ -25,11 +25,12 @@ export class AIOrchestrator {
               role: 'user',
               parts: [
                 {
-                  text: `System Context: You are MoveWell AI, an empathetic senior transition coordinator helping a family navigate post-hospital discharge and senior moving.
+                  text: `System Context: You are Grace, an empathetic senior transition coordinator for MoveWell.
 Case ID: ${caseId}
 Senior Name: ${overview?.seniorProfile.name || 'Senior'}
 Current Urgency: ${overview?.caseData.urgency || 'URGENT'}
 Current Progress: ${overview?.progressPercent || 0}%
+Current Budget: $${overview?.caseData.budget || 8000}
 
 User request: ${prompt}`,
                 },
@@ -42,12 +43,13 @@ User request: ${prompt}`,
                 functionDeclarations: [
                   {
                     name: 'update_case_context',
-                    description: 'Update the case budget or parameters',
+                    description: 'Update the case dollar budget or target dates. Call this tool whenever user asks to set, update, or change the budget limit.',
                     parameters: {
                       type: Type.OBJECT,
                       properties: {
-                        budget: { type: Type.NUMBER, description: 'Updated dollar budget limit' },
+                        budget: { type: Type.NUMBER, description: 'Updated dollar budget limit (e.g. 5000)' },
                       },
+                      required: ['budget'],
                     },
                   },
                   {
@@ -103,8 +105,17 @@ User request: ${prompt}`,
         if (functionCalls && functionCalls.length > 0) {
           for (const call of functionCalls) {
             const args = (call.args || {}) as Record<string, any>;
-            if (call.name === 'update_case_context' && typeof args.budget === 'number') {
-              toolResults.push(await AI_TOOLS_REGISTRY.update_case_context({ caseId, budget: args.budget }));
+            if (call.name === 'update_case_context') {
+              const rawBudget = args.budget ?? args.amount ?? args.value;
+              let parsedBudget: number | undefined = undefined;
+              if (typeof rawBudget === 'number') {
+                parsedBudget = rawBudget;
+              } else if (typeof rawBudget === 'string') {
+                parsedBudget = parseInt(rawBudget.replace(/[^0-9]/g, ''), 10);
+              }
+              if (parsedBudget !== undefined && !isNaN(parsedBudget) && parsedBudget > 0) {
+                toolResults.push(await AI_TOOLS_REGISTRY.update_case_context({ caseId, budget: parsedBudget }));
+              }
             } else if (call.name === 'assign_task' && args.assigneeName) {
               toolResults.push(
                 await AI_TOOLS_REGISTRY.assign_task({
@@ -128,10 +139,14 @@ User request: ${prompt}`,
           }
         }
 
-        const textResponse = response.text || (toolResults.length > 0 ? toolResults[0].message : '');
-        if (textResponse) {
+        let textResponse = response.text || '';
+        if (!textResponse && toolResults.length > 0) {
+          textResponse = toolResults.map((tr) => tr.message).join(' ');
+        }
+
+        if (textResponse || toolResults.length > 0) {
           return {
-            message: textResponse,
+            message: textResponse || 'Plan updated successfully.',
             toolResults,
             suggestedNextAction: `Focus on ${overview?.urgentTask?.title || 'next plan priority'}.`,
           };
@@ -155,12 +170,14 @@ User request: ${prompt}`,
       const match = lower.match(/\$?([0-9,]+)/);
       if (match) {
         const budgetVal = parseInt(match[1].replace(/,/g, ''), 10);
-        const res = await AI_TOOLS_REGISTRY.update_case_context({
-          caseId,
-          budget: budgetVal,
-        });
-        toolResults.push(res);
-        responseMessages.push(`Updated budget to $${budgetVal.toLocaleString()}.`);
+        if (!isNaN(budgetVal) && budgetVal > 0) {
+          const res = await AI_TOOLS_REGISTRY.update_case_context({
+            caseId,
+            budget: budgetVal,
+          });
+          toolResults.push(res);
+          responseMessages.push(`Updated budget to $${budgetVal.toLocaleString()}.`);
+        }
       }
     }
 

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { MobileNav } from '@/components/layout/MobileNav';
+import { AIAssistant } from '@/components/assistant/AIAssistant';
 import { ServiceResource } from '@/types';
 import {
   BookOpen,
@@ -160,6 +161,7 @@ export default function ResourcesPage() {
         )}
       </div>
 
+      <AIAssistant caseId={caseId} />
       <MobileNav caseId={caseId} />
     </div>
   );

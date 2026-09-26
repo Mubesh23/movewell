@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { MobileNav } from '@/components/layout/MobileNav';
+import { AIAssistant } from '@/components/assistant/AIAssistant';
 import { CaseOverview } from '@/types';
 import { Users, UserPlus, CheckCircle2, MapPin } from 'lucide-react';
 
@@ -14,16 +15,21 @@ export default function FamilyPage() {
   const [overview, setOverview] = useState<CaseOverview | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (caseId) {
-      fetch(`/api/cases/${caseId}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success) setOverview(data.data);
-          setLoading(false);
-        });
+  const fetchOverview = React.useCallback(async () => {
+    try {
+      const res = await fetch(`/api/cases/${caseId}`);
+      const data = await res.json();
+      if (data.success) setOverview(data.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
   }, [caseId]);
+
+  useEffect(() => {
+    if (caseId) fetchOverview();
+  }, [caseId, fetchOverview]);
 
   if (loading || !overview) {
     return (
@@ -108,6 +114,7 @@ export default function FamilyPage() {
         </div>
       </div>
 
+      <AIAssistant caseId={caseId} onPlanUpdated={fetchOverview} />
       <MobileNav caseId={caseId} />
     </div>
   );
