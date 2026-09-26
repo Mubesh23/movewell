@@ -7,10 +7,11 @@ export async function PATCH(
 ) {
   try {
     const body = await req.json();
-    const { action, assigneeId, assigneeName, actorName } = body;
+    const { action, assigneeId, assigneeName, actorName, note, completionNotes } = body;
 
     if (action === 'COMPLETE') {
-      const updated = await taskService.completeTask(params.taskId, actorName || 'Sarah', params.caseId);
+      const noteToSave = note || completionNotes;
+      const updated = await taskService.completeTask(params.taskId, actorName || 'Sarah', params.caseId, noteToSave);
       return NextResponse.json({ success: true, data: updated });
     }
 

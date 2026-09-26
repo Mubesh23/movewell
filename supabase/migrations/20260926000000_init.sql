@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     title VARCHAR(255) NOT NULL,
     description TEXT,
     why_it_matters TEXT,
+    completion_notes TEXT,
     status VARCHAR(30) NOT NULL DEFAULT 'NOT_STARTED',
     priority INT NOT NULL DEFAULT 5,
     phase VARCHAR(30) NOT NULL DEFAULT 'RIGHT_NOW',

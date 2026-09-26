@@ -87,6 +87,7 @@ export interface TransitionTask {
   title: string;
   description?: string;
   whyItMatters?: string;
+  completionNotes?: string;
   status: TaskStatus;
   priority: number;
   phase: TaskPhase;

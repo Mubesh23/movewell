@@ -77,11 +77,12 @@ User request: ${prompt}`,
                   },
                   {
                     name: 'complete_task',
-                    description: 'Mark a specific transition task as completed',
+                    description: 'Mark a specific transition task as completed with optional notes or record of what was done',
                     parameters: {
                       type: Type.OBJECT,
                       properties: {
                         taskId: { type: Type.STRING, description: 'ID of the task to mark completed' },
+                        note: { type: Type.STRING, description: 'Optional completion note or record of what was done (e.g. "Confirmed safe destination with social worker")' },
                       },
                     },
                   },
@@ -132,7 +133,13 @@ User request: ${prompt}`,
                 })
               );
             } else if (call.name === 'complete_task' && args.taskId) {
-              toolResults.push(await AI_TOOLS_REGISTRY.complete_task({ caseId, taskId: args.taskId }));
+              toolResults.push(
+                await AI_TOOLS_REGISTRY.complete_task({
+                  caseId,
+                  taskId: args.taskId,
+                  note: args.note,
+                })
+              );
             } else if (call.name === 'get_plan') {
               toolResults.push(await AI_TOOLS_REGISTRY.get_plan({ caseId }));
             }

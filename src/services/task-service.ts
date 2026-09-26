@@ -66,7 +66,8 @@ export class TaskService {
   public async completeTask(
     taskId: string,
     actorName: string = 'Sarah',
-    expectedCaseId?: string
+    expectedCaseId?: string,
+    note?: string
   ): Promise<TransitionTask> {
     const task = await repository.getTaskById(taskId);
     if (!task) throw new Error(`Task ${taskId} not found`);
@@ -75,6 +76,9 @@ export class TaskService {
     }
 
     task.status = 'COMPLETED';
+    if (note !== undefined && note !== null) {
+      task.completionNotes = note.trim() || undefined;
+    }
     task.updatedAt = new Date().toISOString();
     await repository.saveTask(task);
 
@@ -83,6 +87,7 @@ export class TaskService {
       taskId: task.id,
       taskTitle: task.title,
       completedBy: actorName,
+      completionNotes: task.completionNotes || null,
     });
 
     // Recalculate downstream task dependencies

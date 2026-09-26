@@ -118,12 +118,12 @@ export const AI_TOOLS_REGISTRY = {
     };
   },
 
-  complete_task: async (args: { caseId: string; taskId: string }): Promise<ToolExecutionResult> => {
-    const updated = await taskService.completeTask(args.taskId, 'AI Assistant', args.caseId);
+  complete_task: async (args: { caseId: string; taskId: string; note?: string }): Promise<ToolExecutionResult> => {
+    const updated = await taskService.completeTask(args.taskId, 'AI Assistant', args.caseId, args.note);
     return {
       toolName: 'complete_task',
       success: true,
-      message: `Marked "${updated.title}" as completed. Downstream dependencies recalculated.`,
+      message: `Marked "${updated.title}" as completed${args.note ? ` (Note: "${args.note}")` : ''}. Downstream dependencies recalculated.`,
       data: updated,
     };
   },

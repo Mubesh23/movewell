@@ -395,7 +395,12 @@ export default function DashboardPage() {
                       {evt.type === 'TASK_REOPENED' && `Task Reopened: ${evt.payload.taskTitle}`}
                       {evt.type === 'TASK_ASSIGNED' && `Task Assigned: ${evt.payload.taskTitle}`}
                     </p>
-                    <p className="text-stone-500 text-[10px]">
+                    {evt.type === 'TASK_COMPLETED' && evt.payload.completionNotes && (
+                      <p className="text-[11px] text-stone-600 italic mt-0.5 bg-sand-50 p-1.5 rounded-md border border-stone-200">
+                        Note: &ldquo;{evt.payload.completionNotes}&rdquo;
+                      </p>
+                    )}
+                    <p className="text-stone-500 text-[10px] mt-0.5">
                       {new Date(evt.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
