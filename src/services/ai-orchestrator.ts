@@ -245,6 +245,19 @@ User request: ${prompt}`,
       }
     }
 
+    // Intent 5: Phase Concept Explanations
+    if (lower.includes('right now') || lower.includes('what does right now mean')) {
+      const overview = await caseService.getCaseOverview(caseId);
+      const seniorName = overview?.seniorProfile.name || 'Maria';
+      return {
+        message:
+          `In MoveWell, **RIGHT NOW** represents critical path tasks that must be resolved immediately before hospital discharge or within the first 24–48 hours.\n\n` +
+          `These are urgent safety & destination priorities (like confirming ${seniorName}'s safe discharge destination or assessing accessibility) that block downstream moving, packing, or care arrangements.`,
+        toolResults: [],
+        suggestedNextAction: `Confirming ${seniorName}'s safe discharge destination.`,
+      };
+    }
+
     // Proactive Next Step Suggestion Engine based on active case overview
     const overview = await caseService.getCaseOverview(caseId);
     const seniorName = overview?.seniorProfile.name || 'Senior';
