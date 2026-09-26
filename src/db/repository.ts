@@ -29,7 +29,10 @@ export class Repository {
         budget: caseData.budget,
         updated_at: new Date().toISOString(),
       });
-      if (error) console.error('Supabase saveCase error:', error);
+      if (error) {
+        console.error('Supabase saveCase error:', error);
+        throw new Error(`Database saveCase failed: ${error.message}`);
+      }
     }
 
     return caseData;
@@ -105,7 +108,10 @@ export class Repository {
         owns_home: profile.ownsHome,
         updated_at: new Date().toISOString(),
       });
-      if (error) console.error('Supabase saveSeniorProfile error:', error);
+      if (error) {
+        console.error('Supabase saveSeniorProfile error:', error);
+        throw new Error(`Database saveSeniorProfile failed: ${error.message}`);
+      }
     }
 
     return profile;
@@ -161,7 +167,10 @@ export class Repository {
         role: member.role,
         updated_at: new Date().toISOString(),
       });
-      if (error) console.error('Supabase saveCaseMember error:', error);
+      if (error) {
+        console.error('Supabase saveCaseMember error:', error);
+        throw new Error(`Database saveCaseMember failed: ${error.message}`);
+      }
     }
 
     return member;
@@ -218,7 +227,10 @@ export class Repository {
         max_estimated_cost: task.maxEstimatedCost,
         updated_at: new Date().toISOString(),
       });
-      if (error) console.error('Supabase saveTask error:', error);
+      if (error) {
+        console.error('Supabase saveTask error:', error);
+        throw new Error(`Database saveTask failed: ${error.message}`);
+      }
     }
 
     return task;
@@ -320,7 +332,10 @@ export class Repository {
         depends_on_task_id: d.dependsOnTaskId,
       }));
       const { error } = await supabase.from('task_dependencies').upsert(rows);
-      if (error) console.error('Supabase saveTaskDependencies error:', error);
+      if (error) {
+        console.error('Supabase saveTaskDependencies error:', error);
+        throw new Error(`Database saveTaskDependencies failed: ${error.message}`);
+      }
     }
 
     return memoryStore.taskDependencies;
@@ -366,7 +381,10 @@ export class Repository {
         payload: event.payload,
         created_at: event.createdAt,
       });
-      if (error) console.error('Supabase saveCaseEvent error:', error);
+      if (error) {
+        console.error('Supabase saveCaseEvent error:', error);
+        throw new Error(`Database saveCaseEvent failed: ${error.message}`);
+      }
     }
 
     return event;
@@ -421,7 +439,7 @@ export class Repository {
           !zipCode ||
           !loc ||
           loc.zipCode === zipCode ||
-          (zipCode.startsWith('77') && loc.zipCode.startsWith('77'));
+          (zipCode.slice(0, 3) === loc.zipCode.slice(0, 3));
 
         return matchesCategory && matchesZip;
       })
