@@ -1,0 +1,140 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { planningEngine } from '@/services/planning-engine';
+import { TransitionCase, SeniorProfile, CaseMember } from '@/types';
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+
+    // Check if loading Maria's Golden Scenario preset
+    if (body.preset === 'MARIA_GOLDEN_SCENARIO') {
+      const caseId = 'case-maria-' + Math.random().toString(36).substring(2, 7);
+      const seniorProfileId = 'profile-maria';
+
+      const caseData: TransitionCase = {
+        id: caseId,
+        seniorProfileId,
+        transitionType: 'POST_HOSPITAL',
+        urgency: 'URGENT',
+        zipCode: '77004', // Houston, TX
+        targetDate: '2026-11-07',
+        dischargeDate: '2026-11-01',
+        housingStatus: 'OWN',
+        destinationStatus: 'UNDECIDED',
+        budget: 8000,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const profile: SeniorProfile = {
+        id: seniorProfileId,
+        caseId: caseId,
+        name: 'Maria Thompson',
+        ageRange: '78',
+        livesAlone: true,
+        mobilityConstraint: true,
+        stairsConstraint: true,
+        immediateSafetyConcern: false,
+        homeType: 'Two-story house',
+        ownsHome: true,
+      };
+
+      const members: CaseMember[] = [
+        {
+          id: 'mem-sarah',
+          caseId: caseId,
+          name: 'Sarah',
+          relationship: 'Daughter',
+          city: 'Chicago, IL',
+          isLocal: false,
+          availability: 'Full time remote coordination',
+          role: 'OWNER',
+        },
+        {
+          id: 'mem-jennifer',
+          caseId: caseId,
+          name: 'Jennifer',
+          relationship: 'Sister / Local Support',
+          city: 'Houston, TX',
+          isLocal: true,
+          availability: 'Evenings & weekends local',
+          role: 'FAMILY',
+        },
+      ];
+
+      const result = await planningEngine.generatePlan(
+        caseData,
+        profile,
+        members
+      );
+
+      return NextResponse.json({ success: true, caseId: result.caseData.id });
+    }
+
+    // Custom Intake submission
+    const caseId = 'case-' + Math.random().toString(36).substring(2, 9);
+    const seniorProfileId = 'prof-' + Math.random().toString(36).substring(2, 9);
+
+    const caseData: TransitionCase = {
+      id: caseId,
+      seniorProfileId,
+      transitionType: body.transitionType || 'POST_HOSPITAL',
+      urgency: 'PLANNED',
+      zipCode: body.zipCode || '77004',
+      targetDate: body.targetDate || '2026-11-07',
+      dischargeDate: body.dischargeDate || '2026-11-01',
+      housingStatus: body.housingStatus || 'OWN',
+      destinationStatus: body.destinationStatus || 'UNDECIDED',
+      budget: Number(body.budget) || 8000,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const profile: SeniorProfile = {
+      id: seniorProfileId,
+      caseId: caseId,
+      name: body.seniorName || 'Maria Thompson',
+      ageRange: body.ageRange || '78',
+      livesAlone: body.livesAlone !== false,
+      mobilityConstraint: body.mobilityConstraint !== false,
+      stairsConstraint: body.stairsConstraint !== false,
+      immediateSafetyConcern: body.immediateSafetyConcern === true,
+      homeType: body.homeType || 'Two-story house',
+      ownsHome: body.ownsHome !== false,
+    };
+
+    const members: CaseMember[] = [
+      {
+        id: 'mem-primary-' + Math.random().toString(36).substring(2, 6),
+        caseId: caseId,
+        name: body.userName || 'Sarah',
+        relationship: 'Daughter',
+        city: body.userCity || 'Chicago, IL',
+        isLocal: false,
+        role: 'OWNER',
+      },
+      {
+        id: 'mem-local-' + Math.random().toString(36).substring(2, 6),
+        caseId: caseId,
+        name: body.localHelperName || 'Jennifer',
+        relationship: 'Sister / Local Support',
+        city: body.localHelperCity || 'Houston, TX',
+        isLocal: true,
+        role: 'FAMILY',
+      },
+    ];
+
+    const result = await planningEngine.generatePlan(
+      caseData,
+      profile,
+      members
+    );
+
+    return NextResponse.json({ success: true, caseId: result.caseData.id });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
+  }
+}
