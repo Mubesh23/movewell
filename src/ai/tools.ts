@@ -15,10 +15,20 @@ export const AI_TOOLS_REGISTRY = {
   get_plan: async (args: { caseId: string }): Promise<ToolExecutionResult> => {
     const overview = await caseService.getCaseOverview(args.caseId);
     if (!overview) return { toolName: 'get_plan', success: false, message: 'Case not found' };
+
+    const remaining = overview.tasks.filter((t) => t.status !== 'COMPLETED' && t.status !== 'SKIPPED');
+    const remainingList =
+      remaining.length > 0
+        ? remaining.slice(0, 4).map((t) => `• ${t.title} (${t.phase.replace('_', ' ')})`).join('\n')
+        : 'All tasks in the transition plan are completed!';
+
     return {
       toolName: 'get_plan',
       success: true,
-      message: `Retrieved transition plan for ${overview.seniorProfile.name}`,
+      message:
+        `Here is the plan status for ${overview.seniorProfile.name}:\n\n` +
+        `• Progress: ${overview.progressPercent}% (${overview.tasks.length - remaining.length}/${overview.tasks.length} completed)\n\n` +
+        `Remaining Tasks:\n${remainingList}`,
       data: overview,
     };
   },

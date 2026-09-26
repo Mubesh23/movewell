@@ -138,4 +138,35 @@ describe('AI Orchestrator Tool Calling', () => {
     const packingTask = tasks.find((t) => t.templateId === 'inventory-belongings' || t.title.toLowerCase().includes('inventory'));
     expect(packingTask?.assigneeId).toBe(james?.id);
   });
+
+  it('should respond with structured plan summary when asked "what is left to do?"', async () => {
+    const caseData: TransitionCase = {
+      id: 'case-ai-query',
+      transitionType: 'POST_HOSPITAL',
+      urgency: 'URGENT',
+      zipCode: '77004',
+      budget: 8000,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const profile: SeniorProfile = {
+      id: 'prof-ai-query',
+      caseId: 'case-ai-query',
+      name: 'Maria Thompson',
+      livesAlone: true,
+      mobilityConstraint: true,
+      stairsConstraint: true,
+      immediateSafetyConcern: false,
+      ownsHome: true,
+    };
+
+    await planningEngine.generatePlan(caseData, profile, []);
+
+    const response = await aiOrchestrator.processUserIntent('case-ai-query', 'what is left to do?');
+
+    expect(response.message).toContain('Maria Thompson');
+    expect(response.message).toContain('Remaining Tasks');
+    expect(response.toolResults.length).toBeGreaterThan(0);
+  });
 });

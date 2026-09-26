@@ -74,7 +74,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
 
       if (data.success && data.data) {
         const confirmations = (data.data.toolResults || [])
-          .filter((tr: any) => tr.success)
+          .filter((tr: any) => tr.success && tr.toolName !== 'get_plan')
           .map((tr: any) => tr.message);
 
         setMessages((prev) => [
@@ -82,13 +82,21 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
           {
             sender: 'ai',
             text: data.data.message,
-            toolConfirmations: confirmations,
+            toolConfirmations: confirmations.length > 0 ? confirmations : undefined,
           },
         ]);
 
         if (onPlanUpdated) {
           onPlanUpdated();
         }
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            sender: 'ai',
+            text: data.error || 'Sorry, I encountered an error processing your request.',
+          },
+        ]);
       }
     } catch (err) {
       setMessages((prev) => [

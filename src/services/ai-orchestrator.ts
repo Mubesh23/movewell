@@ -275,11 +275,13 @@ User request: ${prompt}`,
       };
     }
 
-    // Default overview response
+    // Default overview response for queries like "what is left to do?", "status", "tasks", etc.
     const overviewRes = await AI_TOOLS_REGISTRY.get_plan({ caseId });
     toolResults.push(overviewRes);
     return {
-      message: `MoveWell is managing ${seniorName}'s post-hospital plan. Current progress is ${overviewRes.data?.progressPercent}%. Today's top priority is "${overviewRes.data?.urgentTask?.title}".${proactiveSuggestion}`,
+      message: overviewRes.success
+        ? `${overviewRes.message}${proactiveSuggestion}`
+        : `MoveWell is managing ${seniorName}'s post-hospital plan.${proactiveSuggestion}`,
       toolResults,
       suggestedNextAction: proactiveSuggestion.trim(),
     };
