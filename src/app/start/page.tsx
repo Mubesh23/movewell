@@ -162,8 +162,8 @@ export default function IntakePage() {
                       onChange={(e) => setFormData({ ...formData, livesAlone: e.target.value === 'yes' })}
                       className="w-full px-4 py-3 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-brand-700 text-sm font-medium bg-white"
                     >
-                      <option value="yes">Yes, lives alone</option>
-                      <option value="no">No, lives with someone</option>
+                      <option value="yes">Yes</option>
+                      <option value="no">No</option>
                     </select>
                   </div>
                 </div>
