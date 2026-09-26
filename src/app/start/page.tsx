@@ -170,10 +170,10 @@ export default function IntakePage() {
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {[
-                      { id: 'POST_HOSPITAL', label: 'Post-Hospital Discharge', desc: 'Transition following recent hospital stay or fall' },
-                      { id: 'PLANNED_DOWNSIZE', label: 'Planned Downsize', desc: 'Moving to smaller residence within several months' },
-                      { id: 'AGE_IN_PLACE', label: 'Age in Place', desc: 'Home modifications to remain safely at home' },
-                      { id: 'EMERGENCY_DISPLACEMENT', label: 'Emergency Displacement', desc: 'Sudden displacement due to storm or emergency' },
+                      { id: 'POST_HOSPITAL', label: 'Post-Hospital Discharge', desc: 'Transition following recent hospital stay or fall', status: 'Available' },
+                      { id: 'PLANNED_DOWNSIZE', label: 'Planned Downsize', desc: 'Moving to smaller residence within several months', status: 'Coming Soon' },
+                      { id: 'AGE_IN_PLACE', label: 'Age in Place', desc: 'Home modifications to remain safely at home', status: 'Coming Soon' },
+                      { id: 'EMERGENCY_DISPLACEMENT', label: 'Emergency Displacement', desc: 'Sudden displacement due to emergency', status: 'Coming Soon' },
                     ].map((type) => (
                       <button
                         key={type.id}
@@ -185,7 +185,14 @@ export default function IntakePage() {
                             : 'border-stone-200 hover:border-stone-300 bg-white'
                         }`}
                       >
-                        <p className="font-bold text-sm text-stone-900">{type.label}</p>
+                        <div className="flex items-center justify-between mb-0.5">
+                          <p className="font-bold text-sm text-stone-900">{type.label}</p>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            type.status === 'Available' ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-100 text-stone-600'
+                          }`}>
+                            {type.status}
+                          </span>
+                        </div>
                         <p className="text-xs text-stone-500 leading-tight mt-0.5">{type.desc}</p>
                       </button>
                     ))}

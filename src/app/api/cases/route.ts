@@ -8,8 +8,9 @@ export async function POST(req: NextRequest) {
 
     // Check if loading Maria's Golden Scenario preset
     if (body.preset === 'MARIA_GOLDEN_SCENARIO') {
-      const caseId = 'case-maria-' + Math.random().toString(36).substring(2, 7);
-      const seniorProfileId = 'profile-maria';
+      const randomSuffix = Math.random().toString(36).substring(2, 9);
+      const caseId = `case-maria-${randomSuffix}`;
+      const seniorProfileId = `profile-maria-${randomSuffix}`;
 
       const now = new Date();
       const dischargeDateStr = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
 
       const members: CaseMember[] = [
         {
-          id: 'mem-sarah',
+          id: `mem-sarah-${randomSuffix}`,
           caseId: caseId,
           name: 'Sarah',
           relationship: 'Daughter',
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
           role: 'OWNER',
         },
         {
-          id: 'mem-jennifer',
+          id: `mem-jennifer-${randomSuffix}`,
           caseId: caseId,
           name: 'Jennifer',
           relationship: 'Sister / Local Support',

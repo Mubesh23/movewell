@@ -1,4 +1,4 @@
-import { TaskPhase, TransitionTask } from '../types';
+import { TaskPhase } from '../types';
 
 export interface TemplateTaskDefinition {
   templateId: string;
@@ -18,8 +18,8 @@ export const POST_HOSPITAL_WORKFLOW_TEMPLATES: TemplateTaskDefinition[] = [
   {
     templateId: 'confirm-discharge-destination',
     title: 'Confirm safe discharge destination',
-    description: 'Verify whether Maria will return directly home with support or spend time in a temporary rehabilitation facility.',
-    whyItMatters: 'Maria cannot navigate stairs post-hospitalization. The medical team requires a safe, accessible destination before approving discharge.',
+    description: 'Verify whether {seniorName} will return directly home with support or spend time in a temporary rehabilitation facility.',
+    whyItMatters: '{seniorName} cannot navigate stairs post-hospitalization. The medical team requires a safe, accessible destination before approving discharge.',
     phase: 'RIGHT_NOW',
     priority: 1,
     minEstimatedCost: 0,
@@ -83,8 +83,8 @@ export const POST_HOSPITAL_WORKFLOW_TEMPLATES: TemplateTaskDefinition[] = [
   {
     templateId: 'shortlist-housing',
     title: 'Shortlist housing options if moving',
-    description: 'Filter single-story residences, senior living communities, or accessible apartments in Houston.',
-    whyItMatters: 'Ensures Maria moves directly into a safe environment tailored to single-story living.',
+    description: 'Filter single-story residences, senior living communities, or accessible apartments in local area.',
+    whyItMatters: 'Ensures {seniorName} moves directly into a safe environment tailored to single-story living.',
     phase: 'THIS_WEEK',
     priority: 6,
     minEstimatedCost: 0,
@@ -149,7 +149,7 @@ export const POST_HOSPITAL_WORKFLOW_TEMPLATES: TemplateTaskDefinition[] = [
     templateId: 'execute-move',
     title: 'Execute move',
     description: 'Oversee loading, transport, and unloading at the new residence.',
-    whyItMatters: 'Ensures Maria’s transition is comfortable, calm, and safe.',
+    whyItMatters: 'Ensures {seniorName}’s transition is comfortable, calm, and safe.',
     phase: 'MOVE_WEEK',
     priority: 11,
     minEstimatedCost: 0,
