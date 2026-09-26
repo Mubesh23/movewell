@@ -77,12 +77,13 @@ User request: ${prompt}`,
                   },
                   {
                     name: 'complete_task',
-                    description: 'Mark a specific transition task as completed with optional notes or record of what was done',
+                    description: 'Mark a specific transition task as completed by title query or ID with optional completion notes',
                     parameters: {
                       type: Type.OBJECT,
                       properties: {
-                        taskId: { type: Type.STRING, description: 'ID of the task to mark completed' },
-                        note: { type: Type.STRING, description: 'Optional completion note or record of what was done (e.g. "Confirmed safe destination with social worker")' },
+                        taskTitleQuery: { type: Type.STRING, description: 'Task title or keyword to mark complete (e.g. discharge destination, pack, move, housing)' },
+                        taskId: { type: Type.STRING, description: 'Optional ID of the task to mark completed' },
+                        note: { type: Type.STRING, description: 'Optional completion note or record of what was done (e.g. "Spoke with social worker")' },
                       },
                     },
                   },
@@ -122,7 +123,7 @@ User request: ${prompt}`,
                 await AI_TOOLS_REGISTRY.assign_task({
                   caseId,
                   assigneeName: args.assigneeName,
-                  taskTitleQuery: args.taskTitleQuery || 'task',
+                  taskTitleQuery: args.taskTitleQuery || args.taskTitle || args.task || 'task',
                 })
               );
             } else if (call.name === 'find_resources') {
@@ -132,12 +133,13 @@ User request: ${prompt}`,
                   zipCode: args.zipCode || overview?.caseData.zipCode || '77004',
                 })
               );
-            } else if (call.name === 'complete_task' && args.taskId) {
+            } else if (call.name === 'complete_task') {
               toolResults.push(
                 await AI_TOOLS_REGISTRY.complete_task({
                   caseId,
                   taskId: args.taskId,
-                  note: args.note,
+                  taskTitleQuery: args.taskTitleQuery || args.taskTitle || args.task || 'discharge',
+                  note: args.note || args.completionNotes,
                 })
               );
             } else if (call.name === 'get_plan') {
@@ -201,15 +203,23 @@ User request: ${prompt}`,
         assigneeName = capitalize(toMatch[1]);
       }
 
-      const taskQuery = lower.includes('pack')
-        ? 'pack'
-        : lower.includes('discharge')
-        ? 'discharge'
-        : lower.includes('move')
-        ? 'move'
-        : lower.includes('clean')
-        ? 'clean'
-        : 'inventory';
+      let taskQuery = 'task';
+      if (lower.includes('pack') || lower.includes('inventory')) {
+        taskQuery = 'pack';
+      } else if (lower.includes('discharge')) {
+        taskQuery = 'discharge';
+      } else if (lower.includes('move') || lower.includes('moving')) {
+        taskQuery = 'move';
+      } else if (lower.includes('clean')) {
+        taskQuery = 'clean';
+      } else {
+        const queryWithoutAssignee = lower
+          .replace(/\bassign\b/g, '')
+          .replace(/\bto\s+[a-z]+\b/g, '')
+          .replace(/\bfor\s+[a-z]+\b/g, '')
+          .trim();
+        if (queryWithoutAssignee) taskQuery = queryWithoutAssignee;
+      }
 
       const res = await AI_TOOLS_REGISTRY.assign_task({
         caseId,

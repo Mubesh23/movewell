@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { planningEngine } from '../services/planning-engine';
+import { caseService } from '../services/case-service';
 import { repository } from '../db/repository';
 import { TransitionCase, SeniorProfile, CaseMember } from '../types';
 
@@ -69,5 +70,39 @@ describe('Post-Hospital Workflow Generation (Maria Scenario)', () => {
     const housingTask = result.tasks.find((t) => t.templateId === 'decide-temporary-vs-permanent');
     expect(housingTask).toBeDefined();
     expect(housingTask?.status).toBe('BLOCKED');
+  });
+
+  it('should enforce case ownership and prevent owner deletion when deleting members', async () => {
+    const owner: CaseMember = {
+      id: 'mem-owner-test',
+      caseId: 'case-owner-1',
+      name: 'Sarah',
+      isLocal: false,
+      role: 'OWNER',
+    };
+    const helper: CaseMember = {
+      id: 'mem-helper-test',
+      caseId: 'case-owner-1',
+      name: 'John',
+      isLocal: true,
+      role: 'HELPER',
+    };
+
+    await repository.saveCaseMember(owner);
+    await repository.saveCaseMember(helper);
+
+    // Reject deleting primary owner
+    await expect(caseService.deleteMember('case-owner-1', 'mem-owner-test')).rejects.toThrow(
+      'Cannot delete primary case owner'
+    );
+
+    // Reject deleting member from wrong case ID
+    await expect(caseService.deleteMember('case-wrong-id', 'mem-helper-test')).rejects.toThrow(
+      'Member mem-helper-test not found in case case-wrong-id'
+    );
+
+    // Allow deleting valid helper from correct case
+    const success = await caseService.deleteMember('case-owner-1', 'mem-helper-test');
+    expect(success).toBe(true);
   });
 });

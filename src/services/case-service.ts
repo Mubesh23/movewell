@@ -96,6 +96,15 @@ export class CaseService {
   }
 
   public async deleteMember(caseId: string, memberId: string): Promise<boolean> {
+    const members = await repository.getCaseMembers(caseId);
+    const targetMember = members.find((m) => m.id === memberId);
+    if (!targetMember) {
+      throw new Error(`Member ${memberId} not found in case ${caseId}`);
+    }
+    if (targetMember.role === 'OWNER') {
+      throw new Error('Cannot delete primary case owner');
+    }
+
     const tasks = await repository.getTasksByCaseId(caseId);
     for (const task of tasks) {
       if (task.assigneeId === memberId) {
@@ -104,7 +113,7 @@ export class CaseService {
       }
     }
 
-    const success = await repository.deleteCaseMember(memberId);
+    const success = await repository.deleteCaseMember(memberId, caseId);
     if (success) {
       await eventService.recordEvent(caseId, 'CASE_MEMBER_REMOVED', {
         memberId,

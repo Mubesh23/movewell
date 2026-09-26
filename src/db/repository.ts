@@ -176,11 +176,19 @@ export class Repository {
     return member;
   }
 
-  async deleteCaseMember(id: string): Promise<boolean> {
+  async deleteCaseMember(id: string, caseId?: string): Promise<boolean> {
+    const mem = memoryStore.caseMembers.get(id);
+    if (caseId && mem && mem.caseId !== caseId) {
+      throw new Error(`Member ${id} does not belong to case ${caseId}`);
+    }
     memoryStore.caseMembers.delete(id);
 
     if (supabase) {
-      const { error } = await supabase.from('case_members').delete().eq('id', id);
+      let query = supabase.from('case_members').delete().eq('id', id);
+      if (caseId) {
+        query = query.eq('case_id', caseId);
+      }
+      const { error } = await query;
       if (error) {
         console.error('Supabase deleteCaseMember error:', error);
         throw new Error(`Database deleteCaseMember failed: ${error.message}`);

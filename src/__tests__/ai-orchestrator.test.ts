@@ -169,4 +169,77 @@ describe('AI Orchestrator Tool Calling', () => {
     expect(response.message).toContain('Remaining Tasks');
     expect(response.toolResults.length).toBeGreaterThan(0);
   });
+
+  it('should complete task by title query without requiring raw database taskId', async () => {
+    const caseData: TransitionCase = {
+      id: 'case-ai-complete-query',
+      transitionType: 'POST_HOSPITAL',
+      urgency: 'URGENT',
+      zipCode: '77004',
+      budget: 8000,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const profile: SeniorProfile = {
+      id: 'prof-ai-cq',
+      caseId: 'case-ai-complete-query',
+      name: 'Maria Thompson',
+      livesAlone: true,
+      mobilityConstraint: false,
+      stairsConstraint: false,
+      immediateSafetyConcern: false,
+      ownsHome: true,
+    };
+
+    await planningEngine.generatePlan(caseData, profile, []);
+
+    const response = await aiOrchestrator.processUserIntent(
+      'case-ai-complete-query',
+      'Mark confirm safe discharge destination complete. Spoke with social worker.'
+    );
+
+    expect(response.toolResults[0].success).toBe(true);
+    expect(response.toolResults[0].message).toContain('Confirm');
+
+    const tasks = await repository.getTasksByCaseId('case-ai-complete-query');
+    const dischargeTask = tasks.find((t) => t.templateId === 'confirm-discharge-destination');
+    expect(dischargeTask?.status).toBe('COMPLETED');
+  });
+
+  it('should not create member side-effect if assign_task target task is not found', async () => {
+    const caseData: TransitionCase = {
+      id: 'case-ai-no-sideeffect',
+      transitionType: 'POST_HOSPITAL',
+      urgency: 'URGENT',
+      zipCode: '77004',
+      budget: 8000,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const profile: SeniorProfile = {
+      id: 'prof-ai-ns',
+      caseId: 'case-ai-no-sideeffect',
+      name: 'Maria Thompson',
+      livesAlone: true,
+      mobilityConstraint: false,
+      stairsConstraint: false,
+      immediateSafetyConcern: false,
+      ownsHome: true,
+    };
+
+    await planningEngine.generatePlan(caseData, profile, []);
+
+    const initialMembers = await repository.getCaseMembers('case-ai-no-sideeffect');
+
+    const response = await aiOrchestrator.processUserIntent(
+      'case-ai-no-sideeffect',
+      'Assign non-existent astronaut flying task to Bob'
+    );
+
+    const finalMembers = await repository.getCaseMembers('case-ai-no-sideeffect');
+    expect(finalMembers.length).toBe(initialMembers.length);
+    expect(finalMembers.find((m) => m.name === 'Bob')).toBeUndefined();
+  });
 });

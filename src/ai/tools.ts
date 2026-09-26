@@ -84,24 +84,6 @@ export const AI_TOOLS_REGISTRY = {
     assigneeName: string;
   }): Promise<ToolExecutionResult> => {
     const tasks = await repository.getTasksByCaseId(args.caseId);
-    let members = await repository.getCaseMembers(args.caseId);
-
-    let member = members.find(
-      (m) => m.name.toLowerCase() === args.assigneeName.toLowerCase()
-    );
-
-    // Dynamic creation of family/helper/professional collaborator if name is not recognized
-    if (!member) {
-      member = await repository.saveCaseMember({
-        id: 'mem-' + Math.random().toString(36).substring(2, 7),
-        caseId: args.caseId,
-        name: args.assigneeName,
-        relationship: 'Helper / Collaborator',
-        isLocal: true,
-        role: 'HELPER',
-      });
-    }
-
     let targetTasks: typeof tasks = [];
 
     if (args.taskId) {
@@ -117,12 +99,30 @@ export const AI_TOOLS_REGISTRY = {
       );
     }
 
+    // Fail early without mutating member state if target task cannot be resolved
     if (targetTasks.length === 0) {
       return {
         toolName: 'assign_task',
         success: false,
-        message: `Could not find a task matching "${args.taskTitleQuery || 'your request'}". Please specify the exact task title to assign.`,
+        message: `Could not find a task matching "${args.taskTitleQuery || 'your request'}". Please specify the task title to assign.`,
       };
+    }
+
+    // Resolve or dynamically create member ONLY after task target is validated
+    let members = await repository.getCaseMembers(args.caseId);
+    let member = members.find(
+      (m) => m.name.toLowerCase() === args.assigneeName.toLowerCase()
+    );
+
+    if (!member) {
+      member = await repository.saveCaseMember({
+        id: 'mem-' + Math.random().toString(36).substring(2, 7),
+        caseId: args.caseId,
+        name: args.assigneeName,
+        relationship: 'Helper / Collaborator',
+        isLocal: true,
+        role: 'HELPER',
+      });
     }
 
     for (const t of targetTasks) {
@@ -137,8 +137,45 @@ export const AI_TOOLS_REGISTRY = {
     };
   },
 
-  complete_task: async (args: { caseId: string; taskId: string; note?: string }): Promise<ToolExecutionResult> => {
-    const updated = await taskService.completeTask(args.taskId, 'AI Assistant', args.caseId, args.note);
+  complete_task: async (args: {
+    caseId: string;
+    taskId?: string;
+    taskTitleQuery?: string;
+    note?: string;
+  }): Promise<ToolExecutionResult> => {
+    const tasks = await repository.getTasksByCaseId(args.caseId);
+    let targetTask: typeof tasks[0] | undefined = undefined;
+
+    if (args.taskId) {
+      targetTask = tasks.find((t) => t.id === args.taskId);
+    }
+
+    if (!targetTask && args.taskTitleQuery) {
+      const q = args.taskTitleQuery.toLowerCase();
+      targetTask = tasks.find(
+        (t) =>
+          t.title.toLowerCase().includes(q) ||
+          t.phase.toLowerCase().includes(q) ||
+          (q.includes('discharge') && (t.templateId?.includes('discharge') || t.title.toLowerCase().includes('discharge'))) ||
+          (q.includes('pack') && (t.templateId?.includes('inventory') || t.title.toLowerCase().includes('inventory'))) ||
+          (q.includes('move') && (t.templateId?.includes('moving') || t.title.toLowerCase().includes('move')))
+      );
+    }
+
+    if (!targetTask) {
+      // Fallback to current urgent/ready task if unspecified
+      targetTask = tasks.find((t) => t.status === 'READY') || tasks[0];
+    }
+
+    if (!targetTask) {
+      return {
+        toolName: 'complete_task',
+        success: false,
+        message: `Could not find a task matching "${args.taskTitleQuery || args.taskId || 'your request'}".`,
+      };
+    }
+
+    const updated = await taskService.completeTask(targetTask.id, 'AI Assistant', args.caseId, args.note);
     return {
       toolName: 'complete_task',
       success: true,
