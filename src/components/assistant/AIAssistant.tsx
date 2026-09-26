@@ -22,7 +22,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
 
   const initialWelcomeMessage: ChatMessage = {
     sender: 'ai',
-    text: "Hello Sarah! I'm Grace, your MoveWell transition companion. I can help coordinate tasks, update budgets, or search verified Houston resources.\n\ne.g., 'Set budget to $5,000' or 'Jennifer will handle packing'.",
+    text: "Hello Sarah! I'm Nora, your MoveWell transition companion. I can help coordinate tasks, update budgets, or search verified Houston resources.\n\ne.g., 'Set budget to $5,000' or 'Jennifer will handle packing'.",
     suggestionChip: 'Set budget to $5,000',
   };
 
@@ -114,7 +114,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
         className="fixed bottom-20 md:bottom-6 right-6 z-50 bg-brand-900 hover:bg-brand-800 text-white font-bold text-xs py-3 px-4 rounded-full shadow-2xl transition flex items-center space-x-2 border-2 border-white/20"
       >
         <Sparkles className="w-4 h-4 text-amber-300" />
-        <span>Ask Grace AI</span>
+        <span>Ask Nora AI</span>
       </button>
     );
   }
@@ -125,10 +125,10 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
       <div className="bg-brand-900 text-white px-4 py-3 flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <div className="w-7 h-7 rounded-lg bg-brand-800 flex items-center justify-center font-bold text-amber-300 text-xs">
-            G
+            N
           </div>
           <div>
-            <h4 className="font-bold text-xs">Grace &bull; MoveWell Companion</h4>
+            <h4 className="font-bold text-xs">Nora &bull; MoveWell Companion</h4>
             <p className="text-[10px] text-brand-200">Transition Assistant</p>
           </div>
         </div>
@@ -206,7 +206,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask Grace (e.g. Set budget to $5,000)..."
+          placeholder="Ask Nora (e.g. Set budget to $5,000)..."
           className="flex-1 px-3 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-brand-800"
         />
         <button

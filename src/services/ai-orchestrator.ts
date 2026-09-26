@@ -25,7 +25,7 @@ export class AIOrchestrator {
               role: 'user',
               parts: [
                 {
-                  text: `System Context: You are Grace, an empathetic senior transition coordinator for MoveWell.
+                  text: `System Context: You are Nora, an empathetic senior transition coordinator for MoveWell.
 Case ID: ${caseId}
 Senior Name: ${overview?.seniorProfile.name || 'Senior'}
 Current Urgency: ${overview?.caseData.urgency || 'URGENT'}
