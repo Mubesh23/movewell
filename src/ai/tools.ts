@@ -163,11 +163,6 @@ export const AI_TOOLS_REGISTRY = {
     }
 
     if (!targetTask) {
-      // Fallback to current urgent/ready task if unspecified
-      targetTask = tasks.find((t) => t.status === 'READY') || tasks[0];
-    }
-
-    if (!targetTask) {
       return {
         toolName: 'complete_task',
         success: false,

@@ -46,7 +46,15 @@ export class Repository {
         .eq('id', id)
         .single();
 
-      if (!error && data) {
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return memoryStore.cases.get(id) || null;
+        }
+        console.error('Supabase getCaseById error:', error);
+        throw new Error(`Database getCaseById failed: ${error.message}`);
+      }
+
+      if (data) {
         const cData: TransitionCase = {
           id: data.id,
           transitionType: data.transition_type,
@@ -71,7 +79,11 @@ export class Repository {
   async listCases(): Promise<TransitionCase[]> {
     if (supabase) {
       const { data, error } = await supabase.from('transition_cases').select('*');
-      if (!error && data) {
+      if (error) {
+        console.error('Supabase listCases error:', error);
+        throw new Error(`Database listCases failed: ${error.message}`);
+      }
+      if (data) {
         return data.map((d) => ({
           id: d.id,
           transitionType: d.transition_type,
@@ -125,7 +137,18 @@ export class Repository {
         .eq('case_id', caseId)
         .single();
 
-      if (!error && data) {
+      if (error) {
+        if (error.code === 'PGRST116') {
+          for (const profile of memoryStore.seniorProfiles.values()) {
+            if (profile.caseId === caseId) return profile;
+          }
+          return null;
+        }
+        console.error('Supabase getSeniorProfileByCaseId error:', error);
+        throw new Error(`Database getSeniorProfileByCaseId failed: ${error.message}`);
+      }
+
+      if (data) {
         const p: SeniorProfile = {
           id: data.id,
           caseId: data.case_id,
@@ -205,7 +228,12 @@ export class Repository {
         .select('*')
         .eq('case_id', caseId);
 
-      if (!error && data) {
+      if (error) {
+        console.error('Supabase getCaseMembers error:', error);
+        throw new Error(`Database getCaseMembers failed: ${error.message}`);
+      }
+
+      if (data) {
         const list = data.map((m) => ({
           id: m.id,
           caseId: m.case_id,
@@ -274,7 +302,12 @@ export class Repository {
         .eq('case_id', caseId)
         .order('priority', { ascending: true });
 
-      if (!error && data) {
+      if (error) {
+        console.error('Supabase getTasksByCaseId error:', error);
+        throw new Error(`Database getTasksByCaseId failed: ${error.message}`);
+      }
+
+      if (data) {
         const list = data.map((t) => ({
           id: t.id,
           caseId: t.case_id,
@@ -311,7 +344,15 @@ export class Repository {
         .eq('id', taskId)
         .single();
 
-      if (!error && data) {
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return memoryStore.tasks.get(taskId) || null;
+        }
+        console.error('Supabase getTaskById error:', error);
+        throw new Error(`Database getTaskById failed: ${error.message}`);
+      }
+
+      if (data) {
         const t: TransitionTask = {
           id: data.id,
           caseId: data.case_id,
@@ -376,7 +417,12 @@ export class Repository {
           .select('*')
           .in('task_id', caseTaskIds);
 
-        if (!error && data) {
+        if (error) {
+          console.error('Supabase getTaskDependenciesByCaseId error:', error);
+          throw new Error(`Database getTaskDependenciesByCaseId failed: ${error.message}`);
+        }
+
+        if (data) {
           return data.map((d) => ({
             taskId: d.task_id,
             dependsOnTaskId: d.depends_on_task_id,
@@ -423,7 +469,12 @@ export class Repository {
         .eq('case_id', caseId)
         .order('created_at', { ascending: false });
 
-      if (!error && data) {
+      if (error) {
+        console.error('Supabase getCaseEvents error:', error);
+        throw new Error(`Database getCaseEvents failed: ${error.message}`);
+      }
+
+      if (data) {
         return data.map((e) => ({
           id: e.id,
           caseId: e.case_id,

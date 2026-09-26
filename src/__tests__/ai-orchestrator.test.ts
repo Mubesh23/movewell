@@ -242,4 +242,44 @@ describe('AI Orchestrator Tool Calling', () => {
     expect(finalMembers.length).toBe(initialMembers.length);
     expect(finalMembers.find((m) => m.name === 'Bob')).toBeUndefined();
   });
+
+  it('should return failure and change zero task statuses when completing a non-existent task', async () => {
+    const caseData: TransitionCase = {
+      id: 'case-ai-strict-complete',
+      transitionType: 'POST_HOSPITAL',
+      urgency: 'URGENT',
+      zipCode: '77004',
+      budget: 8000,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const profile: SeniorProfile = {
+      id: 'prof-ai-sc',
+      caseId: 'case-ai-strict-complete',
+      name: 'Maria Thompson',
+      livesAlone: true,
+      mobilityConstraint: false,
+      stairsConstraint: false,
+      immediateSafetyConcern: false,
+      ownsHome: true,
+    };
+
+    await planningEngine.generatePlan(caseData, profile, []);
+
+    const initialTasks = await repository.getTasksByCaseId('case-ai-strict-complete');
+    const initialCompletedCount = initialTasks.filter((t) => t.status === 'COMPLETED').length;
+
+    const response = await aiOrchestrator.processUserIntent(
+      'case-ai-strict-complete',
+      'Complete the astronaut paperwork task'
+    );
+
+    expect(response.toolResults[0].success).toBe(false);
+    expect(response.toolResults[0].message).toContain('Could not find a task matching');
+
+    const finalTasks = await repository.getTasksByCaseId('case-ai-strict-complete');
+    const finalCompletedCount = finalTasks.filter((t) => t.status === 'COMPLETED').length;
+    expect(finalCompletedCount).toBe(initialCompletedCount);
+  });
 });

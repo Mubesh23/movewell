@@ -138,7 +138,7 @@ User request: ${prompt}`,
                 await AI_TOOLS_REGISTRY.complete_task({
                   caseId,
                   taskId: args.taskId,
-                  taskTitleQuery: args.taskTitleQuery || args.taskTitle || args.task || 'discharge',
+                  taskTitleQuery: args.taskTitleQuery || args.taskTitle || args.task,
                   note: args.note || args.completionNotes,
                 })
               );
@@ -150,7 +150,7 @@ User request: ${prompt}`,
 
         let textResponse = response.text || '';
         if (!textResponse && toolResults.length > 0) {
-          textResponse = toolResults.map((tr) => tr.message).join(' ');
+          textResponse = toolResults.map((tr) => tr.message).join('\n\n');
         }
 
         if (textResponse || toolResults.length > 0) {
@@ -244,14 +244,26 @@ User request: ${prompt}`,
       responseMessages.push(`Found ${res.data?.length || 0} local verified listings.`);
     }
 
-    // Intent 4: Task Completion
-    if (lower.includes('complete') || lower.includes('done') || lower.includes('finished')) {
-      const overview = await caseService.getCaseOverview(caseId);
-      const target = overview?.tasks.find((t) => t.status === 'READY') || overview?.tasks[0];
-      if (target) {
-        const res = await AI_TOOLS_REGISTRY.complete_task({ caseId, taskId: target.id });
-        toolResults.push(res);
-        responseMessages.push(`Marked "${target.title}" as completed.`);
+    // Intent 4: Task Completion (Strict Task Query Resolution)
+    if (lower.includes('complete') || lower.includes('done') || lower.includes('finished') || lower.includes('mark')) {
+      const queryCleaned = lower
+        .replace(/\bmark\b/g, '')
+        .replace(/\bcomplete\b/g, '')
+        .replace(/\bdone\b/g, '')
+        .replace(/\bfinished\b/g, '')
+        .replace(/\bas\b/g, '')
+        .replace(/\bthe\b/g, '')
+        .trim();
+
+      const res = await AI_TOOLS_REGISTRY.complete_task({
+        caseId,
+        taskTitleQuery: queryCleaned || 'discharge',
+      });
+      toolResults.push(res);
+      if (res.success) {
+        responseMessages.push(res.message);
+      } else {
+        responseMessages.push(res.message);
       }
     }
 
