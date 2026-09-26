@@ -19,16 +19,25 @@ export const AI_TOOLS_REGISTRY = {
     const remaining = overview.tasks.filter((t) => t.status !== 'COMPLETED' && t.status !== 'SKIPPED');
     const remainingList =
       remaining.length > 0
-        ? remaining.slice(0, 4).map((t) => `• ${t.title} (${t.phase.replace('_', ' ')})`).join('\n')
+        ? remaining
+            .slice(0, 5)
+            .map((t) => {
+              const assigneeName = t.assignee ? t.assignee.name : 'Unassigned';
+              const phaseLabel = t.phase.replace('_', ' ');
+              return `• **${t.title}** (${phaseLabel})\n  👤 Assigned to: *${assigneeName}*`;
+            })
+            .join('\n\n')
         : 'All tasks in the transition plan are completed!';
+
+    const completedCount = overview.tasks.length - remaining.length;
 
     return {
       toolName: 'get_plan',
       success: true,
       message:
-        `Here is the plan status for ${overview.seniorProfile.name}:\n\n` +
-        `• Progress: ${overview.progressPercent}% (${overview.tasks.length - remaining.length}/${overview.tasks.length} completed)\n\n` +
-        `Remaining Tasks:\n${remainingList}`,
+        `**Transition Plan Summary for ${overview.seniorProfile.name}**\n` +
+        `📊 Progress: **${overview.progressPercent}%** (${completedCount}/${overview.tasks.length} tasks completed)\n\n` +
+        `📋 **Remaining Tasks & Assignees:**\n${remainingList}`,
       data: overview,
     };
   },

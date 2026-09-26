@@ -15,6 +15,35 @@ interface ChatMessage {
   suggestionChip?: string;
 }
 
+function renderFormattedText(text: string) {
+  const lines = text.split('\n');
+  return lines.map((line, lineIdx) => {
+    const parts = line.split(/(\*\*.*?\*\*|\*.*?\*)/g);
+    return (
+      <React.Fragment key={lineIdx}>
+        {parts.map((part, partIdx) => {
+          if (part.startsWith('**') && part.endsWith('**')) {
+            return (
+              <strong key={partIdx} className="font-bold text-stone-900">
+                {part.slice(2, -2)}
+              </strong>
+            );
+          }
+          if (part.startsWith('*') && part.endsWith('*')) {
+            return (
+              <span key={partIdx} className="font-semibold text-brand-900 bg-brand-50 px-1 py-0.5 rounded border border-brand-200/60 text-[11px]">
+                {part.slice(1, -1)}
+              </span>
+            );
+          }
+          return part;
+        })}
+        {lineIdx < lines.length - 1 && <br />}
+      </React.Fragment>
+    );
+  });
+}
+
 export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
@@ -168,7 +197,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
                   : 'bg-white border border-stone-200 text-stone-900 rounded-bl-none shadow-xs'
               }`}
             >
-              {m.text}
+              {renderFormattedText(m.text)}
             </div>
 
             {/* Tool confirmation badges */}
