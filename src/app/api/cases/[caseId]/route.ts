@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { caseService } from '@/services/case-service';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { caseId: string } }
@@ -13,7 +16,9 @@ export async function GET(
         { status: 404 }
       );
     }
-    return NextResponse.json({ success: true, data: overview });
+    return NextResponse.json({ success: true, data: overview }, {
+      headers: { 'Cache-Control': 'no-store, max-age=0' },
+    });
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message },

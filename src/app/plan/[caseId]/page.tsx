@@ -33,7 +33,7 @@ export default function DashboardPage() {
 
   const fetchOverview = React.useCallback(async () => {
     try {
-      const res = await fetch(`/api/cases/${caseId}`);
+      const res = await fetch(`/api/cases/${caseId}`, { cache: 'no-store' });
       const data = await res.json();
       if (data.success) {
         setOverview(data.data);

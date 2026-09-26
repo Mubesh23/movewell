@@ -17,7 +17,7 @@ export default function BudgetPage() {
 
   const fetchOverview = React.useCallback(async () => {
     try {
-      const res = await fetch(`/api/cases/${caseId}`);
+      const res = await fetch(`/api/cases/${caseId}`, { cache: 'no-store' });
       const data = await res.json();
       if (data.success) setOverview(data.data);
     } catch (err) {
@@ -54,7 +54,7 @@ export default function BudgetPage() {
         <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-xs">
           <h1 className="text-2xl font-serif font-bold text-brand-950">Cost &amp; Budget Estimation</h1>
           <p className="text-xs text-stone-500 font-medium mt-1">
-            Deterministic planning ranges for Maria&apos;s post-hospital transition
+            Deterministic planning ranges for {seniorProfile.name}&apos;s post-hospital transition
           </p>
         </div>
 

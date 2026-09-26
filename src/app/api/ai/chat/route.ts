@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { aiOrchestrator } from '@/services/ai-orchestrator';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function POST(req: NextRequest) {
   try {
     const { caseId, prompt } = await req.json();
