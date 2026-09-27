@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Navbar } from '@/components/layout/Navbar';
 import {
   ArrowRight,
@@ -11,8 +10,6 @@ import {
   Users,
   ShieldCheck,
   Sparkles,
-  Send,
-  HelpCircle,
   MessageSquare,
   Zap,
   Clock3,
@@ -22,36 +19,6 @@ import { BRAND_NAME } from '@/lib/brand';
 export default function LandingPage() {
   const router = useRouter();
   const [loadingDemo, setLoadingDemo] = useState(false);
-  const [initialPrompt, setInitialPrompt] = useState('');
-  const [noraPreview, setNoraPreview] = useState<{
-    userMessage: string;
-    noraReply: string;
-  } | null>(null);
-
-  const handleHomepageNoraSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!initialPrompt.trim()) return;
-    setNoraPreview({
-      userMessage: initialPrompt.trim(),
-      noraReply:
-        "I'm on it. Tell me a little more about who you're planning for, and I'll help you find the right next step.",
-    });
-  };
-
-  const handleChipClick = (promptText: string) => {
-    setInitialPrompt(promptText);
-    setNoraPreview({
-      userMessage: promptText,
-      noraReply:
-        "I'm on it. Tell me a little more about who you're planning for, and I'll help you find the right next step.",
-    });
-  };
-
-  const handleContinueWithNora = () => {
-    const text = noraPreview?.userMessage || initialPrompt.trim();
-    if (!text) return;
-    router.push(`/get-started?initial=${encodeURIComponent(text)}`);
-  };
 
   const handleExploreSamplePlan = async () => {
     setLoadingDemo(true);
@@ -76,195 +43,68 @@ export default function LandingPage() {
       <Navbar />
 
       <main className="flex-1">
-        {/* Mockup-Inspired Deep Evergreen Hero Section with Photographic Warmth */}
-        <section className="relative isolate overflow-hidden bg-[#173F39] text-white pt-12 pb-20 md:pt-20 md:pb-28 border-b border-[#12302C]">
-          {/* Background Photo Overlay */}
+        {/* Mockup Hero Section - Clean, Warm & Unobstructed */}
+        <section className="relative isolate overflow-hidden bg-[#173F39] text-white pt-12 pb-16 md:pt-20 md:pb-24 border-b border-[#12302C]">
+          {/* Full-width Background Photo - Uncut and unobstructed */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/images/movewell-hero.png"
-            alt="Family gathered in supportive conversation"
-            className="absolute inset-0 -z-20 size-full object-cover object-center opacity-40 mix-blend-luminosity pointer-events-none"
+            alt="A family supporting their aging parent"
+            className="absolute inset-0 -z-20 size-full object-cover object-center opacity-50 pointer-events-none"
           />
-          {/* Calming Vignette Gradient Overlay */}
-          <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(17,56,50,0.96)_0%,rgba(23,63,57,0.90)_45%,rgba(23,63,57,0.35)_100%)] pointer-events-none" />
+          {/* Mockup Vignette Gradient Overlay */}
+          <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(17,56,50,0.95)_0%,rgba(23,63,57,0.85)_40%,rgba(23,63,57,0.2)_100%)] pointer-events-none" />
 
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-              {/* Left Column (7 cols): Brand Narrative & Main CTAs */}
-              <div className="lg:col-span-7 space-y-6">
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 text-[#C8E1CE] text-xs font-semibold tracking-wider border border-white/15 backdrop-blur-xs">
-                  <Sparkles className="w-3.5 h-3.5 text-[#C8E1CE]" />
-                  <span>A CALMER WAY FORWARD</span>
-                </div>
-
-                <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-bold text-white tracking-[-0.03em] leading-[1.1]">
-                  When life changes,{' '}
-                  <span className="text-[#D7AD77]">
-                    move through it together.
-                  </span>
-                </h1>
-
-                <p className="text-base sm:text-lg text-[#D6E6D9] leading-relaxed max-w-xl">
-                  {BRAND_NAME} helps families understand what needs to happen, coordinate who&apos;s doing it, find the right help, track costs, and keep the plan current as life changes.
-                </p>
-
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-2">
-                  <Link
-                    href="/get-started"
-                    className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-white hover:bg-[#F1F6F1] text-[#1F4D45] font-semibold text-sm transition-all shadow-lg"
-                  >
-                    <span>Get started free</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-
-                  <a
-                    href="#how-it-works"
-                    className="inline-flex items-center justify-center px-6 py-3.5 rounded-xl border border-white/30 bg-white/10 hover:bg-white/15 text-white font-semibold text-sm backdrop-blur-xs transition-colors text-center"
-                  >
-                    See how it works
-                  </a>
-
-                  <button
-                    type="button"
-                    onClick={handleExploreSamplePlan}
-                    disabled={loadingDemo}
-                    className="text-xs font-semibold text-[#B8D4BA] hover:text-white px-2 py-3 transition-colors text-center"
-                  >
-                    {loadingDemo ? 'Loading demo...' : 'Explore sample plan →'}
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-6 pt-3 text-xs text-[#B8D4BA] font-medium">
-                  <span className="inline-flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4 text-[#A7C4B6]" />
-                    Private family coordination
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <Users className="w-4 h-4 text-[#A7C4B6]" />
-                    No credit card required
-                  </span>
-                </div>
+          <div className="mx-auto flex min-h-[480px] max-w-6xl items-center px-4 sm:px-6 lg:px-8 py-10 md:py-16">
+            <div className="max-w-2xl">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#C8E1CE]">
+                <Sparkles className="w-3.5 h-3.5 text-[#C8E1CE]" />
+                <span>A CALMER WAY FORWARD</span>
               </div>
 
-              {/* Right Column (5 cols): Functional Interactive Nora Preview Card */}
-              <div className="lg:col-span-5">
-                <div className="rounded-3xl border border-white/20 bg-white/95 backdrop-blur-md p-5 sm:p-6 shadow-2xl text-[#183331] relative">
-                  {/* Card Header */}
-                  <div className="flex items-center justify-between pb-4 mb-4 border-b border-[#E3E9E5]">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-[#1F4D45] text-white flex items-center justify-center font-bold text-xs shadow-2xs">
-                        ✦
-                      </div>
-                      <div>
-                        <strong className="text-sm font-bold text-[#183331] block leading-none">
-                          Nora
-                        </strong>
-                        <span className="text-[11px] text-[#667572] leading-tight">
-                          {BRAND_NAME}&apos;s AI planning guide
-                        </span>
-                      </div>
-                    </div>
-                    <div
-                      className="text-[#667572] hover:text-[#183331] cursor-pointer"
-                      title="Nora helps with planning and coordination. She doesn't provide medical, legal, or financial advice."
-                    >
-                      <HelpCircle className="w-4 h-4 text-[#667572]/70" />
-                    </div>
-                  </div>
+              <h1 className="mt-6 text-4xl sm:text-5xl lg:text-7xl font-bold leading-[1.1] tracking-[-0.02em] text-white">
+                When life changes, move through it together.
+              </h1>
 
-                  {/* Speech Bubbles */}
-                  <div className="space-y-3 mb-4 min-h-[170px] flex flex-col justify-end">
-                    {/* Nora Welcome Bubble */}
-                    <div className="p-3.5 rounded-2xl bg-[#F7F8F5] border border-[#E3E9E5] text-xs text-[#183331] leading-relaxed self-start max-w-[90%]">
-                      Hi, I&apos;m Nora. Tell me about your parent&apos;s situation—what&apos;s happening, and what are you most worried about?
-                    </div>
+              <p className="mt-6 max-w-lg text-lg leading-8 text-[#D6E6D9] md:text-xl">
+                {BRAND_NAME} helps families understand what needs to happen, coordinate who&apos;s doing it, find the right help, track costs, and keep the plan current as life changes.
+              </p>
 
-                    <AnimatePresence>
-                      {noraPreview && (
-                        <motion.div
-                          key="nora-preview-group"
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0 }}
-                          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                          className="space-y-3 flex flex-col"
-                        >
-                          {/* User Bubble */}
-                          <div className="p-3 rounded-2xl bg-[#1F4D45] text-white text-xs leading-relaxed self-end max-w-[85%] font-medium shadow-2xs">
-                            {noraPreview.userMessage}
-                          </div>
+              <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
+                <Link
+                  href="/get-started"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-7 py-3.5 text-base font-semibold text-[#1F4D45] shadow-lg hover:bg-[#F1F6F1] transition-all"
+                >
+                  <span>Get started</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
 
-                          {/* Nora Response Bubble */}
-                          <div className="p-3.5 rounded-2xl bg-[#F7F8F5] border border-[#E3E9E5] text-xs text-[#183331] leading-relaxed self-start max-w-[90%] shadow-2xs">
-                            {noraPreview.noraReply}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
+                <a
+                  href="#how-it-works"
+                  className="inline-flex items-center justify-center px-6 py-3.5 rounded-xl border border-white/30 bg-white/10 hover:bg-white/15 text-white font-semibold text-base backdrop-blur-sm transition-colors text-center"
+                >
+                  See how it works
+                </a>
 
-                  {/* Interaction Area */}
-                  {noraPreview ? (
-                    <div className="pt-2">
-                      <motion.button
-                        type="button"
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={handleContinueWithNora}
-                        className="w-full py-3 px-4 rounded-xl bg-[#1F4D45] hover:bg-[#163D37] text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-xs"
-                      >
-                        <span>Continue with Nora</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </motion.button>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {/* Quick Prompts */}
-                      <div className="flex flex-col gap-1.5">
-                        {[
-                          'My parent is leaving the hospital Friday',
-                          'My parent needs to move and has mobility issues',
-                          "I'm coordinating from out of town and need a plan",
-                        ].map((prompt, i) => (
-                          <motion.button
-                            key={i}
-                            type="button"
-                            whileHover={{ x: 2 }}
-                            whileTap={{ scale: 0.99 }}
-                            onClick={() => handleChipClick(prompt)}
-                            className="text-left px-3 py-2 rounded-xl bg-[#E7F0E9]/60 hover:bg-[#E7F0E9] border border-[#D0E2D5] text-xs font-medium text-[#1F4D45] transition-colors"
-                          >
-                            {prompt}
-                          </motion.button>
-                        ))}
-                      </div>
+                <button
+                  type="button"
+                  onClick={handleExploreSamplePlan}
+                  disabled={loadingDemo}
+                  className="inline-flex items-center justify-center text-sm font-semibold text-[#B8D4BA] hover:text-white px-3 py-3 transition-colors text-center"
+                >
+                  {loadingDemo ? 'Loading demo...' : 'Explore sample plan →'}
+                </button>
+              </div>
 
-                      {/* Custom input */}
-                      <form onSubmit={handleHomepageNoraSubmit} className="relative pt-1">
-                        <input
-                          id="nora-input-field"
-                          type="text"
-                          value={initialPrompt}
-                          onChange={(e) => setInitialPrompt(e.target.value)}
-                          placeholder="Tell Nora what's going on..."
-                          className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-[#D0E2D5] bg-[#FBFAF7] text-xs text-[#183331] placeholder:text-[#667572]/70 focus:outline-none focus:ring-2 focus:ring-[#1F4D45]/20 focus:border-[#1F4D45] transition-all"
-                        />
-                        <button
-                          type="submit"
-                          disabled={!initialPrompt.trim()}
-                          className="absolute right-1.5 top-2 w-7 h-7 rounded-lg bg-[#1F4D45] hover:bg-[#163D37] text-white flex items-center justify-center transition-colors disabled:opacity-30"
-                          title="Send to Nora"
-                        >
-                          <Send className="w-3.5 h-3.5" />
-                        </button>
-                      </form>
-                    </div>
-                  )}
-
-                  <p className="text-[10px] text-[#667572] text-center mt-3">
-                    Nora offers planning guidance, not medical, legal, or financial advice.
-                  </p>
-                </div>
+              <div className="mt-8 flex items-center gap-6 text-sm text-[#B8D4BA]">
+                <span className="inline-flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-[#A7C4B6]" />
+                  Private family workspace
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Users className="w-4 h-4 text-[#A7C4B6]" />
+                  Coordinate care together
+                </span>
               </div>
             </div>
           </div>
