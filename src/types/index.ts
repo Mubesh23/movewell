@@ -145,6 +145,7 @@ export type CostUnit = 'flat' | 'hourly' | 'monthly' | 'per_day';
 
 export interface TransitionCase {
   id: string;
+  ownerUserId?: string;
   seniorProfileId?: string;
   transitionType: TransitionType;
   urgency: Urgency;
@@ -217,6 +218,7 @@ export interface SeniorProfile {
 export interface CaseMember {
   id: string;
   caseId: string;
+  userId?: string;
   name: string;
   relationship?: MemberRelationship;
   city?: string;
@@ -362,3 +364,138 @@ export interface CaseOverview {
   daysUntilDischarge?: number;
   urgentTask?: TransitionTask;
 }
+
+// --- Auth & User Profile ---
+export interface UserProfile {
+  id: string;
+  email?: string;
+  displayName?: string;
+  isAnonymous?: boolean;
+}
+
+// --- Case Locations ---
+export interface CaseLocation {
+  id: string;
+  planDraftId?: string;
+  caseId?: string;
+  type: CaseLocationType;
+  label: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  latitude?: number;
+  longitude?: number;
+  externalPlaceId?: string;
+  createdAt?: string;
+}
+
+// --- Intake Draft Record ---
+export interface IntakeDraftRecord {
+  id: string;
+  ownerUserId: string;
+  data: IntakeDraft;
+  status: 'IN_PROGRESS' | 'READY_FOR_PLAN';
+  createdAt: string;
+  updatedAt: string;
+}
+
+// --- Plan Draft Models ---
+export interface ProposedTask {
+  id: string;
+  templateId?: string;
+  title: string;
+  description?: string;
+  whyItMatters?: string;
+  phase: TaskPhase;
+  priority: number;
+  dueDate?: string; // YYYY-MM-DD
+  assigneeName?: string;
+  minEstimatedCost: number;
+  maxEstimatedCost: number;
+  category?: string;
+  applicable: boolean;
+  notes?: string;
+}
+
+export interface ProposedMember {
+  id: string;
+  name: string;
+  relationship?: string;
+  city?: string;
+  isLocal: boolean;
+  role: CaseMemberRole;
+}
+
+export interface ProposedResourceNeed {
+  category: ResourceCategory | string;
+  label: string;
+  countNearby?: number;
+  searchTerms: string[];
+}
+
+export interface PlanDraft {
+  id: string;
+  ownerUserId: string;
+  intakeDraftId?: string;
+  seniorProfile: {
+    name: string;
+    ageRange?: string;
+    livesAlone: boolean;
+    mobilityConstraint: boolean;
+    stairsConstraint: boolean;
+    homeType?: string;
+  };
+  dischargeTiming?: {
+    date?: string;
+    days?: number;
+    description?: string;
+  };
+  proposedTasks: ProposedTask[];
+  proposedMembers: ProposedMember[];
+  proposedBudget?: number;
+  budgetStatus: 'SET' | 'UNSET';
+  proposedLocations: CaseLocation[];
+  proposedResourceNeeds: ProposedResourceNeed[];
+  status: 'DRAFT' | 'READY' | 'ACTIVATED';
+  caseId?: string; // set once activated
+  createdAt: string;
+  updatedAt: string;
+}
+
+// --- Resource Search Abstraction & Provenance ---
+export type ResourceTrustLabel =
+  | 'MoveWell-reviewed'
+  | 'Public agency'
+  | 'Directory listing'
+  | 'Nearby option'
+  | 'External listing';
+
+export interface ResourceSearchInput {
+  category: ResourceCategory | string;
+  zipCode?: string;
+  city?: string;
+  state?: string;
+  limit?: number;
+}
+
+export interface ResourceCandidate {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  distanceMiles?: number;
+  trustLabel: ResourceTrustLabel;
+  costType?: string;
+  website?: string;
+}
+
+export interface ResourceSearchProvider {
+  searchNearby(input: ResourceSearchInput): Promise<ResourceCandidate[]>;
+}
+

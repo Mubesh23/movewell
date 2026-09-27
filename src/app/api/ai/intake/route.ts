@@ -139,29 +139,62 @@ function deterministicExtract(text: string, currentDraft: IntakeDraft = {}): Par
     updates.userIsRemote = true;
   }
 
+  // Location / ZIP / City
+  let extractedZip: string | undefined;
+  const zipMatch = text.match(/\b(\d{5})\b/);
+  if (zipMatch && !zipMatch[1].startsWith('000')) {
+    extractedZip = zipMatch[1];
+    updates.zipCode = extractedZip;
+  }
+  const cityStateMatch = text.match(/\b(?:in|at|near)\s+([A-Z][a-zA-Z\s]+?),\s*([A-Z]{2})\b/);
+  if (cityStateMatch) {
+    updates.city = `${cityStateMatch[1].trim()}, ${cityStateMatch[2]}`;
+  } else {
+    const commonCities: Record<string, string> = {
+      houston: 'Houston, TX',
+      dallas: 'Dallas, TX',
+      austin: 'Austin, TX',
+      chicago: 'Chicago, IL',
+      denver: 'Denver, CO',
+      atlanta: 'Atlanta, GA',
+      seattle: 'Seattle, WA',
+      phoenix: 'Phoenix, AZ',
+      miami: 'Miami, FL',
+      boston: 'Boston, MA',
+    };
+    for (const [key, val] of Object.entries(commonCities)) {
+      if (lower.includes(key)) {
+        updates.city = val;
+        break;
+      }
+    }
+  }
+
   // Budget
-  if (lower.includes('leave it open') || lower.includes('leave open') || lower.includes('not set') || lower.includes('no budget') || lower.includes('not sure') || lower.includes('open for now')) {
+  if (
+    lower.includes('leave it open') ||
+    lower.includes('leave open') ||
+    lower.includes('not set') ||
+    lower.includes('no budget') ||
+    lower.includes('not sure') ||
+    lower.includes('open for now')
+  ) {
     updates.budgetStatus = 'UNSET';
     updates.budget = undefined;
   } else {
-    const budgetMatch = text.match(/\$?(\d{1,3}(?:,\d{3})+|\d{4,6})\b/);
-    if (budgetMatch) {
-      const parsed = parseInt(budgetMatch[1].replace(/,/g, ''), 10);
-      if (parsed >= 500) {
+    // Only extract budget if there is an explicit $ sign or the word 'budget'
+    const dollarMatch = text.match(/\$(\d{1,3}(?:,\d{3})*|\d{3,6})\b/);
+    const budgetWordMatch = text.match(/\bbudget\s*(?:of|is|around|about)?\s*:?\s*\$?(\d{1,3}(?:,\d{3})*|\d{3,6})\b/i);
+
+    const budgetCandidate = dollarMatch ? dollarMatch[1] : (budgetWordMatch ? budgetWordMatch[1] : null);
+    if (budgetCandidate) {
+      const parsed = parseInt(budgetCandidate.replace(/,/g, ''), 10);
+      if (parsed >= 100 && String(parsed) !== extractedZip) {
         updates.budget = parsed;
         updates.budgetStatus = 'SET';
       }
     }
   }
-
-  // Location / ZIP
-  const zipMatch = text.match(/\b(\d{5})\b/);
-  if (zipMatch && !zipMatch[1].startsWith('000')) {
-    updates.zipCode = zipMatch[1];
-  }
-  if (lower.includes('houston')) updates.city = 'Houston, TX';
-  if (lower.includes('dallas')) updates.city = 'Dallas, TX';
-  if (lower.includes('austin')) updates.city = 'Austin, TX';
 
   return updates;
 }
@@ -214,16 +247,19 @@ RULES FOR EXTRACTION:
 - Extract ONLY facts explicitly stated or strongly implied by the user.
 - seniorName: extract the senior's actual name (e.g. "Maria", "Robert"). If the user refers to them as "my mom" without an explicit personal name, output "Mom". NEVER output an event/action verb like "fell", "had", "broke", or "is" as a senior's name!
 - If the user says "leave it open", "not sure", or "no budget", set budgetStatus: "UNSET" and budget: null.
+- If the user provides a ZIP code or city/state, extract zipCode and/or city.
 - If the user says "no one nearby" or "I'm on my own", set hasLocalHelper: false.
 - If the user gives a day of the week (e.g. "Thursday"), set dischargeTimelineDescription: "Thursday" and estimate dischargeDays.
 - DO NOT invent fictional names, locations, or details.
 - DO NOT default missing values to Houston or $8,000. Leave missing fields null.
 
 RULES FOR CONVERSATIONAL REPLY:
-- If all required information is now known (senior name, discharge timeline, mobility/safety constraint, coordinator/support, and budget addressed):
-  Acknowledge warmly, provide a concise recap of what you've gathered (bulleted or structured like: Senior name, discharge day, mobility constraint, who is helping, budget status), state the immediate first priority (e.g. confirming a safe discharge destination), and confirm you have enough to build their transition plan.
+- If all required information is now known (senior name, discharge timeline, mobility/safety constraint, location, coordinator/support, and budget addressed):
+  Acknowledge warmly, provide a concise recap of what you've gathered, state the immediate first priority (e.g. confirming a safe discharge destination), and confirm you have enough to build their transition plan.
 - If more information is still needed:
   Warmly acknowledge what the user just said in 1 brief sentence, then ask ONE natural, gentle follow-up question for the next highest-value needed fact (${initialEvaluation.nextTargetField}).
+  If asking for LOCATION: "What address or ZIP code should I use when looking for nearby help? You can give me just the ZIP if you'd rather not share the exact address yet."
+  If asking for BUDGET: "Do you already have a budget in mind, or should we leave that open for now?"
   NEVER ask multiple questions in the same turn.`;
 
         const response = await ai.models.generateContent({

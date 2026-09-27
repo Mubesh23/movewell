@@ -18,6 +18,11 @@ export class IntakeReadinessService {
       draft.mobilityConstraint !== undefined ||
       draft.stairsConstraint !== undefined;
     
+    const hasLocation = Boolean(
+      (draft.zipCode && draft.zipCode.trim().length > 0 && draft.zipCode !== 'UNSET') ||
+      (draft.city && draft.city.trim().length > 0)
+    );
+
     const hasCoordinator = Boolean(
       draft.userName ||
       draft.userIsRemote !== undefined ||
@@ -26,36 +31,40 @@ export class IntakeReadinessService {
       draft.localHelperName
     );
 
+    const hasBudgetStatus = draft.budget !== undefined || draft.budgetStatus === 'UNSET';
+
     if (!hasSenior) missingRequiredFields.push('senior reference or name');
     if (!hasDischarge) missingRequiredFields.push('discharge timing');
     if (!hasMobilityOrSafety) missingRequiredFields.push('mobility and home safety situation');
+    if (!hasLocation) missingRequiredFields.push('location or ZIP code');
     if (!hasCoordinator) missingRequiredFields.push('family coordinator role');
+    if (!hasBudgetStatus) missingRequiredFields.push('budget preference');
 
-    // Determine the single highest-value question to ask next
+    // Determine the single highest-value question to ask next in priority sequence:
+    // Timing → Mobility/Safety → Location → Coordinator/Local Support → Budget
     let nextTargetField: IntakeTargetField = 'NONE';
     if (!hasDischarge) {
       nextTargetField = 'DISCHARGE_TIMING';
     } else if (!hasMobilityOrSafety) {
       nextTargetField = 'SAFETY_MOBILITY';
-    } else if (!draft.destinationStatus && !draft.homeType && draft.livesAlone === undefined) {
-      nextTargetField = 'DESTINATION_HOUSING';
-    } else if (draft.hasLocalHelper === undefined && !draft.localHelperName && draft.userIsRemote === undefined) {
+    } else if (!hasLocation) {
+      nextTargetField = 'LOCATION';
+    } else if (draft.hasLocalHelper === undefined && !draft.localHelperName) {
       nextTargetField = 'LOCAL_SUPPORT';
-    } else if (draft.budget === undefined && draft.budgetStatus !== 'UNSET') {
+    } else if (!hasBudgetStatus) {
       nextTargetField = 'BUDGET';
-    } else if (!draft.zipCode && !draft.city && draft.zipCode !== 'UNSET') {
-      // Location is optional; ask only if all core safety and budget steps are resolved
-      nextTargetField = 'NONE';
     } else {
       nextTargetField = 'NONE';
     }
 
-    // Minimum viable threshold: senior name, discharge timeline, mobility constraint, and budget checked (set or unset)
+    // Minimum viable threshold: senior, discharge, mobility, location, coordinator, and budget (set or unset)
     const isReady =
       hasSenior &&
       hasDischarge &&
       hasMobilityOrSafety &&
-      (draft.budget !== undefined || draft.budgetStatus === 'UNSET' || nextTargetField === 'NONE');
+      hasLocation &&
+      hasCoordinator &&
+      hasBudgetStatus;
 
     // Build concise, human confirmation bullet points
     const INVALID_NAMES = new Set([
@@ -135,9 +144,9 @@ export class IntakeReadinessService {
       case 'LOCAL_SUPPORT':
         return `Is there anyone nearby who can help ${sName} in person, or are you coordinating mostly from a distance?`;
       case 'LOCATION':
-        return `What city or ZIP code should I use when looking for nearby services? (Or we can leave this open for now)`;
+        return `What address or ZIP code should I use when looking for nearby help? You can give me just the ZIP if you'd rather not share the exact address yet.`;
       case 'BUDGET':
-        return `One last thing before I build the plan: do you already have a budget in mind, or should we leave that open for now?`;
+        return `Do you already have a budget in mind, or should we leave that open for now?`;
       default:
         return 'Is there anything else I should know about the situation before we build the plan?';
     }

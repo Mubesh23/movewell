@@ -8,6 +8,10 @@ import {
   CostModel,
   ServiceResource,
   CostItem,
+  IntakeDraftRecord,
+  PlanDraft,
+  CaseLocation,
+  UserProfile,
 } from '../types';
 import { memoryStore } from './memory-store';
 import { supabase } from './client';
@@ -26,6 +30,7 @@ export class Repository {
 
       const { error } = await supabase.from('transition_cases').upsert({
         id: caseData.id,
+        owner_user_id: caseData.ownerUserId || null,
         transition_type: caseData.transitionType,
         urgency: caseData.urgency,
         zip_code: dbZip,
@@ -64,6 +69,7 @@ export class Repository {
       if (data) {
         const cData: TransitionCase = {
           id: data.id,
+          ownerUserId: data.owner_user_id || undefined,
           transitionType: data.transition_type,
           urgency: data.urgency,
           zipCode: data.zip_code && data.zip_code !== 'UNSET' && data.zip_code !== '' ? data.zip_code : undefined,
@@ -189,6 +195,7 @@ export class Repository {
       const { error } = await supabase.from('case_members').upsert({
         id: member.id,
         case_id: member.caseId,
+        user_id: member.userId || null,
         name: member.name,
         relationship: member.relationship || null,
         city: member.city || null,
@@ -241,9 +248,10 @@ export class Repository {
       }
 
       if (data) {
-        const list = data.map((m) => ({
+        const list: CaseMember[] = data.map((m) => ({
           id: m.id,
           caseId: m.case_id,
+          userId: m.user_id || undefined,
           name: m.name,
           relationship: m.relationship || undefined,
           city: m.city || undefined,
@@ -609,6 +617,222 @@ export class Repository {
           verification: ver,
         };
       });
+  }
+
+  // --- Intake Drafts ---
+  async saveIntakeDraft(record: IntakeDraftRecord): Promise<IntakeDraftRecord> {
+    memoryStore.intakeDrafts.set(record.id, { ...record });
+    if (supabase) {
+      const { error } = await supabase.from('intake_drafts').upsert({
+        id: record.id,
+        owner_user_id: record.ownerUserId,
+        data: record.data,
+        status: record.status,
+        created_at: record.createdAt,
+        updated_at: record.updatedAt,
+      });
+      if (error) {
+        console.error('Supabase saveIntakeDraft error:', error);
+      }
+    }
+    return record;
+  }
+
+  async getIntakeDraftById(id: string): Promise<IntakeDraftRecord | null> {
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('intake_drafts')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (!error && data) {
+        const record: IntakeDraftRecord = {
+          id: data.id,
+          ownerUserId: data.owner_user_id,
+          data: data.data,
+          status: data.status,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at,
+        };
+        memoryStore.intakeDrafts.set(record.id, record);
+        return record;
+      }
+    }
+    return memoryStore.intakeDrafts.get(id) || null;
+  }
+
+  // --- Plan Drafts ---
+  async savePlanDraft(draft: PlanDraft): Promise<PlanDraft> {
+    memoryStore.planDrafts.set(draft.id, { ...draft });
+    if (supabase) {
+      const { error } = await supabase.from('plan_drafts').upsert({
+        id: draft.id,
+        owner_user_id: draft.ownerUserId,
+        intake_draft_id: draft.intakeDraftId || null,
+        senior_profile: draft.seniorProfile,
+        discharge_timing: draft.dischargeTiming || null,
+        proposed_tasks: draft.proposedTasks,
+        proposed_members: draft.proposedMembers,
+        proposed_budget: draft.proposedBudget !== undefined ? draft.proposedBudget : null,
+        budget_status: draft.budgetStatus,
+        proposed_locations: draft.proposedLocations,
+        proposed_resource_needs: draft.proposedResourceNeeds,
+        status: draft.status,
+        case_id: draft.caseId || null,
+        created_at: draft.createdAt,
+        updated_at: draft.updatedAt,
+      });
+      if (error) {
+        console.error('Supabase savePlanDraft error:', error);
+      }
+    }
+    return draft;
+  }
+
+  async getPlanDraftById(id: string): Promise<PlanDraft | null> {
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('plan_drafts')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (!error && data) {
+        const draft: PlanDraft = {
+          id: data.id,
+          ownerUserId: data.owner_user_id,
+          intakeDraftId: data.intake_draft_id || undefined,
+          seniorProfile: data.senior_profile,
+          dischargeTiming: data.discharge_timing || undefined,
+          proposedTasks: data.proposed_tasks || [],
+          proposedMembers: data.proposed_members || [],
+          proposedBudget: data.proposed_budget !== null && data.proposed_budget !== undefined ? Number(data.proposed_budget) : undefined,
+          budgetStatus: data.budget_status || 'UNSET',
+          proposedLocations: data.proposed_locations || [],
+          proposedResourceNeeds: data.proposed_resource_needs || [],
+          status: data.status,
+          caseId: data.case_id || undefined,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at,
+        };
+        memoryStore.planDrafts.set(draft.id, draft);
+        return draft;
+      }
+    }
+    return memoryStore.planDrafts.get(id) || null;
+  }
+
+  async updatePlanDraft(id: string, updates: Partial<PlanDraft>): Promise<PlanDraft> {
+    const existing = await this.getPlanDraftById(id);
+    if (!existing) {
+      throw new Error(`PlanDraft not found: ${id}`);
+    }
+    const updated: PlanDraft = {
+      ...existing,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+    return this.savePlanDraft(updated);
+  }
+
+  // --- Case Locations ---
+  async saveCaseLocation(loc: CaseLocation): Promise<CaseLocation> {
+    memoryStore.caseLocations.set(loc.id, { ...loc });
+    if (supabase) {
+      const { error } = await supabase.from('case_locations').upsert({
+        id: loc.id,
+        plan_draft_id: loc.planDraftId || null,
+        case_id: loc.caseId || null,
+        type: loc.type,
+        label: loc.label,
+        address: loc.address || null,
+        city: loc.city || null,
+        state: loc.state || null,
+        zip_code: loc.zipCode || null,
+        latitude: loc.latitude || null,
+        longitude: loc.longitude || null,
+        external_place_id: loc.externalPlaceId || null,
+        created_at: loc.createdAt || new Date().toISOString(),
+      });
+      if (error) {
+        console.error('Supabase saveCaseLocation error:', error);
+      }
+    }
+    return loc;
+  }
+
+  async getLocationsForDraft(planDraftId: string): Promise<CaseLocation[]> {
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('case_locations')
+        .select('*')
+        .eq('plan_draft_id', planDraftId);
+      if (!error && data) {
+        return data.map((d) => ({
+          id: d.id,
+          planDraftId: d.plan_draft_id || undefined,
+          caseId: d.case_id || undefined,
+          type: d.type,
+          label: d.label,
+          address: d.address || undefined,
+          city: d.city || undefined,
+          state: d.state || undefined,
+          zipCode: d.zip_code || undefined,
+          latitude: d.latitude ? Number(d.latitude) : undefined,
+          longitude: d.longitude ? Number(d.longitude) : undefined,
+          externalPlaceId: d.external_place_id || undefined,
+          createdAt: d.created_at,
+        }));
+      }
+    }
+    return Array.from(memoryStore.caseLocations.values()).filter(
+      (l) => l.planDraftId === planDraftId
+    );
+  }
+
+  async getLocationsForCase(caseId: string): Promise<CaseLocation[]> {
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('case_locations')
+        .select('*')
+        .eq('case_id', caseId);
+      if (!error && data) {
+        return data.map((d) => ({
+          id: d.id,
+          planDraftId: d.plan_draft_id || undefined,
+          caseId: d.case_id || undefined,
+          type: d.type,
+          label: d.label,
+          address: d.address || undefined,
+          city: d.city || undefined,
+          state: d.state || undefined,
+          zipCode: d.zip_code || undefined,
+          latitude: d.latitude ? Number(d.latitude) : undefined,
+          longitude: d.longitude ? Number(d.longitude) : undefined,
+          externalPlaceId: d.external_place_id || undefined,
+          createdAt: d.created_at,
+        }));
+      }
+    }
+    return Array.from(memoryStore.caseLocations.values()).filter(
+      (l) => l.caseId === caseId
+    );
+  }
+
+  // --- Authorization & Access Control ---
+  async checkDraftAccess(draftId: string, userId: string): Promise<boolean> {
+    if (!userId) return false;
+    const draft = await this.getPlanDraftById(draftId);
+    if (!draft) return false;
+    return draft.ownerUserId === userId;
+  }
+
+  async checkCaseAccess(caseId: string, userId: string): Promise<boolean> {
+    if (!userId) return false;
+    const c = await this.getCaseById(caseId);
+    if (!c) return false;
+    if (c.ownerUserId === userId) return true;
+    const members = await this.getCaseMembers(caseId);
+    return members.some((m) => m.userId === userId);
   }
 
   // Clear helper for tests

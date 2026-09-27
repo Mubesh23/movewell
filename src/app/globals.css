@@ -4,31 +4,44 @@
 
 @layer base {
   :root {
-    --background: 40 45% 96%; /* #FBF6EE warm cream */
-    --foreground: 75 5% 15%; /* #262824 Charcoal */
+    --cream: #FBFAF7;
+    --ink: #183331;
+    --muted-ink: #667572;
+    --line: #E3E9E5;
+    --evergreen: #1F4D45;
+    --evergreen-dark: #163D37;
+    --evergreen-subtle: #285B50;
+    --sage: #E7F0E9;
+    --amber: #B96C2C;
+    --amber-bg: #FFF1E3;
+    --amber-dot: #E9A460;
+    --avatar-peach: #E5CDBD;
+    --avatar-sage: #D8E7DB;
+    --background: 40 45% 98%;
+    --foreground: 75 5% 15%;
   }
 
   body {
-    background-color: #FBF6EE;
-    color: #262824;
+    background-color: #FBFAF7;
+    color: #183331;
     font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     -webkit-tap-highlight-color: transparent;
   }
 
-  h1, h2, h3, .font-serif {
-    font-family: var(--font-serif), Georgia, serif;
-    letter-spacing: -0.015em;
+  /* Sans-first product headers with tight tracking */
+  h1, h2, h3, h4 {
+    letter-spacing: -0.025em;
   }
 
   ::selection {
-    background-color: #FDF2EC;
-    color: #4B3A31;
+    background-color: #E7F0E9;
+    color: #163D37;
   }
 }
 
 /* Custom scrollbar & focus ring styling */
 :focus-visible {
-  outline: 2px solid #183C32;
+  outline: 2px solid #1F4D45;
   outline-offset: 2px;
 }
 
@@ -40,9 +53,77 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #CFC3B4;
+  background: #E3E9E5;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #B3A696;
+  background: #C3D1CA;
 }
+
+/* Mockup-Inspired Signature Components */
+.transition-hero {
+  display: grid;
+  grid-template-columns: 1.35fr 0.95fr;
+  background: #1F4D45;
+  color: white;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(27, 75, 58, 0.12);
+}
+
+@media (max-width: 768px) {
+  .transition-hero {
+    grid-template-columns: 1fr;
+  }
+}
+
+.hero-main {
+  padding: 28px 32px 25px;
+}
+
+.hero-stats {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 28px 32px;
+  background: #285B50;
+  gap: 20px;
+}
+
+.task-icon {
+  width: 35px;
+  height: 35px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  flex: 0 0 auto;
+}
+
+.task-icon.urgent {
+  background: #FFF1E3;
+  color: #B96C2C;
+}
+
+.task-icon.warm {
+  background: #F5EEE5;
+  color: #A87542;
+}
+
+.task-icon.sage {
+  background: #E7F0E9;
+  color: #1F4D45;
+}
+
+.ai-prompt-box {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  border: 1px solid #D7E5DB;
+  background: #EEF5EF;
+  color: #183331;
+  border-radius: 10px;
+  padding: 13px 14px;
+}
+

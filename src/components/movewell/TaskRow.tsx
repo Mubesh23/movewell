@@ -16,6 +16,8 @@ import {
   MessageSquare,
   DollarSign,
   Lock,
+  Home,
+  ShieldAlert,
 } from 'lucide-react';
 
 export interface TaskRowProps {
@@ -73,6 +75,32 @@ export function TaskRow({
       setNoteText('');
     }
   };
+
+  // Determine category tone & icon
+  let tone = 'sage';
+  let IconComponent = CheckCircle2;
+  const tStr = `${task.templateId || ''} ${task.title}`.toLowerCase();
+  if (tStr.includes('discharge') || tStr.includes('destination')) {
+    tone = 'urgent';
+    IconComponent = Home;
+  } else if (
+    tStr.includes('safety') ||
+    tStr.includes('accessibility') ||
+    tStr.includes('stair') ||
+    tStr.includes('housing-duration')
+  ) {
+    tone = 'warm';
+    IconComponent = ShieldAlert;
+  } else if (
+    tStr.includes('mover') ||
+    tStr.includes('moving') ||
+    tStr.includes('cost') ||
+    tStr.includes('storage') ||
+    tStr.includes('donation')
+  ) {
+    tone = 'sage';
+    IconComponent = DollarSign;
+  }
 
   return (
     <div
@@ -133,6 +161,11 @@ export function TaskRow({
               <Check className="w-3 h-3 text-transparent hover:text-forest" />
             </button>
           )}
+
+          {/* Tinted Category Icon Square */}
+          <span className={cn('task-icon shrink-0 hidden sm:grid', tone)}>
+            <IconComponent className="w-4 h-4" />
+          </span>
 
           {/* Task Title & Quick Assignee */}
           <div className="min-w-0 flex-1">

@@ -28,7 +28,7 @@ describe('Conversational Intake State Machine & Deterministic Readiness', () => 
       expect(res.missingRequiredFields).toContain('mobility and home safety situation');
     });
 
-    it('prioritizes local support when mobility is provided', () => {
+    it('prioritizes location when mobility is provided', () => {
       const draft: IntakeDraft = {
         seniorName: 'Maria',
         dischargeTimelineDescription: 'Thursday',
@@ -39,16 +39,34 @@ describe('Conversational Intake State Machine & Deterministic Readiness', () => 
       const res = intakeReadinessService.evaluate(draft);
 
       expect(res.isReady).toBe(false);
-      expect(res.nextTargetField).toBe('LOCAL_SUPPORT');
+      expect(res.nextTargetField).toBe('LOCATION');
+      expect(res.missingRequiredFields).toContain('location or ZIP code');
     });
 
-    it('prioritizes budget when family coordination is noted', () => {
+    it('prioritizes local support when location is provided', () => {
       const draft: IntakeDraft = {
         seniorName: 'Maria',
         dischargeTimelineDescription: 'Thursday',
         mobilityConstraint: true,
         stairsConstraint: true,
         livesAlone: true,
+        zipCode: '77004',
+      };
+      const res = intakeReadinessService.evaluate(draft);
+
+      expect(res.isReady).toBe(false);
+      expect(res.nextTargetField).toBe('LOCAL_SUPPORT');
+      expect(res.missingRequiredFields).toContain('family coordinator role');
+    });
+
+    it('prioritizes budget when family coordination and location are noted', () => {
+      const draft: IntakeDraft = {
+        seniorName: 'Maria',
+        dischargeTimelineDescription: 'Thursday',
+        mobilityConstraint: true,
+        stairsConstraint: true,
+        livesAlone: true,
+        zipCode: '77004',
         hasLocalHelper: true,
         localHelperName: 'Jennifer',
         userIsRemote: true,
@@ -59,7 +77,7 @@ describe('Conversational Intake State Machine & Deterministic Readiness', () => 
       expect(res.nextTargetField).toBe('BUDGET');
     });
 
-    it('marks draft ready when budget is explicitly unset (open) without forcing numerical default', () => {
+    it('marks draft ready when budget is explicitly unset (open) and location is provided', () => {
       const draft: IntakeDraft = {
         seniorName: 'Maria',
         dischargeTimelineDescription: 'Thursday',
@@ -67,6 +85,7 @@ describe('Conversational Intake State Machine & Deterministic Readiness', () => 
         mobilityConstraint: true,
         stairsConstraint: true,
         livesAlone: true,
+        zipCode: '77004',
         hasLocalHelper: true,
         localHelperName: 'Jennifer',
         userIsRemote: true,
@@ -79,6 +98,7 @@ describe('Conversational Intake State Machine & Deterministic Readiness', () => 
       expect(res.summaryBulletPoints.some((b) => b.includes('Budget not set'))).toBe(true);
       expect(res.summaryBulletPoints.some((b) => b.includes('Thursday'))).toBe(true);
       expect(res.summaryBulletPoints.some((b) => b.includes('Jennifer available locally'))).toBe(true);
+      expect(res.summaryBulletPoints.some((b) => b.includes('77004'))).toBe(true);
     });
   });
 
@@ -131,37 +151,52 @@ describe('Conversational Intake State Machine & Deterministic Readiness', () => 
 
       expect(t3Json.draft.mobilityConstraint).toBe(true);
       expect(t3Json.draft.stairsConstraint).toBe(true);
+      expect(t3Json.nextTargetField).toBe('LOCATION');
 
-      // Turn 4: User answers local helper
+      // Turn 4: User answers location
       const t4Req = new NextRequest('http://localhost:3000/api/ai/intake', {
         method: 'POST',
         body: JSON.stringify({
-          message: 'My sister Jennifer lives nearby.',
+          message: 'Her house is in 77004.',
           currentDraft: t3Json.draft,
         }),
       });
       const t4Res = await intakePost(t4Req);
       const t4Json = await t4Res.json();
 
-      expect(t4Json.draft.localHelperName).toBe('Jennifer');
-      expect(t4Json.draft.hasLocalHelper).toBe(true);
-      expect(t4Json.nextTargetField).toBe('BUDGET');
+      expect(t4Json.draft.zipCode).toBe('77004');
+      expect(t4Json.nextTargetField).toBe('LOCAL_SUPPORT');
 
-      // Turn 5: User answers budget: leave it open
+      // Turn 5: User answers local helper
       const t5Req = new NextRequest('http://localhost:3000/api/ai/intake', {
         method: 'POST',
         body: JSON.stringify({
-          message: 'Leave it open for now.',
+          message: 'My sister Jennifer lives nearby.',
           currentDraft: t4Json.draft,
         }),
       });
       const t5Res = await intakePost(t5Req);
       const t5Json = await t5Res.json();
 
-      expect(t5Json.draft.budgetStatus).toBe('UNSET');
-      expect(t5Json.draft.budget).toBeUndefined();
-      expect(t5Json.isReady).toBe(true);
-      expect(t5Json.nextAction).toBe('CREATE_PLAN');
+      expect(t5Json.draft.localHelperName).toBe('Jennifer');
+      expect(t5Json.draft.hasLocalHelper).toBe(true);
+      expect(t5Json.nextTargetField).toBe('BUDGET');
+
+      // Turn 6: User answers budget: leave it open
+      const t6Req = new NextRequest('http://localhost:3000/api/ai/intake', {
+        method: 'POST',
+        body: JSON.stringify({
+          message: 'Leave it open for now.',
+          currentDraft: t5Json.draft,
+        }),
+      });
+      const t6Res = await intakePost(t6Req);
+      const t6Json = await t6Res.json();
+
+      expect(t6Json.draft.budgetStatus).toBe('UNSET');
+      expect(t6Json.draft.budget).toBeUndefined();
+      expect(t6Json.isReady).toBe(true);
+      expect(t6Json.nextAction).toBe('CREATE_PLAN');
     });
   });
 

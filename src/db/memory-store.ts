@@ -24,6 +24,11 @@ class MemoryStore {
   public costModels: Map<string, CostModel> = new Map();
   public costItems: Map<string, CostItem> = new Map();
 
+  public intakeDrafts: Map<string, import('../types').IntakeDraftRecord> = new Map();
+  public planDrafts: Map<string, import('../types').PlanDraft> = new Map();
+  public caseLocations: Map<string, import('../types').CaseLocation> = new Map();
+  public users: Map<string, import('../types').UserProfile> = new Map();
+
   public organizations: Map<string, Organization> = new Map();
   public services: Map<string, ServiceResource> = new Map();
   public locations: Map<string, Location> = new Map();
@@ -106,6 +111,10 @@ class MemoryStore {
     this.taskDependencies = [];
     this.caseEvents = [];
     this.costItems.clear();
+    this.intakeDrafts.clear();
+    this.planDrafts.clear();
+    this.caseLocations.clear();
+    this.users.clear();
   }
 }
 

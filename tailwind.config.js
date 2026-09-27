@@ -8,17 +8,41 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Mockup-inspired Warm Command Center Tokens
+        cream: '#FBFAF7',
+        ink: {
+          DEFAULT: '#183331',
+          muted: '#667572',
+        },
+        line: '#E3E9E5',
+        evergreen: {
+          DEFAULT: '#1F4D45',
+          dark: '#163D37',
+          subtle: '#285B50',
+          alt: '#285B50',
+          light: '#E7F0E9',
+        },
+        amber: {
+          DEFAULT: '#B96C2C',
+          bg: '#FFF1E3',
+          dot: '#E9A460',
+        },
+        avatar: {
+          peach: '#E5CDBD',
+          sage: '#D8E7DB',
+        },
+
         // Main Warm Palette
-        canvas: '#FBF6EE', // Warm cream canvas
+        canvas: '#FBFAF7', // Updated to match cream
         surface: '#FFFFFF', // Clean surface
         forest: {
-          DEFAULT: '#183C32',
-          deep: '#102A23',
-          light: '#EBF2EE',
-          border: '#245044',
+          DEFAULT: '#1F4D45',
+          deep: '#163D37',
+          light: '#E7F0E9',
+          border: '#285B50',
         },
-        charcoal: '#262824',
-        muted: '#6F716C',
+        charcoal: '#183331',
+        muted: '#667572',
         cocoa: '#4B3A31', // Deep cocoa neutral
         
         // Emotional Warmth & Accents

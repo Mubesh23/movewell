@@ -10,6 +10,7 @@ import {
   Urgency,
   TaskStatus,
   formatLocalDateYYYYMMDD,
+  ProposedTask,
 } from '../types';
 
 export class PlanningEngine {
@@ -37,6 +38,45 @@ export class PlanningEngine {
     }
 
     return 'PLANNED';
+  }
+
+  /**
+   * Generates in-memory proposed tasks for a draft proposal without writing to the database.
+   */
+  public buildProposedTasks(
+    dischargeDateStr?: string,
+    ownerName: string = 'You',
+    localHelperName?: string
+  ): ProposedTask[] {
+    const dischargeDateObj = dischargeDateStr
+      ? new Date(dischargeDateStr)
+      : new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+
+    return POST_HOSPITAL_WORKFLOW_TEMPLATES.map((tpl, idx) => {
+      let assigneeName = ownerName;
+      if (tpl.suggestedAssigneeRole === 'LOCAL' && localHelperName) {
+        assigneeName = localHelperName;
+      }
+
+      const daysOffset = tpl.daysOffsetFromDischarge ?? 0;
+      const taskDueDate = new Date(dischargeDateObj);
+      taskDueDate.setDate(taskDueDate.getDate() + daysOffset);
+
+      return {
+        id: 'ptask-' + Math.random().toString(36).substring(2, 9),
+        templateId: tpl.templateId,
+        title: tpl.title,
+        description: tpl.description,
+        whyItMatters: tpl.whyItMatters,
+        phase: tpl.phase,
+        priority: idx + 1,
+        dueDate: formatLocalDateYYYYMMDD(taskDueDate),
+        assigneeName,
+        minEstimatedCost: tpl.minEstimatedCost || 0,
+        maxEstimatedCost: tpl.maxEstimatedCost || 0,
+        applicable: true,
+      };
+    });
   }
 
   public async generatePlan(
