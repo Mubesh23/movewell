@@ -76,7 +76,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, caseId: result.caseData.id });
     }
 
-    // Custom Intake submission
+    const transitionType = body.transitionType || 'POST_HOSPITAL';
+    if (transitionType !== 'POST_HOSPITAL') {
+      return NextResponse.json(
+        { success: false, error: `Unsupported transition type: ${transitionType}. MoveWell currently supports POST_HOSPITAL transitions.` },
+        { status: 400 }
+      );
+    }
+
     const caseId = 'case-' + Math.random().toString(36).substring(2, 9);
     const seniorProfileId = 'prof-' + Math.random().toString(36).substring(2, 9);
 
@@ -87,7 +94,7 @@ export async function POST(req: NextRequest) {
     const caseData: TransitionCase = {
       id: caseId,
       seniorProfileId,
-      transitionType: body.transitionType || 'POST_HOSPITAL',
+      transitionType,
       urgency: 'PLANNED',
       zipCode: body.zipCode || '77004',
       targetDate: body.targetDate || defaultTarget,

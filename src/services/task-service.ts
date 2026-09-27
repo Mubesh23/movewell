@@ -136,6 +136,12 @@ export class TaskService {
       throw new Error(`Task ${taskId} does not belong to case ${expectedCaseId}`);
     }
 
+    const members = await repository.getCaseMembers(task.caseId);
+    const member = members.find((m) => m.id === assigneeId);
+    if (!member) {
+      throw new Error(`Assignee ${assigneeId} does not belong to case ${task.caseId}`);
+    }
+
     task.assigneeId = assigneeId;
     task.updatedAt = new Date().toISOString();
     await repository.saveTask(task);

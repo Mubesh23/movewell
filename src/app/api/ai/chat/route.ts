@@ -6,15 +6,15 @@ export const revalidate = 0;
 
 export async function POST(req: NextRequest) {
   try {
-    const { caseId, prompt } = await req.json();
-    if (!caseId || !prompt) {
+    const { caseId, prompt, messages } = await req.json();
+    if (!caseId) {
       return NextResponse.json(
-        { success: false, error: 'caseId and prompt required' },
+        { success: false, error: 'caseId is required' },
         { status: 400 }
       );
     }
 
-    const response = await aiOrchestrator.processUserIntent(caseId, prompt);
+    const response = await aiOrchestrator.processConversation(caseId, messages, prompt);
     return NextResponse.json({ success: true, data: response });
   } catch (error: any) {
     return NextResponse.json(

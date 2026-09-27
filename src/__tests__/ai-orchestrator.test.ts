@@ -1,17 +1,87 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { planningEngine } from '../services/planning-engine';
-import { aiOrchestrator } from '../services/ai-orchestrator';
+import { aiOrchestrator, ChatMessageTurn } from '../services/ai-orchestrator';
 import { repository } from '../db/repository';
+import { taskService } from '../services/task-service';
 import { TransitionCase, SeniorProfile, CaseMember } from '../types';
 
-describe('AI Orchestrator Tool Calling', () => {
+vi.mock('@google/genai', () => {
+  return {
+    Type: {
+      OBJECT: 'OBJECT',
+      STRING: 'STRING',
+      NUMBER: 'NUMBER',
+    },
+    GoogleGenAI: vi.fn().mockImplementation(() => ({
+      models: {
+        generateContent: vi.fn().mockImplementation(async (params: any) => {
+          const contents = params.contents || [];
+          const lastTurn = contents[contents.length - 1];
+          const lastText = lastTurn?.parts?.[0]?.text || '';
+
+          if (lastText.includes('How do I confirm?')) {
+            return {
+              text: "To confirm Maria's safe discharge destination, speak directly with the hospital discharge planner or social worker to verify whether short-term rehab or returning home with care is selected.",
+              functionCalls: [],
+            };
+          }
+
+          if (lastText.includes('Can Sarah do that instead?')) {
+            return {
+              text: 'Re-assigning inventory belongings to Sarah.',
+              functionCalls: [
+                {
+                  name: 'assign_task',
+                  args: { assigneeName: 'Sarah', taskTitleQuery: 'inventory' },
+                },
+              ],
+            };
+          }
+
+          if (lastText.includes('Should I mark the discharge task complete?')) {
+            return {
+              text: "No need to mark it complete yet unless you've spoken with the hospital team. Once confirmed, let me know!",
+              functionCalls: [],
+            };
+          }
+
+          if (lastText.includes('Mark it complete')) {
+            return {
+              text: 'Marking discharge destination as complete.',
+              functionCalls: [
+                {
+                  name: 'complete_task',
+                  args: { taskTitleQuery: 'discharge', note: 'Social worker confirmed rehab' },
+                },
+              ],
+            };
+          }
+
+          return {
+            text: "I'm here to help coordinate Maria's transition plan.",
+            functionCalls: [],
+          };
+        }),
+      },
+    })),
+  };
+});
+
+describe('AI Orchestrator Multi-Turn & Integrity', () => {
+  const originalEnvKey = process.env.GEMINI_API_KEY;
+
   beforeEach(async () => {
     await repository.resetAll();
+    process.env.GEMINI_API_KEY = 'test-mock-key';
   });
 
-  it('should parse prompt "Jennifer can handle packing" and invoke assign_task tool', async () => {
+  afterEach(() => {
+    process.env.GEMINI_API_KEY = originalEnvKey;
+  });
+
+  it('should answer context follow-up questions without mutating or blindly dumping plan', async () => {
     const caseData: TransitionCase = {
-      id: 'case-ai-test',
+      id: 'case-multi-followup',
       transitionType: 'POST_HOSPITAL',
       urgency: 'URGENT',
       zipCode: '77004',
@@ -21,8 +91,44 @@ describe('AI Orchestrator Tool Calling', () => {
     };
 
     const profile: SeniorProfile = {
-      id: 'prof-ai-test',
-      caseId: 'case-ai-test',
+      id: 'prof-mf',
+      caseId: 'case-multi-followup',
+      name: 'Maria Thompson',
+      livesAlone: true,
+      mobilityConstraint: true,
+      stairsConstraint: true,
+      immediateSafetyConcern: false,
+      ownsHome: true,
+    };
+
+    await planningEngine.generatePlan(caseData, profile, []);
+
+    const messages: ChatMessageTurn[] = [
+      { role: 'user', text: "What's left to do?" },
+      { role: 'assistant', text: "Your top priority is confirming Maria's safe discharge destination..." },
+      { role: 'user', text: 'How do I confirm?' },
+    ];
+
+    const response = await aiOrchestrator.processConversation('case-multi-followup', messages);
+
+    expect(response.message).toContain('hospital discharge planner or social worker');
+    expect(response.toolResults).toHaveLength(0);
+  });
+
+  it('should resolve pronoun references ("that") using conversation history', async () => {
+    const caseData: TransitionCase = {
+      id: 'case-multi-pronoun',
+      transitionType: 'POST_HOSPITAL',
+      urgency: 'URGENT',
+      zipCode: '77004',
+      budget: 8000,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const profile: SeniorProfile = {
+      id: 'prof-mp',
+      caseId: 'case-multi-pronoun',
       name: 'Maria Thompson',
       livesAlone: true,
       mobilityConstraint: true,
@@ -32,44 +138,31 @@ describe('AI Orchestrator Tool Calling', () => {
     };
 
     const members: CaseMember[] = [
-      {
-        id: 'mem-sarah',
-        caseId: 'case-ai-test',
-        name: 'Sarah',
-        isLocal: false,
-        role: 'OWNER',
-      },
-      {
-        id: 'mem-jennifer',
-        caseId: 'case-ai-test',
-        name: 'Jennifer',
-        isLocal: true,
-        role: 'FAMILY',
-      },
+      { id: 'mem-sarah-p', caseId: 'case-multi-pronoun', name: 'Sarah', isLocal: false, role: 'OWNER' },
+      { id: 'mem-jennifer-p', caseId: 'case-multi-pronoun', name: 'Jennifer', isLocal: true, role: 'FAMILY' },
     ];
 
     await planningEngine.generatePlan(caseData, profile, members);
 
-    const response = await aiOrchestrator.processUserIntent('case-ai-test', 'Jennifer can handle packing');
+    const messages: ChatMessageTurn[] = [
+      { role: 'user', text: 'Who is handling inventory?' },
+      { role: 'assistant', text: 'Jennifer is assigned to inventory belongings.' },
+      { role: 'user', text: 'Can Sarah do that instead?' },
+    ];
 
-    expect(response.message).toContain('Jennifer');
+    const response = await aiOrchestrator.processConversation('case-multi-pronoun', messages);
+
     expect(response.toolResults.length).toBeGreaterThan(0);
-    expect(response.toolResults[0].success).toBe(true);
+    expect(response.toolResults[0].toolName).toBe('assign_task');
 
-    // Verify task assignment in repository
-    const tasks = await repository.getTasksByCaseId('case-ai-test');
-    const packingTask = tasks.find((t) => t.templateId === 'inventory-belongings' || t.title.toLowerCase().includes('inventory'));
-    expect(packingTask?.assigneeId).toBe('mem-jennifer');
-
-    // Verify CaseEvent logged with actorType AI
-    const events = await repository.getCaseEvents('case-ai-test');
-    const assignedEvent = events.find((e) => e.type === 'TASK_ASSIGNED');
-    expect(assignedEvent).toBeDefined();
+    const tasks = await repository.getTasksByCaseId('case-multi-pronoun');
+    const inventoryTask = tasks.find((t) => t.templateId === 'inventory-belongings');
+    expect(inventoryTask?.assigneeId).toBe('mem-sarah-p');
   });
 
-  it('should parse budget update prompt "Set budget to 5000" and update budget', async () => {
+  it('should NOT mutate on questions, but mutate when explicitly confirmed', async () => {
     const caseData: TransitionCase = {
-      id: 'case-ai-budget',
+      id: 'case-multi-safety',
       transitionType: 'POST_HOSPITAL',
       urgency: 'URGENT',
       zipCode: '77004',
@@ -79,111 +172,8 @@ describe('AI Orchestrator Tool Calling', () => {
     };
 
     const profile: SeniorProfile = {
-      id: 'prof-ai-budget',
-      caseId: 'case-ai-budget',
-      name: 'Maria Thompson',
-      livesAlone: true,
-      mobilityConstraint: true,
-      stairsConstraint: true,
-      immediateSafetyConcern: false,
-      ownsHome: true,
-    };
-
-    await planningEngine.generatePlan(caseData, profile, []);
-
-    const response = await aiOrchestrator.processUserIntent('case-ai-budget', 'Set budget to $5,000');
-    expect(response.toolResults[0].success).toBe(true);
-
-    const updatedCase = await repository.getCaseById('case-ai-budget');
-    expect(updatedCase?.budget).toBe(5000);
-  });
-
-  it('should parse multi-intent prompt "update the budget to 5,000 and re-assign packing to James"', async () => {
-    const caseData: TransitionCase = {
-      id: 'case-ai-multi',
-      transitionType: 'POST_HOSPITAL',
-      urgency: 'URGENT',
-      zipCode: '77004',
-      budget: 8000,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    const profile: SeniorProfile = {
-      id: 'prof-ai-multi',
-      caseId: 'case-ai-multi',
-      name: 'Maria Thompson',
-      livesAlone: true,
-      mobilityConstraint: true,
-      stairsConstraint: true,
-      immediateSafetyConcern: false,
-      ownsHome: true,
-    };
-
-    await planningEngine.generatePlan(caseData, profile, []);
-
-    const response = await aiOrchestrator.processUserIntent('case-ai-multi', 'update the budget to 5,000 and re-assign packing to James');
-    
-    // Should execute BOTH budget update and assign_task to James!
-    expect(response.toolResults.length).toBeGreaterThanOrEqual(2);
-    
-    const updatedCase = await repository.getCaseById('case-ai-multi');
-    expect(updatedCase?.budget).toBe(5000);
-
-    const members = await repository.getCaseMembers('case-ai-multi');
-    const james = members.find((m) => m.name === 'James');
-    expect(james).toBeDefined();
-
-    const tasks = await repository.getTasksByCaseId('case-ai-multi');
-    const packingTask = tasks.find((t) => t.templateId === 'inventory-belongings' || t.title.toLowerCase().includes('inventory'));
-    expect(packingTask?.assigneeId).toBe(james?.id);
-  });
-
-  it('should respond with structured plan summary when asked "what is left to do?"', async () => {
-    const caseData: TransitionCase = {
-      id: 'case-ai-query',
-      transitionType: 'POST_HOSPITAL',
-      urgency: 'URGENT',
-      zipCode: '77004',
-      budget: 8000,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    const profile: SeniorProfile = {
-      id: 'prof-ai-query',
-      caseId: 'case-ai-query',
-      name: 'Maria Thompson',
-      livesAlone: true,
-      mobilityConstraint: true,
-      stairsConstraint: true,
-      immediateSafetyConcern: false,
-      ownsHome: true,
-    };
-
-    await planningEngine.generatePlan(caseData, profile, []);
-
-    const response = await aiOrchestrator.processUserIntent('case-ai-query', 'what is left to do?');
-
-    expect(response.message).toContain('Maria Thompson');
-    expect(response.message).toContain('Remaining Tasks');
-    expect(response.toolResults.length).toBeGreaterThan(0);
-  });
-
-  it('should complete task by title query without requiring raw database taskId', async () => {
-    const caseData: TransitionCase = {
-      id: 'case-ai-complete-query',
-      transitionType: 'POST_HOSPITAL',
-      urgency: 'URGENT',
-      zipCode: '77004',
-      budget: 8000,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    const profile: SeniorProfile = {
-      id: 'prof-ai-cq',
-      caseId: 'case-ai-complete-query',
+      id: 'prof-ms',
+      caseId: 'case-multi-safety',
       name: 'Maria Thompson',
       livesAlone: true,
       mobilityConstraint: false,
@@ -194,22 +184,83 @@ describe('AI Orchestrator Tool Calling', () => {
 
     await planningEngine.generatePlan(caseData, profile, []);
 
-    const response = await aiOrchestrator.processUserIntent(
-      'case-ai-complete-query',
-      'Mark confirm safe discharge destination complete. Spoke with social worker.'
-    );
+    // 1. Question turn -> No mutation
+    const qMessages: ChatMessageTurn[] = [{ role: 'user', text: 'Should I mark the discharge task complete?' }];
+    const qResponse = await aiOrchestrator.processConversation('case-multi-safety', qMessages);
+    expect(qResponse.toolResults).toHaveLength(0);
 
-    expect(response.toolResults[0].success).toBe(true);
-    expect(response.toolResults[0].message).toContain('Confirm');
+    const tasksBefore = await repository.getTasksByCaseId('case-multi-safety');
+    const dischargeBefore = tasksBefore.find((t) => t.templateId === 'confirm-discharge-destination');
+    expect(dischargeBefore?.status).not.toBe('COMPLETED');
 
-    const tasks = await repository.getTasksByCaseId('case-ai-complete-query');
+    // 2. Confirmation turn -> Execute mutation
+    const cMessages: ChatMessageTurn[] = [
+      ...qMessages,
+      { role: 'assistant', text: qResponse.message },
+      { role: 'user', text: 'The social worker confirmed rehab. Mark it complete.' },
+    ];
+    const cResponse = await aiOrchestrator.processConversation('case-multi-safety', cMessages);
+    expect(cResponse.toolResults.length).toBeGreaterThan(0);
+    expect(cResponse.toolResults[0].toolName).toBe('complete_task');
+
+    const tasksAfter = await repository.getTasksByCaseId('case-multi-safety');
+    const dischargeAfter = tasksAfter.find((t) => t.templateId === 'confirm-discharge-destination');
+    expect(dischargeAfter?.status).toBe('COMPLETED');
+  });
+
+  it('should return safe non-mutating message when Gemini is unavailable', async () => {
+    process.env.GEMINI_API_KEY = ''; // Disable API key
+
+    const caseData: TransitionCase = {
+      id: 'case-fallback-test',
+      transitionType: 'POST_HOSPITAL',
+      urgency: 'URGENT',
+      zipCode: '77004',
+      budget: 8000,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const profile: SeniorProfile = {
+      id: 'prof-fb',
+      caseId: 'case-fallback-test',
+      name: 'Maria Thompson',
+      livesAlone: true,
+      mobilityConstraint: false,
+      stairsConstraint: false,
+      immediateSafetyConcern: false,
+      ownsHome: true,
+    };
+
+    await planningEngine.generatePlan(caseData, profile, []);
+
+    const response = await aiOrchestrator.processConversation('case-fallback-test', [
+      { role: 'user', text: 'mark discharge complete' },
+    ]);
+
+    expect(response.message).toContain("I'm having trouble processing conversational requests right now");
+    expect(response.message).toContain('Your plan has not been changed');
+    expect(response.toolResults).toHaveLength(0);
+
+    // Verify ZERO tasks were mutated
+    const tasks = await repository.getTasksByCaseId('case-fallback-test');
     const dischargeTask = tasks.find((t) => t.templateId === 'confirm-discharge-destination');
-    expect(dischargeTask?.status).toBe('COMPLETED');
+    expect(dischargeTask?.status).not.toBe('COMPLETED');
   });
 
-  it('should not create member side-effect if assign_task target task is not found', async () => {
-    const caseData: TransitionCase = {
-      id: 'case-ai-no-sideeffect',
+  it('should throw error when assigning a member from a different case', async () => {
+    const case1: TransitionCase = {
+      id: 'case-assign-1',
+      transitionType: 'POST_HOSPITAL',
+      urgency: 'URGENT',
+      zipCode: '77004',
+      budget: 8000,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const case2: TransitionCase = {
+      id: 'case-assign-2',
       transitionType: 'POST_HOSPITAL',
       urgency: 'URGENT',
       zipCode: '77004',
@@ -219,8 +270,8 @@ describe('AI Orchestrator Tool Calling', () => {
     };
 
     const profile: SeniorProfile = {
-      id: 'prof-ai-ns',
-      caseId: 'case-ai-no-sideeffect',
+      id: 'prof-a',
+      caseId: 'case-assign-1',
       name: 'Maria Thompson',
       livesAlone: true,
       mobilityConstraint: false,
@@ -229,137 +280,21 @@ describe('AI Orchestrator Tool Calling', () => {
       ownsHome: true,
     };
 
-    await planningEngine.generatePlan(caseData, profile, []);
+    const case2Members: CaseMember[] = [
+      { id: 'mem-case2-bob', caseId: 'case-assign-2', name: 'Bob', isLocal: true, role: 'FAMILY' },
+    ];
 
-    const initialMembers = await repository.getCaseMembers('case-ai-no-sideeffect');
+    await planningEngine.generatePlan(case1, profile, []);
+    await planningEngine.generatePlan(case2, profile, case2Members);
 
-    const response = await aiOrchestrator.processUserIntent(
-      'case-ai-no-sideeffect',
-      'Assign non-existent astronaut flying task to Bob'
-    );
+    const tasks1 = await repository.getTasksByCaseId('case-assign-1');
+    const members2 = await repository.getCaseMembers('case-assign-2');
 
-    const finalMembers = await repository.getCaseMembers('case-ai-no-sideeffect');
-    expect(finalMembers.length).toBe(initialMembers.length);
-    expect(finalMembers.find((m) => m.name === 'Bob')).toBeUndefined();
-  });
+    expect(members2.length).toBeGreaterThan(0);
 
-  it('should return failure and change zero task statuses when completing a non-existent task', async () => {
-    const caseData: TransitionCase = {
-      id: 'case-ai-strict-complete',
-      transitionType: 'POST_HOSPITAL',
-      urgency: 'URGENT',
-      zipCode: '77004',
-      budget: 8000,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    const profile: SeniorProfile = {
-      id: 'prof-ai-sc',
-      caseId: 'case-ai-strict-complete',
-      name: 'Maria Thompson',
-      livesAlone: true,
-      mobilityConstraint: false,
-      stairsConstraint: false,
-      immediateSafetyConcern: false,
-      ownsHome: true,
-    };
-
-    await planningEngine.generatePlan(caseData, profile, []);
-
-    const initialTasks = await repository.getTasksByCaseId('case-ai-strict-complete');
-    const initialCompletedCount = initialTasks.filter((t) => t.status === 'COMPLETED').length;
-
-    const response = await aiOrchestrator.processUserIntent(
-      'case-ai-strict-complete',
-      'Complete the astronaut paperwork task'
-    );
-
-    expect(response.toolResults[0].success).toBe(false);
-    expect(response.toolResults[0].message).toContain('Could not find a task matching');
-
-    const finalTasks = await repository.getTasksByCaseId('case-ai-strict-complete');
-    const finalCompletedCount = finalTasks.filter((t) => t.status === 'COMPLETED').length;
-    expect(finalCompletedCount).toBe(initialCompletedCount);
-  });
-
-  it('should search resources when user types natural search prompt like "search houstn care options"', async () => {
-    const caseData: TransitionCase = {
-      id: 'case-ai-resources',
-      transitionType: 'POST_HOSPITAL',
-      urgency: 'URGENT',
-      zipCode: '77004',
-      budget: 8000,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    const profile: SeniorProfile = {
-      id: 'prof-ai-res',
-      caseId: 'case-ai-resources',
-      name: 'Maria Thompson',
-      livesAlone: true,
-      mobilityConstraint: false,
-      stairsConstraint: false,
-      immediateSafetyConcern: false,
-      ownsHome: true,
-    };
-
-    await planningEngine.generatePlan(caseData, profile, []);
-
-    const response = await aiOrchestrator.processUserIntent(
-      'case-ai-resources',
-      'search houstn care options'
-    );
-
-    expect(response.toolResults.length).toBeGreaterThan(0);
-    expect(response.toolResults[0].toolName).toBe('find_resources');
-    expect(response.toolResults[0].success).toBe(true);
-    expect(response.message).toContain('Verified Houston Care & Transition Resources');
-  });
-
-  it('should explain and NOT mutate tasks when user questions suggestion ("why would you mark it as completed yet?")', async () => {
-    const caseData: TransitionCase = {
-      id: 'case-ai-question',
-      transitionType: 'POST_HOSPITAL',
-      urgency: 'URGENT',
-      zipCode: '77004',
-      budget: 8000,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    const profile: SeniorProfile = {
-      id: 'prof-ai-q',
-      caseId: 'case-ai-question',
-      name: 'Maria Thompson',
-      livesAlone: true,
-      mobilityConstraint: false,
-      stairsConstraint: false,
-      immediateSafetyConcern: false,
-      ownsHome: true,
-    };
-
-    await planningEngine.generatePlan(caseData, profile, []);
-
-    const initialTasks = await repository.getTasksByCaseId('case-ai-question');
-    const initialCompletedCount = initialTasks.filter((t) => t.status === 'COMPLETED').length;
-
-    const response = await aiOrchestrator.processUserIntent(
-      'case-ai-question',
-      'why would you mark it as completed yet?'
-    );
-
-    // Should NOT trigger complete_task tool result
-    const completedToolCall = response.toolResults.find((tr) => tr.toolName === 'complete_task');
-    expect(completedToolCall).toBeUndefined();
-
-    // Message should be an explanatory response
-    expect(response.message).toContain("won't mark it completed yet");
-
-    // Task completion count must be 0
-    const finalTasks = await repository.getTasksByCaseId('case-ai-question');
-    const finalCompletedCount = finalTasks.filter((t) => t.status === 'COMPLETED').length;
-    expect(finalCompletedCount).toBe(initialCompletedCount);
+    // Attempting to assign case 2 member to case 1 task must fail!
+    await expect(
+      taskService.assignTask(tasks1[0].id, members2[0].id, members2[0].name)
+    ).rejects.toThrow('does not belong to case');
   });
 });

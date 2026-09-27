@@ -90,14 +90,25 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
     if (!promptText.trim() || loading) return;
 
     const userMessage: ChatMessage = { sender: 'user', text: promptText };
-    setMessages((prev) => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setLoading(true);
+
+    // Bounded recent message window (last 12 messages)
+    const conversationHistory = updatedMessages.slice(-12).map((m) => ({
+      role: m.sender === 'user' ? ('user' as const) : ('assistant' as const),
+      text: m.text,
+    }));
 
     try {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ caseId, prompt: promptText }),
+        body: JSON.stringify({
+          caseId,
+          prompt: promptText,
+          messages: conversationHistory,
+        }),
       });
       const data = await res.json();
 
