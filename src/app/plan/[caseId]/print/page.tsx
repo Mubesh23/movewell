@@ -113,7 +113,9 @@ export default function PrintPlanPage() {
           <p className="text-sm font-bold text-forest">
             ${costSummary.minTotal.toLocaleString()} &ndash; ${costSummary.maxTotal.toLocaleString()}
           </p>
-          <p className="text-[11px] text-muted">Stated budget: ${costSummary.userBudget.toLocaleString()}</p>
+          <p className="text-[11px] text-muted">
+            Stated budget: {costSummary.userBudget ? `$${costSummary.userBudget.toLocaleString()}` : 'Not set'}
+          </p>
         </div>
       </div>
 

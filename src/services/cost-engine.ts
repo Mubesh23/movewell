@@ -3,7 +3,7 @@ import { TransitionTask, CostItem } from '../types';
 export interface CostSummary {
   minTotal: number;
   maxTotal: number;
-  userBudget: number;
+  userBudget?: number;
   budgetGap: number; // > 0 means over budget, <= 0 means within budget
   disclaimer: string;
   confirmedQuotesTotal?: number;
@@ -15,7 +15,7 @@ export class CostEngine {
 
   public calculatePlanCosts(
     tasks: TransitionTask[],
-    userBudget: number,
+    userBudget?: number,
     costItems: CostItem[] = []
   ): CostSummary {
     let minTotal = 0;
@@ -69,12 +69,13 @@ export class CostEngine {
       }
     }
 
-    const budgetGap = maxTotal - userBudget;
+    const hasBudget = typeof userBudget === 'number' && userBudget > 0;
+    const budgetGap = hasBudget ? maxTotal - (userBudget as number) : 0;
 
     return {
       minTotal,
       maxTotal,
-      userBudget,
+      userBudget: hasBudget ? userBudget : undefined,
       budgetGap,
       disclaimer: CostEngine.DISCLAIMER,
       confirmedQuotesTotal: confirmedQuotesTotal > 0 ? confirmedQuotesTotal : undefined,

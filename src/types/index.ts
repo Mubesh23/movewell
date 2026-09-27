@@ -148,14 +148,55 @@ export interface TransitionCase {
   seniorProfileId?: string;
   transitionType: TransitionType;
   urgency: Urgency;
-  zipCode: string;
+  zipCode?: string;
   targetDate?: string; // ISO date string YYYY-MM-DD
   dischargeDate?: string; // ISO date string YYYY-MM-DD for post-hospital
   housingStatus?: HousingStatus;
   destinationStatus?: DestinationStatus;
-  budget: number;
+  budget?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface IntakeDraft {
+  seniorName?: string;
+  ageRange?: string;
+  transitionType?: TransitionType;
+  dischargeDate?: string;
+  dischargeDays?: number;
+  dischargeTimelineDescription?: string;
+  livesAlone?: boolean;
+  mobilityConstraint?: boolean;
+  stairsConstraint?: boolean;
+  homeType?: string;
+  city?: string;
+  zipCode?: string;
+  userName?: string;
+  userRelationship?: string;
+  userCity?: string;
+  userIsRemote?: boolean;
+  localHelperName?: string;
+  localHelperCity?: string;
+  hasLocalHelper?: boolean;
+  budget?: number;
+  budgetStatus?: 'SET' | 'UNSET';
+  destinationStatus?: DestinationStatus;
+}
+
+export type IntakeTargetField =
+  | 'DISCHARGE_TIMING'
+  | 'SAFETY_MOBILITY'
+  | 'DESTINATION_HOUSING'
+  | 'LOCAL_SUPPORT'
+  | 'LOCATION'
+  | 'BUDGET'
+  | 'NONE';
+
+export interface IntakeReadinessResult {
+  isReady: boolean;
+  missingRequiredFields: string[];
+  nextTargetField: IntakeTargetField;
+  summaryBulletPoints: string[];
 }
 
 export interface SeniorProfile {
@@ -303,7 +344,7 @@ export interface CostItem {
 export interface CostSummary {
   minTotal: number;
   maxTotal: number;
-  userBudget: number;
+  userBudget?: number;
   budgetGap: number;
   disclaimer: string;
   confirmedQuotesTotal?: number;

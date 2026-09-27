@@ -81,31 +81,45 @@ export default function ResourcesPage() {
 
   return (
     <div className="min-h-screen bg-canvas flex flex-col font-sans">
-      <Navbar caseId={caseId} seniorName="Houston Directory" />
+      <Navbar caseId={caseId} seniorName="Local Resources" />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1 space-y-8">
         <PageHeader
-          title="Houston Area Resource Directory"
-          subtitle="Open Referral HSDS catalog of verified senior transition providers and public programs. MoveWell's verified directory is currently localized to Greater Houston for this pilot."
-          statusLabel={isHoustonArea ? 'Greater Houston Pilot' : 'Houston Pilot (Non-local ZIP)'}
-          statusVariant={isHoustonArea ? 'ochre' : 'warning'}
+          title="Local Resource Directory"
+          subtitle="Open Referral HSDS catalog of verified senior transition providers and public programs. Location-aware matching connects your family's plan with verified local services."
+          statusLabel={isHoustonArea ? 'Verified Local Directory' : 'Location-Aware Directory'}
+          statusVariant={isHoustonArea ? 'forest' : 'ochre'}
           summaryItems={[
             { label: 'Directory', value: `${resources.length} verified providers` },
-            { label: 'Pilot Scope', value: 'Harris County & Greater Houston' },
+            { label: 'Coverage', value: isHoustonArea ? 'Local Network Active' : 'National Expansion' },
             { label: 'Standard', value: 'Open Referral HSDS' },
           ]}
         />
 
-        {/* Explicit Geographic Notice if case ZIP is outside Greater Houston */}
+        {/* Location Notice if case ZIP is outside pilot seed or unset */}
         {!isHoustonArea && caseData?.zipCode && (
           <div className="p-4 rounded-xl border border-ochre-border bg-ochre-subtle text-xs text-charcoal flex items-start gap-3">
             <Info className="w-4 h-4 text-ochre shrink-0 mt-0.5" />
             <div className="space-y-1">
               <p className="font-semibold text-charcoal">
-                Directory Geographic Scope Notice
+                Location-Aware Provider Notice
               </p>
               <p className="text-muted leading-relaxed">
-                This case has ZIP code <strong>{caseData.zipCode}</strong>. MoveWell&apos;s verified provider directory is currently active in <strong>Greater Houston &amp; Harris County</strong> for this hackathon pilot. Nationwide provider verification is expanding soon. You can still use Nora for general guidance and itemize custom vendor quotes on your budget ledger.
+                This case has location set to <strong>{caseData.zipCode}</strong>. MoveWell connects families with local resources based on case location. In this pilot, curated community providers are active in Greater Houston, with nationwide coverage expanding. You can always use Nora to research providers in your area or add custom vendor quotes directly to your budget ledger.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {!caseData?.zipCode && (
+          <div className="p-4 rounded-xl border border-stone-line bg-surface text-xs text-charcoal flex items-start gap-3 shadow-2xs">
+            <Info className="w-4 h-4 text-muted shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-semibold text-charcoal">
+                Location Not Set
+              </p>
+              <p className="text-muted leading-relaxed">
+                No city or ZIP code has been set for this case yet. You can build and manage your transition plan now, and ask Nora to add local resources once you know the destination city.
               </p>
             </div>
           </div>

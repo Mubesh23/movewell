@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 
 interface QuoteUploaderProps {
   caseId: string;
-  currentBudget: number;
+  currentBudget?: number;
   onBudgetUpdated?: (newQuoteAmount: number) => void;
 }
 
@@ -134,7 +134,7 @@ export function QuoteUploader({ caseId, currentBudget, onBudgetUpdated }: QuoteU
             Vendor Quote Intelligence
           </h3>
           <p className="text-xs text-muted mt-0.5">
-            Substitute confirmed vendor prices for planning estimates without modifying total available budget (${currentBudget.toLocaleString()}).
+            Substitute confirmed vendor prices for planning estimates without modifying total available budget{currentBudget ? ` ($${currentBudget.toLocaleString()})` : ''}.
           </p>
         </div>
 

@@ -101,17 +101,31 @@ export async function POST(req: NextRequest) {
     dTarget.setDate(dTarget.getDate() + 12);
     const defaultTarget = formatLocalDateYYYYMMDD(dTarget);
 
+    let calculatedDischarge = defaultDischarge;
+    if (body.dischargeDate) {
+      calculatedDischarge = body.dischargeDate;
+    } else if (body.dischargeDays && typeof body.dischargeDays === 'number') {
+      const d = new Date(nowCustom);
+      d.setDate(d.getDate() + body.dischargeDays);
+      calculatedDischarge = formatLocalDateYYYYMMDD(d);
+    }
+
+    const budgetValue =
+      body.budget && !isNaN(Number(body.budget)) && Number(body.budget) > 0
+        ? Number(body.budget)
+        : undefined;
+
     const caseData: TransitionCase = {
       id: caseId,
       seniorProfileId,
       transitionType,
       urgency: 'PLANNED',
-      zipCode: body.zipCode || '77004',
+      zipCode: body.zipCode?.trim() || undefined,
       targetDate: body.targetDate || defaultTarget,
-      dischargeDate: body.dischargeDate || defaultDischarge,
-      housingStatus: body.housingStatus || 'OWN',
+      dischargeDate: calculatedDischarge,
+      housingStatus: body.housingStatus || 'UNDECIDED',
       destinationStatus: body.destinationStatus || 'UNDECIDED',
-      budget: Number(body.budget) || 8000,
+      budget: budgetValue,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -119,13 +133,13 @@ export async function POST(req: NextRequest) {
     const profile: SeniorProfile = {
       id: seniorProfileId,
       caseId: caseId,
-      name: body.seniorName || 'Maria Thompson',
-      ageRange: body.ageRange || '78',
-      livesAlone: body.livesAlone !== false,
-      mobilityConstraint: body.mobilityConstraint !== false,
-      stairsConstraint: body.stairsConstraint !== false,
+      name: body.seniorName?.trim() || 'Senior Family Member',
+      ageRange: body.ageRange?.trim() || undefined,
+      livesAlone: body.livesAlone === true,
+      mobilityConstraint: body.mobilityConstraint === true,
+      stairsConstraint: body.stairsConstraint === true,
       immediateSafetyConcern: body.immediateSafetyConcern === true,
-      homeType: body.homeType || 'Two-story house',
+      homeType: body.homeType?.trim() || undefined,
       ownsHome: body.ownsHome !== false,
     };
 
@@ -133,22 +147,27 @@ export async function POST(req: NextRequest) {
       {
         id: 'mem-primary-' + Math.random().toString(36).substring(2, 6),
         caseId: caseId,
-        name: body.userName || 'Sarah',
-        relationship: 'Daughter',
-        city: body.userCity || 'Chicago, IL',
-        isLocal: false,
+        name: body.userName?.trim() || 'Family Coordinator',
+        relationship:
+          body.userRelationship?.trim() ||
+          (body.userIsRemote ? 'Family Member (Remote)' : 'Family Member'),
+        city: body.userCity?.trim() || undefined,
+        isLocal: body.userIsRemote === false,
         role: 'OWNER',
       },
-      {
+    ];
+
+    if (body.localHelperName && body.localHelperName.trim().length > 0) {
+      members.push({
         id: 'mem-local-' + Math.random().toString(36).substring(2, 6),
         caseId: caseId,
-        name: body.localHelperName || 'Jennifer',
-        relationship: 'Sister / Local Support',
-        city: body.localHelperCity || 'Houston, TX',
+        name: body.localHelperName.trim(),
+        relationship: 'Local Support',
+        city: body.localHelperCity?.trim() || undefined,
         isLocal: true,
         role: 'FAMILY',
-      },
-    ];
+      });
+    }
 
     const result = await planningEngine.generatePlan(
       caseData,
@@ -158,6 +177,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, caseId: result.caseData.id });
   } catch (error: any) {
+    console.error('Case POST error:', error);
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 }

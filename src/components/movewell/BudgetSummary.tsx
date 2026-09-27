@@ -9,7 +9,8 @@ export interface BudgetSummaryProps {
 }
 
 export function BudgetSummary({ costSummary, costItems = [], className }: BudgetSummaryProps) {
-  const isOver = costSummary.budgetGap > 0;
+  const hasBudget = typeof costSummary.userBudget === 'number' && costSummary.userBudget > 0;
+  const isOver = hasBudget && costSummary.budgetGap > 0;
 
   return (
     <div className={cn('space-y-4', className)}>
@@ -18,9 +19,11 @@ export function BudgetSummary({ costSummary, costItems = [], className }: Budget
         <div className="space-y-0.5">
           <p className="text-xs uppercase tracking-wider text-muted font-medium">Family Available Budget</p>
           <p className="text-2xl font-serif font-bold text-charcoal">
-            ${costSummary.userBudget.toLocaleString()}
+            {hasBudget ? `$${costSummary.userBudget!.toLocaleString()}` : 'Open / Unset'}
           </p>
-          <p className="text-xs text-muted">Allocated for transition</p>
+          <p className="text-xs text-muted">
+            {hasBudget ? 'Allocated for transition' : 'No cap set — track as you go'}
+          </p>
         </div>
 
         <div className="space-y-0.5">
@@ -38,15 +41,23 @@ export function BudgetSummary({ costSummary, costItems = [], className }: Budget
           <p
             className={cn(
               'text-2xl font-serif font-bold',
-              isOver ? 'text-status-warning' : 'text-status-success'
+              !hasBudget
+                ? 'text-stone-text'
+                : isOver
+                ? 'text-status-warning'
+                : 'text-status-success'
             )}
           >
-            {isOver
+            {!hasBudget
+              ? 'Open Ledger'
+              : isOver
               ? `+$${costSummary.budgetGap.toLocaleString()} Over`
               : 'Within Budget'}
           </p>
           <p className="text-xs text-muted">
-            {isOver
+            {!hasBudget
+              ? 'Add vendor quotes to monitor total costs'
+              : isOver
               ? 'Review high-cost tasks or adjustments'
               : `$${Math.abs(costSummary.budgetGap).toLocaleString()} contingency remaining`}
           </p>

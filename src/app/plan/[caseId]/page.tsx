@@ -339,7 +339,7 @@ export default function DashboardPage() {
                   <div className="flex items-baseline justify-between text-sm">
                     <span className="text-muted">Available Budget</span>
                     <span className="font-serif font-bold text-charcoal">
-                      ${costSummary.userBudget.toLocaleString()}
+                      {costSummary.userBudget ? `$${costSummary.userBudget.toLocaleString()}` : 'Open / Unset'}
                     </span>
                   </div>
 

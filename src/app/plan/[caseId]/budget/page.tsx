@@ -49,7 +49,10 @@ export default function BudgetPage() {
   const isOver = costSummary.budgetGap > 0;
 
   const summaryItems = [
-    { label: 'Available Budget', value: `$${costSummary.userBudget.toLocaleString()}` },
+    {
+      label: 'Available Budget',
+      value: costSummary.userBudget ? `$${costSummary.userBudget.toLocaleString()}` : 'Open / Unset',
+    },
     {
       label: 'Expected Total',
       value: `$${costSummary.minTotal.toLocaleString()} \u2013 $${costSummary.maxTotal.toLocaleString()}`,

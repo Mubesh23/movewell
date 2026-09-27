@@ -1,87 +1,175 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, AlertCircle, CheckCircle2, ChevronRight, MapPin, DollarSign, Calendar } from 'lucide-react';
+import {
+  ArrowRight,
+  AlertCircle,
+  CheckCircle2,
+  ChevronRight,
+  Sparkles,
+  RotateCcw,
+  Send,
+  Calendar,
+  Check,
+} from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { Textarea } from '@/components/ui/Textarea';
-import { Input } from '@/components/ui/Input';
+import { IntakeDraft } from '@/types';
+
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  bulletPoints?: string[];
+  isConfirmation?: boolean;
+}
 
 export default function LandingPage() {
   const router = useRouter();
-  const [situation, setSituation] = useState('');
-  const [analyzing, setAnalyzing] = useState(false);
-  const [loadingPreset, setLoadingPreset] = useState(false);
-  const [candidatePlan, setCandidatePlan] = useState<any | null>(null);
-  const [intakeError, setIntakeError] = useState<string | null>(null);
+
+  // Multi-turn conversational intake state
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: 'welcome',
+      role: 'assistant',
+      content:
+        "Tell me what's happening with your parent or family member. For example: what's their situation right now, and what's coming up?",
+    },
+  ]);
+  const [inputValue, setInputValue] = useState('');
+  const [draft, setDraft] = useState<IntakeDraft>({});
+  const [isReady, setIsReady] = useState(false);
+  const [submittingTurn, setSubmittingTurn] = useState(false);
   const [creatingPlan, setCreatingPlan] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
+  const [loadingPreset, setLoadingPreset] = useState(false);
 
-  // Editable candidate fields for explicit confirmation
-  const [customZip, setCustomZip] = useState('');
-  const [customBudget, setCustomBudget] = useState('8000');
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const handleAnalyzeSituation = async (customText?: string) => {
-    const textToAnalyze = customText || situation;
-    if (!textToAnalyze.trim()) return;
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
-    setAnalyzing(true);
-    setCandidatePlan(null);
-    setIntakeError(null);
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, submittingTurn]);
+
+  const handleSendMessage = async (textOverride?: string) => {
+    const textToSend = (textOverride || inputValue).trim();
+    if (!textToSend || submittingTurn) return;
+
+    setChatError(null);
+    setInputValue('');
+
+    const userMessage: ChatMessage = {
+      id: 'msg-' + Date.now(),
+      role: 'user',
+      content: textToSend,
+    };
+
+    const nextMessages = [...messages, userMessage];
+    setMessages(nextMessages);
+    setSubmittingTurn(true);
 
     try {
+      // Send message along with conversation history and accumulated draft
       const res = await fetch('/api/ai/intake', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: textToAnalyze }),
+        body: JSON.stringify({
+          message: textToSend,
+          history: nextMessages.slice(-6).map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+          currentDraft: draft,
+        }),
       });
+
       const data = await res.json();
-      if (data.success && data.data) {
-        setCandidatePlan(data.data);
-        if (data.data.zipCode) setCustomZip(data.data.zipCode);
-        if (data.data.budget) setCustomBudget(String(data.data.budget));
+      if (data.success && data.draft) {
+        setDraft(data.draft);
+        setIsReady(data.isReady);
+
+        const assistantMessage: ChatMessage = {
+          id: 'nora-' + Date.now(),
+          role: 'assistant',
+          content: data.assistantMessage || data.message || "I've noted that.",
+          bulletPoints: data.isReady ? data.summaryBulletPoints : undefined,
+          isConfirmation: data.isReady,
+        };
+
+        setMessages((prev) => [...prev, assistantMessage]);
       } else {
-        setIntakeError(data.error || "I couldn't confidently extract the transition details.");
+        setChatError(
+          data.error || "Nora couldn't interpret that. Please try adding more context or use our guided form."
+        );
       }
     } catch (err: any) {
-      setIntakeError('Error analyzing situation: ' + err.message);
+      setChatError('Communication error: ' + err.message);
     } finally {
-      setAnalyzing(false);
+      setSubmittingTurn(false);
+      // Focus back onto input if more turns needed
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
   };
 
-  const handleCreatePlanFromCandidate = async () => {
-    if (!candidatePlan) return;
+  const handleCreatePlanFromDraft = async () => {
     setCreatingPlan(true);
     try {
       const res = await fetch('/api/cases', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          transitionType: candidatePlan.transitionType || 'POST_HOSPITAL',
-          seniorName: candidatePlan.seniorName,
-          ageRange: candidatePlan.ageRange || '75-80',
-          budget: Number(customBudget) || candidatePlan.budget || 8000,
-          zipCode: customZip.trim() || candidatePlan.zipCode || '77004',
-          livesAlone: candidatePlan.livesAlone !== false,
-          mobilityConstraint: candidatePlan.mobilityConstraint !== false,
-          stairsConstraint: candidatePlan.stairsConstraint !== false,
-          userName: candidatePlan.userName || 'Family Coordinator',
-          localHelperName: candidatePlan.localHelperName || 'Local Helper',
+          seniorName: draft.seniorName || 'Senior Family Member',
+          ageRange: draft.ageRange,
+          transitionType: draft.transitionType || 'POST_HOSPITAL',
+          dischargeDate: draft.dischargeDate,
+          dischargeDays: draft.dischargeDays,
+          mobilityConstraint: draft.mobilityConstraint,
+          stairsConstraint: draft.stairsConstraint,
+          livesAlone: draft.livesAlone,
+          homeType: draft.homeType,
+          zipCode: draft.zipCode,
+          city: draft.city,
+          budget: draft.budget,
+          userName: draft.userName,
+          userCity: draft.userCity,
+          userIsRemote: draft.userIsRemote,
+          localHelperName: draft.localHelperName,
+          localHelperCity: draft.localHelperCity,
         }),
       });
+
       const data = await res.json();
       if (data.success && data.caseId) {
         router.push(`/plan/${data.caseId}`);
       } else {
-        alert('Failed to create plan: ' + data.error);
+        alert('Failed to generate plan: ' + data.error);
         setCreatingPlan(false);
       }
     } catch (err: any) {
-      alert('Error: ' + err.message);
+      alert('Error creating plan: ' + err.message);
       setCreatingPlan(false);
     }
+  };
+
+  const handleResetChat = () => {
+    setMessages([
+      {
+        id: 'welcome',
+        role: 'assistant',
+        content:
+          "Tell me what's happening with your parent or family member. For example: what's their situation right now, and what's coming up?",
+      },
+    ]);
+    setDraft({});
+    setIsReady(false);
+    setChatError(null);
+    setInputValue('');
   };
 
   const handleLoadMariaScenario = async () => {
@@ -106,7 +194,7 @@ export default function LandingPage() {
   };
 
   const samplePrompt =
-    'My mom Maria is 78. She had a fall and is in the hospital in Houston. They expect to discharge her in 5 days. She lives alone in a two-story house and cannot safely use stairs anymore. I live in Chicago, but my sister Jennifer lives nearby. We have around $8,000 to work with.';
+    'My mom Maria is 78. She had a fall and is in the hospital. They expect to discharge her in 5 days. She lives alone in a two-story house and cannot safely use stairs anymore. I live in Chicago, but my sister Jennifer lives nearby. We have around $8,000 to work with.';
 
   return (
     <div className="min-h-screen bg-canvas text-charcoal flex flex-col justify-between selection:bg-terracotta-subtle selection:text-cocoa font-sans">
@@ -127,196 +215,219 @@ export default function LandingPage() {
               href="/start"
               className="text-xs font-semibold text-terracotta hover:text-terracotta-hover transition-colors"
             >
-              Use guided intake &rarr;
+              Use step-by-step form &rarr;
             </Link>
           </div>
         </div>
       </header>
 
       {/* Hero Section: Two-column editorial layout */}
-      <main className="max-w-6xl mx-auto px-6 py-12 sm:py-16 flex-1 w-full space-y-20">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start">
-          {/* Left Column (7 cols): Editorial Narrative + Conversational Intake */}
-          <div className="lg:col-span-7 space-y-6">
-            <div className="space-y-3">
+      <main className="max-w-6xl mx-auto px-6 py-10 sm:py-14 flex-1 w-full space-y-16">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
+          {/* Left Column (7 cols): Editorial Narrative + Conversational Intake Chat */}
+          <div className="lg:col-span-7 space-y-5">
+            <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-widest text-terracotta font-sans">
                 Hospital Discharge &amp; Family Care Coordination
               </p>
-              <h1 className="text-4xl sm:text-5xl lg:text-[52px] font-serif font-bold text-charcoal tracking-tight leading-[1.12]">
+              <h1 className="text-3xl sm:text-4xl lg:text-[46px] font-serif font-bold text-charcoal tracking-tight leading-[1.14]">
                 A calmer way through what comes next.
               </h1>
-              <p className="text-base sm:text-lg text-stone-text leading-relaxed max-w-xl">
+              <p className="text-sm sm:text-base text-stone-text leading-relaxed max-w-xl">
                 When a parent suddenly needs more support, MoveWell helps your family understand what needs to happen, coordinate who&apos;s doing it, and keep the transition moving.
               </p>
             </div>
 
-            {/* Conversational Intake Form */}
-            <div className="rounded-xl border border-stone-line bg-surface p-5 sm:p-6 shadow-2xs space-y-4">
-              <label
-                htmlFor="situation-input"
-                className="block text-xs font-semibold uppercase tracking-wider text-muted"
-              >
-                Tell us what&apos;s happening
-              </label>
+            {/* Conversational Intake Hero Experience */}
+            <div className="rounded-xl border border-stone-line bg-surface shadow-2xs overflow-hidden flex flex-col">
+              {/* Chat Header Bar */}
+              <div className="px-4 py-3 bg-canvas/60 border-b border-stone-line flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-forest text-surface font-serif text-xs font-bold flex items-center justify-center">
+                    N
+                  </span>
+                  <div>
+                    <span className="text-xs font-semibold text-charcoal block">
+                      Transition Planning with Nora
+                    </span>
+                    <span className="text-[10px] text-muted block flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-forest" />
+                      Conversational Intake &bull; Quietly organizing your plan
+                    </span>
+                  </div>
+                </div>
 
-              <Textarea
-                id="situation-input"
-                rows={4}
-                value={situation}
-                onChange={(e) => setSituation(e.target.value)}
-                placeholder="e.g. My mom Maria is 78. She had a fall and is hospitalized in Houston. Discharge is in 5 days, but she can't safely use stairs at home anymore..."
-                className="text-sm placeholder:text-muted/60"
-              />
-
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSituation(samplePrompt);
-                    handleAnalyzeSituation(samplePrompt);
-                  }}
-                  className="text-xs text-forest hover:text-terracotta underline underline-offset-4 text-left font-medium transition-colors"
-                >
-                  Use sample situation (Maria, 78 &bull; Houston)
-                </button>
-
-                <Button
-                  type="button"
-                  variant="default"
-                  size="default"
-                  isLoading={analyzing}
-                  disabled={!situation.trim()}
-                  onClick={() => handleAnalyzeSituation()}
-                  className="w-full sm:w-auto"
-                >
-                  <span>Build my plan</span>
-                  <ArrowRight className="w-4 h-4 ml-1" />
-                </Button>
+                {messages.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={handleResetChat}
+                    className="inline-flex items-center gap-1 text-[11px] text-stone-text hover:text-charcoal transition-colors px-2 py-1 rounded hover:bg-stone-line/40"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Start over</span>
+                  </button>
+                )}
               </div>
 
-              <p className="text-[12px] text-muted">
-                No account or payment needed to create your transition plan.
-              </p>
-
-              {/* Recoverable Intake Error */}
-              {intakeError && (
-                <div className="p-3.5 bg-status-critical-bg border border-status-critical/20 rounded-lg text-xs text-status-critical space-y-2">
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                    <p className="font-medium">{intakeError}</p>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs pt-1 border-t border-status-critical/10">
-                    <button
-                      type="button"
-                      onClick={() => handleAnalyzeSituation()}
-                      className="underline font-semibold"
+              {/* Chat Message Scrollport */}
+              <div className="p-4 sm:p-5 max-h-[360px] overflow-y-auto space-y-3.5 text-sm bg-surface">
+                {messages.map((m) => {
+                  const isUser = m.role === 'user';
+                  return (
+                    <div
+                      key={m.id}
+                      className={`flex gap-2.5 ${isUser ? 'justify-end' : 'justify-start'}`}
                     >
-                      Try again
-                    </button>
-                    <span>&bull;</span>
-                    <button
-                      type="button"
-                      onClick={() => router.push('/start')}
-                      className="underline font-semibold"
-                    >
-                      Use guided form instead
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Candidate Plan Summary after Nora Analysis */}
-              {candidatePlan && (
-                <div className="mt-4 pt-5 border-t border-stone-line space-y-4 animate-in fade-in">
-                  <div className="rounded-lg bg-surface border border-stone-line p-4 text-xs space-y-3 shadow-2xs">
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <div className="flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-forest text-surface font-serif text-[10px] font-bold flex items-center justify-center">
+                      {!isUser && (
+                        <div className="w-6 h-6 rounded-full bg-forest text-surface font-serif text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
                           N
-                        </span>
-                        <span className="font-semibold text-charcoal text-sm">
-                          Transition Assessment for {candidatePlan.seniorName}
-                        </span>
-                      </div>
-
-                      {candidatePlan.dischargeDays && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-ochre-text bg-ochre-subtle border border-ochre-border px-2 py-0.5 rounded-full">
-                          <Calendar className="w-3 h-3" />
-                          {candidatePlan.dischargeDays} days to discharge
-                        </span>
+                        </div>
                       )}
-                    </div>
 
-                    <p className="text-charcoal/90 leading-relaxed">
-                      {candidatePlan.summaryText}
-                    </p>
+                      <div
+                        className={`space-y-3 max-w-[88%] sm:max-w-[82%] ${
+                          isUser
+                            ? 'bg-forest/10 border border-forest/20 text-charcoal rounded-2xl rounded-br-xs px-4 py-2.5'
+                            : 'bg-canvas/70 border border-stone-line text-charcoal rounded-2xl rounded-tl-xs px-4 py-3'
+                        }`}
+                      >
+                        <p className="leading-relaxed whitespace-pre-line text-xs sm:text-sm">
+                          {m.content}
+                        </p>
 
-                    {/* Explicit Confirmation of Extracted Fields / Assumptions */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-stone-line/60">
-                      <div>
-                        <label className="block text-[10px] uppercase tracking-wider text-muted font-semibold mb-1">
-                          Location / ZIP {candidatePlan.zipCode ? '(Detected)' : '(Required for Local Providers)'}
-                        </label>
-                        <Input
-                          value={customZip}
-                          onChange={(e) => setCustomZip(e.target.value)}
-                          placeholder="e.g. 77005 (Houston)"
-                          className="h-8 text-xs"
-                        />
-                        {!candidatePlan.zipCode && (
-                          <p className="text-[10px] text-terracotta mt-0.5">
-                            ZIP code wasn&apos;t explicitly mentioned. Defaults to Houston pilot if blank.
-                          </p>
+                        {/* Confirmation Card with Summary Bullet Points */}
+                        {m.isConfirmation && m.bulletPoints && (
+                          <div className="mt-3 p-3.5 rounded-lg bg-surface border border-stone-line space-y-3 shadow-2xs">
+                            <div className="flex items-center gap-1.5 text-forest text-xs font-semibold">
+                              <CheckCircle2 className="w-4 h-4" />
+                              <span>Minimum Viable Case Data Complete</span>
+                            </div>
+
+                            <div className="space-y-1.5 text-xs text-charcoal/90 border-t border-stone-line/60 pt-2">
+                              {m.bulletPoints.map((bp, i) => (
+                                <div key={i} className="flex items-start gap-1.5">
+                                  <span className="text-forest mt-0.5">&bull;</span>
+                                  <span>{bp}</span>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="pt-2 border-t border-stone-line/60">
+                              <Button
+                                type="button"
+                                variant="default"
+                                size="default"
+                                isLoading={creatingPlan}
+                                onClick={handleCreatePlanFromDraft}
+                                className="w-full font-semibold shadow-xs"
+                              >
+                                <span>Create Transition Plan for {draft.seniorName || 'Family'}</span>
+                                <ArrowRight className="w-4 h-4 ml-1" />
+                              </Button>
+                              <p className="text-[10px] text-muted text-center mt-1.5">
+                                Generates initial checklist, critical path task, and financial ledger.
+                              </p>
+                            </div>
+                          </div>
                         )}
                       </div>
+                    </div>
+                  );
+                })}
 
-                      <div>
-                        <label className="block text-[10px] uppercase tracking-wider text-muted font-semibold mb-1">
-                          Family Stated Budget ($)
-                        </label>
-                        <Input
-                          value={customBudget}
-                          onChange={(e) => setCustomBudget(e.target.value)}
-                          placeholder="e.g. 8000"
-                          className="h-8 text-xs"
-                        />
-                        {!candidatePlan.budget && (
-                          <p className="text-[10px] text-muted mt-0.5">
-                            No budget mentioned. Baseline contingency of $8,000 assumed.
-                          </p>
-                        )}
-                      </div>
+                {/* Thinking / Typing indicator */}
+                {submittingTurn && (
+                  <div className="flex gap-2.5 justify-start">
+                    <div className="w-6 h-6 rounded-full bg-forest text-surface font-serif text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                      N
+                    </div>
+                    <div className="bg-canvas/70 border border-stone-line text-muted rounded-2xl rounded-tl-xs px-3.5 py-2.5 text-xs flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-stone-text animate-pulse" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-stone-text animate-pulse delay-150" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-stone-text animate-pulse delay-300" />
+                      <span className="ml-1 text-[11px] text-stone-text">Nora is reviewing...</span>
                     </div>
                   </div>
+                )}
 
-                  <div className="flex flex-col sm:flex-row gap-2.5">
-                    <Button
-                      type="button"
-                      variant="default"
-                      size="default"
-                      isLoading={creatingPlan}
-                      onClick={handleCreatePlanFromCandidate}
-                      className="flex-1 font-semibold"
-                    >
-                      <span>Create Transition Plan for {candidatePlan.seniorName}</span>
-                      <ArrowRight className="w-4 h-4 ml-1" />
-                    </Button>
+                <div ref={messagesEndRef} />
+              </div>
 
-                    <Button
+              {/* Chat Input Bar */}
+              <div className="p-3 sm:p-4 bg-canvas/30 border-t border-stone-line space-y-2.5">
+                {/* Suggestions / Starter Chips */}
+                {messages.length === 1 && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[11px] text-muted font-medium">Try starting with:</span>
+                    <button
                       type="button"
-                      variant="secondary"
-                      size="default"
-                      onClick={() => router.push('/start')}
+                      onClick={() => handleSendMessage(samplePrompt)}
+                      className="text-[11px] bg-surface hover:bg-forest/5 text-forest border border-stone-line rounded-full px-2.5 py-1 font-medium transition-colors"
                     >
-                      Edit in guided form
-                    </Button>
+                      Sample scenario (Maria, 78 &bull; 5-day discharge)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleSendMessage(
+                          "My mom fell and she's in the hospital. She lives alone and I'm in another state."
+                        )
+                      }
+                      className="text-[11px] bg-surface hover:bg-forest/5 text-charcoal border border-stone-line rounded-full px-2.5 py-1 transition-colors"
+                    >
+                      &ldquo;My mom fell and is hospitalized...&rdquo;
+                    </button>
                   </div>
-                </div>
-              )}
+                )}
+
+                {/* Input form */}
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    placeholder={
+                      isReady
+                        ? "Any other details to note, or click 'Create Transition Plan' above..."
+                        : "Describe the situation or answer Nora's question..."
+                    }
+                    disabled={submittingTurn || creatingPlan}
+                    className="flex-1 bg-surface border border-stone-line rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-charcoal placeholder:text-muted/60 focus:outline-none focus:ring-1 focus:ring-forest"
+                  />
+                  <Button
+                    type="submit"
+                    variant="default"
+                    size="sm"
+                    disabled={!inputValue.trim() || submittingTurn}
+                    className="shrink-0 h-10 px-3.5"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                  </Button>
+                </form>
+
+                {chatError && (
+                  <div className="p-2.5 bg-status-critical-bg border border-status-critical/20 rounded-md text-xs text-status-critical flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{chatError}</span>
+                    </div>
+                    <Link href="/start" className="underline font-semibold ml-2">
+                      Use guided form
+                    </Link>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Right Column (5 cols): Editorial Photography */}
+          {/* Right Column (5 cols): Editorial Photography & Demo Box */}
           <div className="lg:col-span-5 space-y-4">
             <div className="relative rounded-2xl overflow-hidden border border-stone-line shadow-xs aspect-[4/3] sm:aspect-[16/11]">
               <Image
@@ -328,8 +439,8 @@ export default function LandingPage() {
                 sizes="(max-width: 1024px) 100vw, 40vw"
               />
             </div>
-            
-            {/* Neutral Product Copy (Replaced fabricated testimonial) */}
+
+            {/* Neutral Product Purpose Copy */}
             <p className="text-xs text-stone-text leading-relaxed text-center sm:text-left">
               Designed to give families one shared place to coordinate the days before and after discharge.
             </p>

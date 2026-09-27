@@ -92,7 +92,7 @@ export const AI_TOOLS_REGISTRY = {
     }
 
     const updates: string[] = [];
-    if (args.budget !== undefined) updates.push(`Updated case budget to $${caseData.budget.toLocaleString()}.`);
+    if (args.budget !== undefined) updates.push(`Updated case budget to ${caseData.budget ? `$${caseData.budget.toLocaleString()}` : 'open / unset'}.`);
     if (args.targetDate) updates.push(`Updated target date to ${caseData.targetDate}.`);
     if (args.dischargeDate) updates.push(`Updated discharge date to ${caseData.dischargeDate}.`);
     if (args.destinationStatus) {
