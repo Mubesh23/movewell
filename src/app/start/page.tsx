@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { ArrowRight, ArrowLeft, Check, Sparkles, AlertCircle, Building, User, Calendar, DollarSign, Users } from 'lucide-react';
+import { formatLocalDateYYYYMMDD } from '@/types';
 
 export default function IntakePage() {
   const router = useRouter();
@@ -11,8 +12,13 @@ export default function IntakePage() {
   const [submitting, setSubmitting] = useState(false);
 
   const now = new Date();
-  const defaultDischarge = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-  const defaultTarget = new Date(now.getTime() + 12 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const dDischarge = new Date(now);
+  dDischarge.setDate(dDischarge.getDate() + 5);
+  const defaultDischarge = formatLocalDateYYYYMMDD(dDischarge);
+
+  const dTarget = new Date(now);
+  dTarget.setDate(dTarget.getDate() + 12);
+  const defaultTarget = formatLocalDateYYYYMMDD(dTarget);
 
   // Form State initialized with defaults pre-populated for convenience
   const [formData, setFormData] = useState({

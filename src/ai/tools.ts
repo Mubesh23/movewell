@@ -69,10 +69,15 @@ export const AI_TOOLS_REGISTRY = {
       'AI'
     );
 
+    const updates: string[] = [];
+    if (args.budget !== undefined) updates.push(`Updated case budget to $${caseData.budget.toLocaleString()}.`);
+    if (args.targetDate) updates.push(`Updated target date to ${caseData.targetDate}.`);
+    if (args.dischargeDate) updates.push(`Updated discharge date to ${caseData.dischargeDate}.`);
+
     return {
       toolName: 'update_case_context',
       success: true,
-      message: `Updated case budget to $${caseData.budget.toLocaleString()} and target dates.`,
+      message: updates.join(' ') || `Updated case context.`,
       data: caseData,
     };
   },

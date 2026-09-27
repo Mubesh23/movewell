@@ -9,6 +9,7 @@ import {
   TaskDependency,
   Urgency,
   TaskStatus,
+  formatLocalDateYYYYMMDD,
 } from '../types';
 
 export class PlanningEngine {
@@ -122,7 +123,7 @@ export class PlanningEngine {
         status: initialStatus,
         priority: tpl.priority,
         phase: tpl.phase,
-        dueDate: taskDueDate.toISOString().split('T')[0],
+        dueDate: formatLocalDateYYYYMMDD(taskDueDate),
         assigneeId: assigneeId,
         minEstimatedCost: tpl.minEstimatedCost,
         maxEstimatedCost: tpl.maxEstimatedCost,

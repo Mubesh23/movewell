@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { planningEngine } from '@/services/planning-engine';
-import { TransitionCase, SeniorProfile, CaseMember } from '@/types';
+import { TransitionCase, SeniorProfile, CaseMember, formatLocalDateYYYYMMDD } from '@/types';
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,8 +13,13 @@ export async function POST(req: NextRequest) {
       const seniorProfileId = `profile-maria-${randomSuffix}`;
 
       const now = new Date();
-      const dischargeDateStr = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      const targetDateStr = new Date(now.getTime() + 12 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const dischargeDate = new Date(now);
+      dischargeDate.setDate(dischargeDate.getDate() + 5);
+      const dischargeDateStr = formatLocalDateYYYYMMDD(dischargeDate);
+
+      const targetDate = new Date(now);
+      targetDate.setDate(targetDate.getDate() + 12);
+      const targetDateStr = formatLocalDateYYYYMMDD(targetDate);
 
       const caseData: TransitionCase = {
         id: caseId,
@@ -88,8 +93,13 @@ export async function POST(req: NextRequest) {
     const seniorProfileId = 'prof-' + Math.random().toString(36).substring(2, 9);
 
     const nowCustom = new Date();
-    const defaultDischarge = new Date(nowCustom.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const defaultTarget = new Date(nowCustom.getTime() + 12 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const dDischarge = new Date(nowCustom);
+    dDischarge.setDate(dDischarge.getDate() + 5);
+    const defaultDischarge = formatLocalDateYYYYMMDD(dDischarge);
+
+    const dTarget = new Date(nowCustom);
+    dTarget.setDate(dTarget.getDate() + 12);
+    const defaultTarget = formatLocalDateYYYYMMDD(dTarget);
 
     const caseData: TransitionCase = {
       id: caseId,
