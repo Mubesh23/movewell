@@ -79,6 +79,12 @@ function renderInlineFormatting(text: string) {
   });
 }
 
+export function openNoraWithPrompt(prompt?: string) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('open-nora', { detail: { prompt } }));
+  }
+}
+
 export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
@@ -120,6 +126,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
       localStorage.removeItem(`movewell_chat_${caseId}`);
     }
   };
+
+  const executePromptRef = React.useRef<(text: string) => Promise<void>>();
 
   const executePrompt = async (promptText: string) => {
     if (!promptText.trim() || loading) return;
@@ -182,6 +190,19 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
       setLoading(false);
     }
   };
+
+  executePromptRef.current = executePrompt;
+
+  useEffect(() => {
+    const handleOpenNora = (e: any) => {
+      setIsOpen(true);
+      if (e?.detail?.prompt && executePromptRef.current) {
+        executePromptRef.current(e.detail.prompt);
+      }
+    };
+    window.addEventListener('open-nora', handleOpenNora);
+    return () => window.removeEventListener('open-nora', handleOpenNora);
+  }, []);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();

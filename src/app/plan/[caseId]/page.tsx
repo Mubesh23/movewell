@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { MobileNav } from '@/components/layout/MobileNav';
-import { AIAssistant } from '@/components/assistant/AIAssistant';
+import { AIAssistant, openNoraWithPrompt } from '@/components/assistant/AIAssistant';
 import { CaseOverview, TransitionTask } from '@/types';
 import {
   Clock,
@@ -229,8 +229,16 @@ export default function DashboardPage() {
                       <span>{updatingTaskId === urgentTask.id ? 'Updating...' : 'Mark Task Complete'}</span>
                     </button>
 
+                    <button
+                      onClick={() => openNoraWithPrompt(`How do I confirm the discharge destination for ${seniorProfile.name}?`)}
+                      className="bg-brand-50 hover:bg-brand-100 text-brand-900 border border-brand-200 font-bold text-xs py-3 px-4 rounded-2xl transition flex items-center space-x-1.5"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-brand-700" />
+                      <span>Ask Nora How to Confirm</span>
+                    </button>
+
                     {urgentTask.assignee && (
-                      <span className="text-xs text-stone-500 font-medium bg-sand-200/60 px-3 py-2 rounded-xl">
+                      <span className="text-xs text-stone-500 font-medium bg-sand-200/60 px-3 py-2.5 rounded-xl">
                         Assigned to: <strong>{urgentTask.assignee.name}</strong>
                       </span>
                     )}
@@ -371,6 +379,16 @@ export default function DashboardPage() {
                       width: `${Math.min(100, (costSummary.maxTotal / costSummary.userBudget) * 100)}%`,
                     }}
                   ></div>
+                </div>
+
+                <div className="pt-1 flex items-center justify-between">
+                  <button
+                    onClick={() => openNoraWithPrompt("Why did our estimate change and what are the largest expected costs?")}
+                    className="text-[11px] text-brand-800 hover:text-brand-900 font-semibold underline flex items-center space-x-1"
+                  >
+                    <Sparkles className="w-3 h-3 text-brand-700" />
+                    <span>Ask Nora about budget breakdown</span>
+                  </button>
                 </div>
               </div>
 
