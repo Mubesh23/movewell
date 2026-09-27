@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { TransitionTask, CaseMember } from '@/types';
 import { StatusIndicator } from './StatusIndicator';
@@ -18,6 +19,7 @@ import {
   Lock,
   Home,
   ShieldAlert,
+  FileText,
 } from 'lucide-react';
 
 export interface TaskRowProps {
@@ -43,6 +45,35 @@ function formatFriendlyDate(dateStr?: string): string {
     }
   } catch {}
   return dateStr;
+}
+
+function getMatchingResourceLink(task: TransitionTask): { label: string; href: string } | null {
+  const tStr = `${task.templateId || ''} ${task.title}`.toLowerCase();
+  if (tStr.includes('move manager') || tStr.includes('downsize')) {
+    return { label: 'Explore senior move managers', href: `/plan/${task.caseId}/resources?category=senior_move_management` };
+  }
+  if (tStr.includes('mover') || tStr.includes('moving')) {
+    return { label: 'Find verified movers', href: `/plan/${task.caseId}/resources?category=moving` };
+  }
+  if (
+    tStr.includes('accessibility') ||
+    tStr.includes('safety') ||
+    tStr.includes('grab bar') ||
+    tStr.includes('ramp') ||
+    tStr.includes('stair')
+  ) {
+    return { label: 'Explore home modifications & safety', href: `/plan/${task.caseId}/resources?category=home_modification` };
+  }
+  if (tStr.includes('donation') || tStr.includes('donate')) {
+    return { label: 'Find donation pickup', href: `/plan/${task.caseId}/resources?category=donation` };
+  }
+  if (tStr.includes('junk') || tStr.includes('haul')) {
+    return { label: 'Explore junk removal', href: `/plan/${task.caseId}/resources?category=junk_removal` };
+  }
+  if (tStr.includes('storage')) {
+    return { label: 'Explore storage options', href: `/plan/${task.caseId}/resources?category=storage` };
+  }
+  return null;
 }
 
 export function TaskRow({
@@ -297,6 +328,23 @@ export function TaskRow({
               </span>
             </div>
           )}
+
+          {/* Contextual Resource Directory Link */}
+          {(() => {
+            const resourceLink = getMatchingResourceLink(task);
+            if (!resourceLink) return null;
+            return (
+              <div className="pt-0.5">
+                <Link
+                  href={resourceLink.href}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#1f4d45] hover:text-[#153c36] hover:underline transition-colors"
+                >
+                  <FileText className="w-3.5 h-3.5 text-[#3f6c5c]" />
+                  <span>{resourceLink.label} &rarr;</span>
+                </Link>
+              </div>
+            );
+          })()}
 
           {/* Actions inside expansion */}
           <div className="pt-2 flex items-center gap-3 flex-wrap">
