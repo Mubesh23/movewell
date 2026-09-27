@@ -56,9 +56,9 @@ function renderInlineFormatting(text: string) {
     }
     if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
       return (
-        <span key={partIdx} className="font-semibold text-brand-900 bg-brand-50 px-1 py-0.5 rounded border border-brand-200/60 text-[11px]">
+        <em key={partIdx} className="italic text-stone-800">
           {part.slice(1, -1)}
-        </span>
+        </em>
       );
     }
     return part;
