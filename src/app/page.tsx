@@ -13,6 +13,7 @@ import {
   Send,
   HelpCircle,
 } from 'lucide-react';
+import { BRAND_NAME } from '@/lib/brand';
 
 export default function LandingPage() {
   const router = useRouter();
@@ -90,7 +91,7 @@ export default function LandingPage() {
                 </h1>
 
                 <p className="text-base sm:text-lg text-muted-ink leading-relaxed max-w-xl">
-                  MoveWell helps families navigate caregiving, recovery, and moving with a clear plan, trusted guidance, and the right support at every step.
+                  {BRAND_NAME} helps families navigate caregiving, recovery, and moving with a clear plan, trusted guidance, and the right support at every step.
                 </p>
 
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-2">
@@ -355,7 +356,7 @@ export default function LandingPage() {
                 Simple &amp; Thoughtful Process
               </span>
               <h2 className="text-3xl sm:text-4xl font-bold text-ink tracking-tight mb-4">
-                How MoveWell works
+                How {BRAND_NAME} works
               </h2>
               <p className="text-base text-muted-ink leading-relaxed">
                 We remove the overwhelm of elder transitions by breaking high-stakes moments into
@@ -381,7 +382,7 @@ export default function LandingPage() {
                 </div>
                 <h3 className="text-xl font-bold text-ink mb-2">Review a proposed plan</h3>
                 <p className="text-sm text-muted-ink leading-relaxed">
-                  MoveWell generates a structured draft: sequenced priorities, clear family roles,
+                  {BRAND_NAME} generates a structured draft: sequenced priorities, clear family roles,
                   estimated costs, and relevant local resources. Edit and tailor anything before starting.
                 </p>
               </div>
@@ -392,7 +393,7 @@ export default function LandingPage() {
                 </div>
                 <h3 className="text-xl font-bold text-ink mb-2">Coordinate with confidence</h3>
                 <p className="text-sm text-muted-ink leading-relaxed">
-                  Keep family members, vendors, and deadlines aligned. As decisions change, MoveWell adapts
+                  Keep family members, vendors, and deadlines aligned. As decisions change, {BRAND_NAME} adapts
                   dates and assignments so everyone stays on the same page.
                 </p>
               </div>
@@ -402,7 +403,7 @@ export default function LandingPage() {
       </main>
 
       <footer className="bg-white border-t border-line py-12 text-center text-xs text-muted-ink">
-        <p>&copy; {new Date().getFullYear()} MoveWell. Thoughtful transition coordination for families.</p>
+        <p>&copy; {new Date().getFullYear()} {BRAND_NAME}. Thoughtful transition coordination for families.</p>
       </footer>
     </div>
   );
