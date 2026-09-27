@@ -2,14 +2,77 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Heart, Sparkles, ShieldAlert, CheckCircle2, Clock, Users, DollarSign } from 'lucide-react';
+import { ArrowRight, Sparkles, CheckCircle2, Clock, ShieldCheck, HeartHandshake, DollarSign, FileText } from 'lucide-react';
 
 export default function LandingPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [situation, setSituation] = useState('');
+  const [analyzing, setAnalyzing] = useState(false);
+  const [loadingPreset, setLoadingPreset] = useState(false);
+  const [candidatePlan, setCandidatePlan] = useState<any | null>(null);
+  const [creatingPlan, setCreatingPlan] = useState(false);
+
+  const handleAnalyzeSituation = async (customText?: string) => {
+    const textToAnalyze = customText || situation;
+    if (!textToAnalyze.trim()) return;
+
+    setAnalyzing(true);
+    setCandidatePlan(null);
+
+    try {
+      const res = await fetch('/api/ai/intake', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: textToAnalyze }),
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setCandidatePlan(data.data);
+      } else {
+        alert('Failed to analyze situation: ' + data.error);
+      }
+    } catch (err: any) {
+      alert('Error analyzing situation: ' + err.message);
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const handleCreatePlanFromCandidate = async () => {
+    if (!candidatePlan) return;
+    setCreatingPlan(true);
+    try {
+      const res = await fetch('/api/cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transitionType: candidatePlan.transitionType || 'POST_HOSPITAL',
+          seniorName: candidatePlan.seniorName || 'Maria Thompson',
+          ageRange: candidatePlan.ageRange || '78',
+          budget: candidatePlan.budget || 8000,
+          zipCode: candidatePlan.zipCode || '77004',
+          livesAlone: candidatePlan.livesAlone !== false,
+          mobilityConstraint: candidatePlan.mobilityConstraint !== false,
+          stairsConstraint: candidatePlan.stairsConstraint !== false,
+          userName: candidatePlan.userName || 'Sarah',
+          localHelperName: candidatePlan.localHelperName || 'Jennifer',
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.caseId) {
+        router.push(`/plan/${data.caseId}`);
+      } else {
+        alert('Failed to create plan: ' + data.error);
+        setCreatingPlan(false);
+      }
+    } catch (err: any) {
+      alert('Error: ' + err.message);
+      setCreatingPlan(false);
+    }
+  };
 
   const handleLoadMariaScenario = async () => {
-    setLoading(true);
+    setLoadingPreset(true);
     try {
       const res = await fetch('/api/cases', {
         method: 'POST',
@@ -21,18 +84,20 @@ export default function LandingPage() {
         router.push(`/plan/${data.caseId}`);
       } else {
         alert('Failed to load Maria scenario: ' + data.error);
-        setLoading(false);
+        setLoadingPreset(false);
       }
     } catch (err: any) {
       alert('Error: ' + err.message);
-      setLoading(false);
+      setLoadingPreset(false);
     }
   };
 
+  const samplePrompt = "My mom Maria is 78. She had a fall and is in the hospital in Houston. They expect to discharge her in 5 days. She lives alone in a two-story house and cannot safely use stairs anymore. I live in Chicago, but my sister Jennifer lives nearby. We have around $8,000 to work with.";
+
   return (
-    <div className="min-h-screen bg-sand-100 flex flex-col justify-between">
+    <div className="min-h-screen bg-sand-100 flex flex-col justify-between text-stone-900">
       {/* Header / Brand */}
-      <header className="px-6 py-6 border-b border-stone-200/60 bg-white/60 backdrop-blur">
+      <header className="px-6 py-6 border-b border-stone-200/70 bg-white/70 backdrop-blur sticky top-0 z-30">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-2xl bg-brand-900 text-white flex items-center justify-center font-bold text-xl shadow-md">
@@ -49,99 +114,183 @@ export default function LandingPage() {
           </div>
           <button
             onClick={() => router.push('/start')}
-            className="text-sm font-semibold text-brand-900 hover:text-brand-700 transition"
+            className="text-xs font-bold text-brand-900 hover:text-brand-700 transition bg-brand-50 px-4 py-2 rounded-xl border border-brand-200"
           >
-            Start Intake &rarr;
+            Guided Form Intake &rarr;
           </button>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <main className="max-w-4xl mx-auto px-6 py-12 text-center flex-1 flex flex-col justify-center items-center">
-        <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-brand-50 border border-brand-200 text-brand-900 text-xs font-semibold mb-6">
-          <Sparkles className="w-3.5 h-3.5 text-brand-700" />
-          <span>Housing transition management for aging parents</span>
+      {/* Main Hero Section */}
+      <main className="max-w-4xl mx-auto px-6 py-12 flex-1 flex flex-col justify-center items-center text-center">
+        <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-brand-50 border border-brand-200 text-brand-900 text-xs font-bold mb-6">
+          <Sparkles className="w-4 h-4 text-brand-700" />
+          <span>Conversational Senior Housing Transition Management</span>
         </div>
 
-        <h1 className="text-4xl sm:text-5xl font-serif font-bold text-brand-950 tracking-tight leading-tight max-w-3xl mb-6">
-          Tell us what happened. <br className="hidden sm:inline" />
-          We&apos;ll show you what to do next.
+        <h1 className="text-4xl sm:text-5xl font-serif font-bold text-brand-950 tracking-tight leading-tight max-w-3xl mb-4">
+          When a parent suddenly needs to move, knowing what to do next is hard.
         </h1>
 
-        <p className="text-lg text-stone-600 max-w-2xl leading-relaxed mb-8">
-          MoveWell turns a chaotic housing transition into a clear, structured plan with ordered priorities, task dependencies, family roles, and transparent planning estimates.
+        <p className="text-base sm:text-lg text-stone-600 max-w-2xl leading-relaxed mb-8">
+          Tell us what&apos;s happening. MoveWell turns your family&apos;s situation into a clear, coordinated transition plan with ordered priorities, task dependencies, and budget ranges.
         </p>
 
-        {/* Primary CTA Box */}
-        <div className="w-full max-w-lg bg-white rounded-3xl p-6 shadow-xl border border-stone-200/80 mb-12">
-          <p className="text-xs font-bold uppercase tracking-wider text-brand-700 mb-3">
-            Golden Demo Scenario
-          </p>
-          <div className="bg-sand-50 rounded-2xl p-4 border border-sand-300 text-left mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-bold text-stone-900 text-sm">Maria Thompson (Age 78)</span>
-              <span className="bg-rose-100 text-rose-800 text-[11px] font-bold px-2.5 py-0.5 rounded-full">
-                Discharge in 5 days
-              </span>
-            </div>
-            <p className="text-xs text-stone-600 mb-2 leading-relaxed">
-              Hospitalized after a fall in Houston, TX. Cannot safely navigate stairs in her two-story home. Daughter Sarah coordinates remotely from Chicago.
-            </p>
-            <div className="flex flex-wrap gap-2 text-[11px] font-semibold text-stone-700">
-              <span className="bg-white px-2 py-1 rounded-md border border-stone-200">Budget: $8,000</span>
-              <span className="bg-white px-2 py-1 rounded-md border border-stone-200">Target: Nov 7</span>
-              <span className="bg-white px-2 py-1 rounded-md border border-stone-200">Post-Hospital</span>
-            </div>
+        {/* Primary Conversational Input Card */}
+        <div className="w-full max-w-2xl bg-white rounded-3xl p-6 shadow-xl border border-stone-200/90 text-left mb-8">
+          <label className="block text-xs font-bold uppercase tracking-wider text-brand-900 mb-2">
+            Tell us what&apos;s happening
+          </label>
+
+          <textarea
+            rows={4}
+            value={situation}
+            onChange={(e) => setSituation(e.target.value)}
+            placeholder="e.g. My mom Maria is 78. She had a fall and is in the hospital in Houston. They expect to discharge her in 5 days. She lives alone in a two-story house and cannot safely use stairs. I live in Chicago, but my sister Jennifer lives nearby. We have around $8,000 to work with."
+            className="w-full bg-sand-50/70 border border-stone-200 rounded-2xl p-4 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-brand-800 transition mb-3"
+          />
+
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <button
+              onClick={() => {
+                setSituation(samplePrompt);
+                handleAnalyzeSituation(samplePrompt);
+              }}
+              className="text-xs text-brand-800 hover:text-brand-900 font-semibold underline flex items-center space-x-1"
+            >
+              <span>Paste Golden Demo Scenario (Maria, 78)</span>
+            </button>
+
+            <button
+              onClick={() => handleAnalyzeSituation()}
+              disabled={analyzing || !situation.trim()}
+              className="w-full sm:w-auto bg-brand-900 hover:bg-brand-800 text-white font-bold py-3 px-6 rounded-2xl shadow-md transition flex items-center justify-center space-x-2 disabled:opacity-50 text-sm"
+            >
+              {analyzing ? (
+                <>
+                  <Sparkles className="w-4 h-4 animate-spin" />
+                  <span>Nora is Analyzing...</span>
+                </>
+              ) : (
+                <>
+                  <span>Make Maria&apos;s Plan</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
           </div>
 
+          {/* Candidate Plan Summary Card after Nora analysis */}
+          {candidatePlan && (
+            <div className="mt-6 pt-6 border-t border-stone-200 space-y-4">
+              <div className="bg-brand-50/70 rounded-2xl p-4 border border-brand-200 text-xs text-brand-950">
+                <div className="flex items-center space-x-2 mb-2">
+                  <div className="w-6 h-6 rounded-full bg-brand-900 text-white flex items-center justify-center font-bold text-xs">
+                    N
+                  </div>
+                  <span className="font-bold text-sm text-brand-950">Nora&apos;s Transition Assessment</span>
+                </div>
+                <p className="text-stone-700 leading-relaxed mb-3">
+                  {candidatePlan.summaryText}
+                </p>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px] font-medium text-stone-800">
+                  <div className="bg-white px-2.5 py-1.5 rounded-lg border border-stone-200">
+                    <span className="text-stone-400 block text-[10px]">Senior</span>
+                    <strong>{candidatePlan.seniorName} ({candidatePlan.ageRange})</strong>
+                  </div>
+                  <div className="bg-white px-2.5 py-1.5 rounded-lg border border-stone-200">
+                    <span className="text-stone-400 block text-[10px]">Discharge Timeline</span>
+                    <strong>{candidatePlan.dischargeDays} Days (Urgent)</strong>
+                  </div>
+                  <div className="bg-white px-2.5 py-1.5 rounded-lg border border-stone-200">
+                    <span className="text-stone-400 block text-[10px]">Budget Available</span>
+                    <strong>${candidatePlan.budget?.toLocaleString()}</strong>
+                  </div>
+                  <div className="bg-white px-2.5 py-1.5 rounded-lg border border-stone-200">
+                    <span className="text-stone-400 block text-[10px]">Remote Coordinator</span>
+                    <strong>{candidatePlan.userName} ({candidatePlan.userCity})</strong>
+                  </div>
+                  <div className="bg-white px-2.5 py-1.5 rounded-lg border border-stone-200">
+                    <span className="text-stone-400 block text-[10px]">Local Helper</span>
+                    <strong>{candidatePlan.localHelperName} ({candidatePlan.localHelperCity})</strong>
+                  </div>
+                  <div className="bg-white px-2.5 py-1.5 rounded-lg border border-stone-200">
+                    <span className="text-stone-400 block text-[10px]">Primary Safety Risk</span>
+                    <strong>Stairs / Mobility</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={handleCreatePlanFromCandidate}
+                  disabled={creatingPlan}
+                  className="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3 px-5 rounded-2xl shadow-md transition flex items-center justify-center space-x-2 text-sm"
+                >
+                  {creatingPlan ? (
+                    <span>Generating Plan...</span>
+                  ) : (
+                    <>
+                      <span>Create Maria&apos;s Transition Plan</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => router.push('/start')}
+                  className="bg-sand-100 hover:bg-sand-200 text-stone-800 font-semibold py-3 px-4 rounded-2xl border border-stone-300 transition text-xs"
+                >
+                  Edit in Guided Form
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Preset Button Bar */}
+        <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4 mb-12">
+          <span className="text-xs text-stone-500 font-medium">Or skip intake & load preset:</span>
           <button
             onClick={handleLoadMariaScenario}
-            disabled={loading}
-            className="w-full bg-brand-900 hover:bg-brand-800 text-white font-bold py-3.5 px-6 rounded-2xl shadow-md transition flex items-center justify-center space-x-2 disabled:opacity-50 text-base"
+            disabled={loadingPreset}
+            className="text-xs font-bold text-brand-900 bg-white hover:bg-stone-50 px-4 py-2 rounded-xl border border-stone-300 shadow-xs transition flex items-center space-x-1.5 disabled:opacity-50"
           >
-            {loading ? (
-              <span>Generating Plan...</span>
+            {loadingPreset ? (
+              <span>Loading Maria Scenario...</span>
             ) : (
               <>
-                <span>Load Maria&apos;s Post-Hospital Scenario</span>
-                <ArrowRight className="w-5 h-5" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Explore Maria Thompson Scenario ($8,000 budget, 5-day discharge)</span>
               </>
             )}
           </button>
-
-          <div className="mt-4 pt-3 border-t border-stone-100">
-            <button
-              onClick={() => router.push('/start')}
-              className="text-xs text-stone-500 hover:text-stone-800 font-semibold underline"
-            >
-              Or start custom intake from scratch
-            </button>
-          </div>
         </div>
 
-        {/* Feature Pill Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full text-left">
-          <div className="bg-white p-5 rounded-2xl border border-stone-200/70 shadow-xs">
-            <Clock className="w-6 h-6 text-brand-800 mb-2" />
-            <h3 className="font-bold text-stone-900 text-sm mb-1">Attention-First Dashboard</h3>
-            <p className="text-xs text-stone-500 leading-normal">
-              Always shows today&apos;s single most urgent priority so Sarah knows what to do first.
+        {/* Feature Value Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full text-left">
+          <div className="bg-white p-6 rounded-3xl border border-stone-200/80 shadow-xs">
+            <Clock className="w-7 h-7 text-brand-800 mb-3" />
+            <h3 className="font-bold text-stone-900 text-base mb-1">What Matters Today</h3>
+            <p className="text-xs text-stone-600 leading-relaxed">
+              Always highlights your single top priority so remote caregivers know what to tackle first.
             </p>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-stone-200/70 shadow-xs">
-            <CheckCircle2 className="w-6 h-6 text-brand-800 mb-2" />
-            <h3 className="font-bold text-stone-900 text-sm mb-1">Deterministic Dependencies</h3>
-            <p className="text-xs text-stone-500 leading-normal">
-              Downstream tasks unlock automatically as upstream milestones are completed.
+          <div className="bg-white p-6 rounded-3xl border border-stone-200/80 shadow-xs">
+            <ShieldCheck className="w-7 h-7 text-brand-800 mb-3" />
+            <h3 className="font-bold text-stone-900 text-base mb-1">Deterministic Dependencies</h3>
+            <p className="text-xs text-stone-600 leading-relaxed">
+              Downstream tasks unlock automatically when discharge destination & accessibility decisions are confirmed.
             </p>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-stone-200/70 shadow-xs">
-            <DollarSign className="w-6 h-6 text-brand-800 mb-2" />
-            <h3 className="font-bold text-stone-900 text-sm mb-1">Planning Cost Models</h3>
-            <p className="text-xs text-stone-500 leading-normal">
-              Calculates expected moving, packing, and repair range estimates against family budget.
+          <div className="bg-white p-6 rounded-3xl border border-stone-200/80 shadow-xs">
+            <DollarSign className="w-7 h-7 text-brand-800 mb-3" />
+            <h3 className="font-bold text-stone-900 text-base mb-1">Quote Intelligence</h3>
+            <p className="text-xs text-stone-600 leading-relaxed">
+              Upload vendor moving quotes to compare actual prices against planning estimates and update family budgets.
             </p>
           </div>
         </div>

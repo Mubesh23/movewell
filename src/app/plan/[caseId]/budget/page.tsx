@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { AIAssistant } from '@/components/assistant/AIAssistant';
+import { QuoteUploader } from '@/components/documents/QuoteUploader';
 import { CaseOverview } from '@/types';
 import { DollarSign, AlertCircle, CheckCircle2, ShieldAlert } from 'lucide-react';
 
@@ -65,6 +66,13 @@ export default function BudgetPage() {
             &ldquo;{costSummary.disclaimer}&rdquo;
           </p>
         </div>
+
+        {/* Moving Quote Intelligence Upload Section */}
+        <QuoteUploader
+          caseId={caseId}
+          currentBudget={costSummary.userBudget}
+          onBudgetUpdated={() => fetchOverview()}
+        />
 
         {/* Budget Comparison Card */}
         <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-xs space-y-6">
