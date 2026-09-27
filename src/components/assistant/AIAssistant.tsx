@@ -20,9 +20,13 @@ function renderFormattedText(text: string) {
   return lines.map((line, lineIdx) => {
     const trimmed = line.trim();
 
+    if (!trimmed) {
+      return <div key={lineIdx} className="h-1.5" />;
+    }
+
     // Horizontal Rule
     if (trimmed === '---' || trimmed === '***') {
-      return <hr key={lineIdx} className="my-2 border-stone-200" />;
+      return <hr key={lineIdx} className="my-2.5 border-stone-200" />;
     }
 
     // Markdown Headings: ### Heading, ## Heading, # Heading
@@ -35,19 +39,29 @@ function renderFormattedText(text: string) {
       );
     }
 
+    // Bullet points: • item, * item, - item
+    if (/^[\u2022\*\-]\s+/.test(trimmed)) {
+      const bulletContent = trimmed.replace(/^[\u2022\*\-]\s+/, '');
+      return (
+        <div key={lineIdx} className="flex items-start space-x-1.5 my-1 pl-1">
+          <span className="text-brand-700 font-bold text-[11px] select-none mt-0.5">&bull;</span>
+          <div className="flex-1 text-stone-800 leading-relaxed">{renderInlineFormatting(bulletContent)}</div>
+        </div>
+      );
+    }
+
     return (
-      <React.Fragment key={lineIdx}>
+      <div key={lineIdx} className="my-0.5 leading-relaxed">
         {renderInlineFormatting(line)}
-        {lineIdx < lines.length - 1 && <br />}
-      </React.Fragment>
+      </div>
     );
   });
 }
 
 function renderInlineFormatting(text: string) {
-  const parts = text.split(/(\*\*.*?\*\*|\*.*?\*)/g);
+  const parts = text.split(/(\*\*[\s\S]+?\*\*|\*[^\*\n]+?\*)/g);
   return parts.map((part, partIdx) => {
-    if (part.startsWith('**') && part.endsWith('**')) {
+    if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
       return (
         <strong key={partIdx} className="font-bold text-stone-900">
           {part.slice(2, -2)}
@@ -56,7 +70,7 @@ function renderInlineFormatting(text: string) {
     }
     if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
       return (
-        <em key={partIdx} className="italic text-stone-800">
+        <em key={partIdx} className="italic text-stone-800 font-medium">
           {part.slice(1, -1)}
         </em>
       );
