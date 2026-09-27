@@ -29,9 +29,8 @@ export class Repository {
           ? Number(caseData.budget)
           : 0;
 
-      const { error } = await supabase.from('transition_cases').upsert({
+      const payload: Record<string, any> = {
         id: caseData.id,
-        owner_user_id: caseData.ownerUserId || null,
         transition_type: caseData.transitionType,
         urgency: caseData.urgency,
         zip_code: dbZip,
@@ -41,7 +40,19 @@ export class Repository {
         destination_status: caseData.destinationStatus || null,
         budget: dbBudget,
         updated_at: new Date().toISOString(),
-      });
+      };
+      if (caseData.ownerUserId) {
+        payload.owner_user_id = caseData.ownerUserId;
+      }
+
+      let { error } = await supabase.from('transition_cases').upsert(payload);
+      if (error && (error.message?.includes('owner_user_id') || error.message?.includes('schema cache'))) {
+        console.warn('Supabase transition_cases table does not have owner_user_id column yet. Retrying without it.');
+        delete payload.owner_user_id;
+        const retry = await supabase.from('transition_cases').upsert(payload);
+        error = retry.error;
+      }
+
       if (error) {
         console.error('Supabase saveCase error:', error);
         throw new Error(`Database saveCase failed: ${error.message}`);
@@ -193,10 +204,9 @@ export class Repository {
     memoryStore.caseMembers.set(member.id, { ...member });
 
     if (supabase) {
-      const { error } = await supabase.from('case_members').upsert({
+      const payload: Record<string, any> = {
         id: member.id,
         case_id: member.caseId,
-        user_id: member.userId || null,
         name: member.name,
         relationship: member.relationship || null,
         city: member.city || null,
@@ -204,7 +214,19 @@ export class Repository {
         availability: member.availability || null,
         role: member.role,
         updated_at: new Date().toISOString(),
-      });
+      };
+      if (member.userId) {
+        payload.user_id = member.userId;
+      }
+
+      let { error } = await supabase.from('case_members').upsert(payload);
+      if (error && (error.message?.includes('user_id') || error.message?.includes('schema cache'))) {
+        console.warn('Supabase case_members table does not have user_id column yet. Retrying without it.');
+        delete payload.user_id;
+        const retry = await supabase.from('case_members').upsert(payload);
+        error = retry.error;
+      }
+
       if (error) {
         console.error('Supabase saveCaseMember error:', error);
         throw new Error(`Database saveCaseMember failed: ${error.message}`);
