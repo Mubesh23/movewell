@@ -282,4 +282,39 @@ describe('AI Orchestrator Tool Calling', () => {
     const finalCompletedCount = finalTasks.filter((t) => t.status === 'COMPLETED').length;
     expect(finalCompletedCount).toBe(initialCompletedCount);
   });
+
+  it('should search resources when user types natural search prompt like "search houstn care options"', async () => {
+    const caseData: TransitionCase = {
+      id: 'case-ai-resources',
+      transitionType: 'POST_HOSPITAL',
+      urgency: 'URGENT',
+      zipCode: '77004',
+      budget: 8000,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const profile: SeniorProfile = {
+      id: 'prof-ai-res',
+      caseId: 'case-ai-resources',
+      name: 'Maria Thompson',
+      livesAlone: true,
+      mobilityConstraint: false,
+      stairsConstraint: false,
+      immediateSafetyConcern: false,
+      ownsHome: true,
+    };
+
+    await planningEngine.generatePlan(caseData, profile, []);
+
+    const response = await aiOrchestrator.processUserIntent(
+      'case-ai-resources',
+      'search houstn care options'
+    );
+
+    expect(response.toolResults.length).toBeGreaterThan(0);
+    expect(response.toolResults[0].toolName).toBe('find_resources');
+    expect(response.toolResults[0].success).toBe(true);
+    expect(response.message).toContain('Verified Houston Care & Transition Resources');
+  });
 });

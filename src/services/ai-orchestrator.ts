@@ -66,7 +66,7 @@ User request: ${prompt}`,
                   },
                   {
                     name: 'find_resources',
-                    description: 'Search for local verified senior transition services and community resources',
+                    description: 'Search for local verified senior transition services, Houston care options, housing, moving companies, storage, and community support resources.',
                     parameters: {
                       type: Type.OBJECT,
                       properties: {
@@ -149,8 +149,41 @@ User request: ${prompt}`,
         }
 
         let textResponse = response.text || '';
-        if (!textResponse && toolResults.length > 0) {
-          textResponse = toolResults.map((tr) => tr.message).join('\n\n');
+
+        // Pass 2 Gemini grounded synthesis loop when tools returned results
+        if (toolResults.length > 0) {
+          try {
+            const secondPassResponse = await ai.models.generateContent({
+              model: 'gemini-2.5-flash',
+              contents: [
+                {
+                  role: 'user',
+                  parts: [
+                    {
+                      text: `System Context: You are Nora, an empathetic senior transition coordinator for MoveWell.
+Senior Name: ${overview?.seniorProfile.name || 'Senior'}
+Original User Request: ${prompt}
+
+Tool Execution Results:
+${toolResults.map((tr) => `Tool: ${tr.toolName}\nSuccess: ${tr.success}\nMessage: ${tr.message}`).join('\n\n')}
+
+Instruction: Using the tool execution results above, synthesize an empathetic, clear, markdown-formatted response for the user. Highlight key details like resource names, verification status, contact numbers, or updated plan status. End with a helpful, context-aware next step recommendation.`,
+                    },
+                  ],
+                },
+              ],
+            });
+
+            if (secondPassResponse.text) {
+              textResponse = secondPassResponse.text;
+            }
+          } catch (pass2Err) {
+            console.warn('Gemini Pass 2 synthesis failed, falling back to tool result text:', pass2Err);
+          }
+
+          if (!textResponse) {
+            textResponse = toolResults.map((tr) => tr.message).join('\n\n');
+          }
         }
 
         if (textResponse || toolResults.length > 0) {
@@ -230,18 +263,30 @@ User request: ${prompt}`,
       responseMessages.push(res.message);
     }
 
-    // Intent 3: Find Resources
-    if (
-      (lower.includes('find') || lower.includes('search') || lower.includes('list')) &&
-      (lower.includes('mover') || lower.includes('resource') || lower.includes('storage') || lower.includes('pack') || lower.includes('clean'))
-    ) {
-      const category = lower.includes('mover') ? 'moving' : lower.includes('storage') ? 'storage' : 'ALL';
+    // Intent 3: Find Resources (handles natural queries, care options, typos like 'houstn')
+    const isResourceQuery =
+      lower.includes('resource') ||
+      lower.includes('care option') ||
+      lower.includes('care options') ||
+      lower.includes('houstn') ||
+      lower.includes('houston care') ||
+      lower.includes('housing') ||
+      lower.includes('senior care') ||
+      lower.includes('mover') ||
+      lower.includes('moving company') ||
+      lower.includes('storage') ||
+      ((lower.includes('find') || lower.includes('search') || lower.includes('list') || lower.includes('option') || lower.includes('help') || lower.includes('service')) &&
+        (lower.includes('care') || lower.includes('option') || lower.includes('support') || lower.includes('service') || lower.includes('mover') || lower.includes('storage') || lower.includes('pack') || lower.includes('clean') || lower.includes('houston') || lower.includes('houstn')));
+
+    if (isResourceQuery) {
+      const overview = await caseService.getCaseOverview(caseId);
+      const category = lower.includes('mover') || lower.includes('moving') ? 'moving' : lower.includes('storage') ? 'storage' : 'ALL';
       const res = await AI_TOOLS_REGISTRY.find_resources({
         category,
-        zipCode: '77004',
+        zipCode: overview?.caseData.zipCode || '77004',
       });
       toolResults.push(res);
-      responseMessages.push(`Found ${res.data?.length || 0} local verified listings.`);
+      responseMessages.push(res.message);
     }
 
     // Intent 4: Task Completion (Strict Task Query Resolution)

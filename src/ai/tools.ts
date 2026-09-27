@@ -181,10 +181,31 @@ export const AI_TOOLS_REGISTRY = {
 
   find_resources: async (args: { category?: string; zipCode?: string }): Promise<ToolExecutionResult> => {
     const resources = await resourceService.findResources(args.category, args.zipCode);
+
+    if (resources.length === 0) {
+      return {
+        toolName: 'find_resources',
+        success: true,
+        message: `No verified resources found matching category "${args.category || 'all'}" near ZIP ${args.zipCode || '77004'}.`,
+        data: [],
+      };
+    }
+
+    const formattedList = resources
+      .slice(0, 4)
+      .map((r) => {
+        const orgName = r.organizationName || r.name;
+        const desc = r.description || 'Senior transition support service';
+        const phone = r.location?.phone ? ` 📞 ${r.location.phone}` : '';
+        const verified = r.verification?.verificationStatus ? ` [${r.verification.verificationStatus}]` : '';
+        return `• **${orgName}**${verified}\n  ${desc}${phone}`;
+      })
+      .join('\n\n');
+
     return {
       toolName: 'find_resources',
       success: true,
-      message: `Found ${resources.length} verified listings in Houston for ${args.category || 'all categories'}`,
+      message: `**Verified Houston Care & Transition Resources:**\n\n${formattedList}`,
       data: resources,
     };
   },
