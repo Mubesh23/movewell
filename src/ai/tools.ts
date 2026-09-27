@@ -3,6 +3,7 @@ import { taskService } from '../services/task-service';
 import { resourceService } from '../services/resource-service';
 import { repository } from '../db/repository';
 import { eventService } from '../services/event-service';
+import { pulseAndChangeService } from '../services/pulse-and-change-service';
 import { AIToolName } from '../types';
 
 export interface ToolExecutionResult {
@@ -53,6 +54,8 @@ export const AI_TOOLS_REGISTRY = {
     const caseData = await repository.getCaseById(args.caseId);
     if (!caseData) return { toolName: 'update_case_context', success: false, message: 'Case not found' };
 
+    const oldDest = caseData.destinationStatus || 'UNDECIDED';
+
     if (args.budget !== undefined) caseData.budget = Number(args.budget);
     if (args.targetDate) caseData.targetDate = args.targetDate;
     if (args.dischargeDate) caseData.dischargeDate = args.dischargeDate;
@@ -80,6 +83,28 @@ export const AI_TOOLS_REGISTRY = {
         'DESTINATION_CONFIRMED',
         { destinationStatus: caseData.destinationStatus, updatedBy: 'AI Assistant' },
         'AI'
+      );
+
+      const destLabel =
+        args.destinationStatus === 'REHAB_FIRST'
+          ? 'Rehab first'
+          : args.destinationStatus === 'RETURN_HOME'
+          ? 'Return home'
+          : args.destinationStatus;
+
+      await pulseAndChangeService.recordPlanChange(
+        args.caseId,
+        'Plan updated',
+        [
+          `✓ ${destLabel} confirmed`,
+          `✓ Safe-discharge destination updated`,
+          `→ Downstream care plan adapts to ${destLabel.toLowerCase()}`,
+        ],
+        [
+          { label: 'Destination', before: oldDest === 'UNDECIDED' ? 'Unknown' : oldDest, after: destLabel },
+          { label: 'Next milestone', before: 'Confirm destination', after: args.destinationStatus === 'REHAB_FIRST' ? 'Prepare rehab transfer' : 'Prepare home' },
+          { label: 'Home assessment', before: 'Blocked', after: args.destinationStatus === 'REHAB_FIRST' ? 'Available later' : 'Available now' },
+        ]
       );
     }
     if (args.targetDate || args.dischargeDate) {

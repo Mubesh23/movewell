@@ -1,5 +1,6 @@
 import { repository } from '../db/repository';
 import { eventService } from './event-service';
+import { pulseAndChangeService } from './pulse-and-change-service';
 import { TaskStatus, TransitionTask } from '../types';
 
 export class TaskService {
@@ -75,6 +76,9 @@ export class TaskService {
       throw new Error(`Task ${taskId} does not belong to case ${expectedCaseId}`);
     }
 
+    const beforeTasks = await repository.getTasksByCaseId(task.caseId);
+    const beforeBlocked = beforeTasks.filter((t) => t.status === 'BLOCKED');
+
     task.status = 'COMPLETED';
     if (note !== undefined && note !== null) {
       task.completionNotes = note.trim() || undefined;
@@ -91,7 +95,33 @@ export class TaskService {
     });
 
     // Recalculate downstream task dependencies
-    await this.recalculateDependencies(task.caseId);
+    const afterTasks = await this.recalculateDependencies(task.caseId);
+    const newlyReady = afterTasks.filter(
+      (at) => at.status === 'READY' && beforeBlocked.some((bt) => bt.id === at.id)
+    );
+
+    const summaryBullets = [`✓ ${task.title} completed`];
+    if (newlyReady.length > 0) {
+      summaryBullets.push(
+        `→ ${newlyReady.length} task${newlyReady.length > 1 ? 's are' : ' is'} now available (${newlyReady.map((t) => t.title).slice(0, 2).join(', ')}${newlyReady.length > 2 ? '...' : ''})`
+      );
+    }
+
+    const diffs = [
+      { label: task.title, before: 'Ready for action', after: 'Completed' },
+    ];
+    if (newlyReady.length > 0) {
+      newlyReady.forEach((nr) => {
+        diffs.push({ label: nr.title, before: 'Blocked by prerequisite', after: 'Available now' });
+      });
+    }
+
+    await pulseAndChangeService.recordPlanChange(
+      task.caseId,
+      'Plan updated',
+      summaryBullets,
+      diffs
+    );
 
     return (await repository.getTaskById(taskId))!;
   }

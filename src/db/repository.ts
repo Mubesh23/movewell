@@ -12,6 +12,7 @@ import {
   PlanDraft,
   CaseLocation,
   UserProfile,
+  PlanChangeRecord,
 } from '../types';
 import { memoryStore } from './memory-store';
 import { supabase } from './client';
@@ -833,6 +834,23 @@ export class Repository {
     if (c.ownerUserId === userId) return true;
     const members = await this.getCaseMembers(caseId);
     return members.some((m) => m.userId === userId);
+  }
+
+  // --- Plan Changes (What Changed) ---
+  async savePlanChange(change: PlanChangeRecord): Promise<PlanChangeRecord> {
+    const list = memoryStore.planChanges.get(change.caseId) || [];
+    list.unshift(change);
+    memoryStore.planChanges.set(change.caseId, list);
+    return change;
+  }
+
+  async getLatestPlanChange(caseId: string): Promise<PlanChangeRecord | null> {
+    const list = memoryStore.planChanges.get(caseId);
+    return list && list.length > 0 ? list[0] : null;
+  }
+
+  async getPlanChanges(caseId: string): Promise<PlanChangeRecord[]> {
+    return memoryStore.planChanges.get(caseId) || [];
   }
 
   // Clear helper for tests

@@ -13,16 +13,24 @@ export class CuratedDirectoryResourceProvider implements ResourceSearchProvider 
     const normCategory = resourceService.normalizeCategory(input.category);
     const services = await repository.findServices(normCategory, input.zipCode);
 
-    return services.slice(0, input.limit || 5).map((s) => {
+    const mapped = services.map((s) => {
       let trustLabel: ResourceTrustLabel = 'Nearby option';
-      if (s.verification?.verificationStatus?.toLowerCase().includes('verified')) {
-        trustLabel = 'MoveWell-reviewed';
-      } else if (
+      if (
         s.costType === 'free_public_service' ||
         s.name.toLowerCase().includes('metro') ||
-        s.name.toLowerCase().includes('county')
+        s.name.toLowerCase().includes('county') ||
+        s.name.toLowerCase().includes('area agency')
       ) {
         trustLabel = 'Public agency';
+      } else if (
+        s.organizationName?.toLowerCase().includes('nonprofit') ||
+        s.description?.toLowerCase().includes('nonprofit') ||
+        s.description?.toLowerCase().includes('volunteer') ||
+        s.costType === 'sliding_scale'
+      ) {
+        trustLabel = 'Nonprofit';
+      } else if (s.verification?.verificationStatus?.toLowerCase().includes('verified')) {
+        trustLabel = 'MoveWell-reviewed';
       } else if (s.organizationName) {
         trustLabel = 'Directory listing';
       }
@@ -42,6 +50,24 @@ export class CuratedDirectoryResourceProvider implements ResourceSearchProvider 
         website: s.website,
       };
     });
+
+    // Rank: 1. Public agency / Nonprofit / Free help -> 2. MoveWell-reviewed -> 3. Directory listing -> 4. Nearby option
+    const rankScore = (r: ResourceCandidate) => {
+      if (r.trustLabel === 'Public agency' || r.trustLabel === 'Nonprofit' || r.costType === 'free_public_service') {
+        return 1;
+      }
+      if (r.trustLabel === 'MoveWell-reviewed') {
+        return 2;
+      }
+      if (r.trustLabel === 'Directory listing') {
+        return 3;
+      }
+      return 4;
+    };
+
+    mapped.sort((a, b) => rankScore(a) - rankScore(b));
+
+    return mapped.slice(0, input.limit || 5);
   }
 }
 

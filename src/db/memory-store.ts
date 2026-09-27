@@ -28,6 +28,7 @@ class MemoryStore {
   public planDrafts: Map<string, import('../types').PlanDraft> = new Map();
   public caseLocations: Map<string, import('../types').CaseLocation> = new Map();
   public users: Map<string, import('../types').UserProfile> = new Map();
+  public planChanges: Map<string, import('../types').PlanChangeRecord[]> = new Map();
 
   public organizations: Map<string, Organization> = new Map();
   public services: Map<string, ServiceResource> = new Map();
@@ -115,6 +116,7 @@ class MemoryStore {
     this.planDrafts.clear();
     this.caseLocations.clear();
     this.users.clear();
+    this.planChanges.clear();
   }
 }
 

@@ -119,6 +119,20 @@ export type CostItemSource =
   | 'SELECTED_VENDOR'
   | 'ACTUAL';
 
+export type CostLifecycleStage =
+  | 'ESTIMATED'
+  | 'QUOTED'
+  | 'COMMITTED'
+  | 'PAID';
+
+export interface CostProvenance {
+  sourceType: 'PLANNING_RANGE' | 'VENDOR_QUOTE' | 'USER_ADJUSTED';
+  updatedAt: string;
+  confidence: 'High' | 'Medium' | 'Low';
+  sources?: string[];
+  disclaimer?: string;
+}
+
 export type TransportationNeed =
   | 'STANDARD'
   | 'ASSISTED'
@@ -334,6 +348,8 @@ export interface CostItem {
   category: CostCategory | string;
   description: string;
   source: CostItemSource;
+  stage?: CostLifecycleStage;
+  provenance?: CostProvenance;
   amount?: number;
   minAmount?: number;
   maxAmount?: number;
@@ -363,6 +379,8 @@ export interface CaseOverview {
   progressPercent: number;
   daysUntilDischarge?: number;
   urgentTask?: TransitionTask;
+  transitionPulse?: TransitionPulseMetrics;
+  latestChange?: PlanChangeRecord;
 }
 
 // --- Auth & User Profile ---
@@ -465,8 +483,9 @@ export interface PlanDraft {
 
 // --- Resource Search Abstraction & Provenance ---
 export type ResourceTrustLabel =
-  | 'MoveWell-reviewed'
   | 'Public agency'
+  | 'Nonprofit'
+  | 'MoveWell-reviewed'
   | 'Directory listing'
   | 'Nearby option'
   | 'External listing';
@@ -497,5 +516,33 @@ export interface ResourceCandidate {
 
 export interface ResourceSearchProvider {
   searchNearby(input: ResourceSearchInput): Promise<ResourceCandidate[]>;
+}
+
+export interface PlanChangeDiff {
+  label: string;
+  before: string;
+  after: string;
+}
+
+export interface PlanChangeRecord {
+  id: string;
+  caseId: string;
+  timestamp: string;
+  title: string;
+  summaryBullets: string[];
+  diffs: PlanChangeDiff[];
+}
+
+export interface TransitionPulseMetrics {
+  criticalDecisions: {
+    resolved: number;
+    total: number;
+    label: string;
+  };
+  thisWeekTasksRemaining: number;
+  blockedCount: number;
+  unassignedCount: number;
+  budgetAssessment: 'Within planning range' | 'Exceeds budget' | 'Budget open';
+  budgetAssessmentDetail: string;
 }
 

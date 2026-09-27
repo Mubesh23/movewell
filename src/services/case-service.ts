@@ -2,6 +2,7 @@ import { repository } from '../db/repository';
 import { costEngine } from './cost-engine';
 import { taskService } from './task-service';
 import { eventService } from './event-service';
+import { pulseAndChangeService } from './pulse-and-change-service';
 import { CaseMember, CaseOverview } from '../types';
 
 export class CaseService {
@@ -50,6 +51,13 @@ export class CaseService {
       tasks.find((t) => t.status === 'READY' || t.status === 'IN_PROGRESS') ||
       tasks[0];
 
+    const transitionPulse = pulseAndChangeService.calculateTransitionPulse(
+      caseData,
+      tasks,
+      costSummary
+    );
+    const latestChange = await repository.getLatestPlanChange(caseId);
+
     return {
       caseData,
       seniorProfile,
@@ -61,6 +69,8 @@ export class CaseService {
       progressPercent,
       daysUntilDischarge,
       urgentTask,
+      transitionPulse,
+      latestChange: latestChange || undefined,
     };
   }
 

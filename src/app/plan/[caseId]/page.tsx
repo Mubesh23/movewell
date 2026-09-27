@@ -14,6 +14,8 @@ import { TaskRow } from '@/components/movewell/TaskRow';
 import { PersonSummary } from '@/components/movewell/PersonSummary';
 import { BudgetSummary } from '@/components/movewell/BudgetSummary';
 import { ActivityTimeline } from '@/components/movewell/ActivityTimeline';
+import { TransitionPulse } from '@/components/movewell/TransitionPulse';
+import { WhatChanged } from '@/components/movewell/WhatChanged';
 import { Button } from '@/components/ui/Button';
 import { AlertCircle, ArrowRight, CheckCircle2, ChevronRight } from 'lucide-react';
 
@@ -250,6 +252,14 @@ export default function DashboardPage() {
           </div>
         </section>
 
+        {/* Adaptive Plan Change Alert (What Changed) */}
+        {overview.latestChange && (
+          <WhatChanged change={overview.latestChange} />
+        )}
+
+        {/* Transition Pulse: Meaningful Operational Snapshot */}
+        <TransitionPulse pulse={overview.transitionPulse} />
+
         {/* Main Editorial Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
           {/* Left Column (8 cols): Primary Focus & Next Tasks */}
@@ -438,6 +448,26 @@ export default function DashboardPage() {
                   ) : null}
                 </div>
 
+                {costSummary.budgetGap > 0 && (
+                  <div className="p-2.5 rounded-lg bg-amber-bg border border-amber/20 text-xs text-ink flex items-start gap-2">
+                    <span className="text-amber font-bold text-sm">✦</span>
+                    <div>
+                      <span className="text-amber font-semibold block">Expected cost may exceed target budget.</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openNoraWithPrompt(
+                            'Our expected costs may exceed our target budget. What could we change or adjust to stay within budget?'
+                          )
+                        }
+                        className="text-evergreen hover:text-evergreen-dark font-medium underline underline-offset-2 mt-0.5 inline-block text-left"
+                      >
+                        Ask Nora what could change &rarr;
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="pt-2 border-t border-stone-line/60">
                   <button
                     type="button"
@@ -478,6 +508,58 @@ export default function DashboardPage() {
                     onSelect={() => router.push(`/plan/${caseId}/family`)}
                   />
                 ))}
+              </div>
+
+              {tasks.filter((t) => (t.status === 'READY' || t.status === 'IN_PROGRESS') && !t.assigneeId).length > 0 && (
+                <div className="mt-3 p-2.5 rounded-lg bg-sage/60 border border-line text-xs text-ink flex items-start gap-2">
+                  <span className="text-evergreen font-bold text-sm">✦</span>
+                  <div>
+                    <span className="font-semibold text-ink block">
+                      {tasks.filter((t) => (t.status === 'READY' || t.status === 'IN_PROGRESS') && !t.assigneeId).length} active task(s) unassigned.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => openNoraWithPrompt('Who in our family team could handle the unassigned tasks?')}
+                      className="text-evergreen hover:text-evergreen-dark font-medium underline underline-offset-2 mt-0.5 inline-block text-left"
+                    >
+                      Ask Nora who could handle them &rarr;
+                    </button>
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* Resources & Support Quick Card */}
+            <section>
+              <SectionHeader
+                eyebrow="Local providers"
+                title="Nearby Help"
+                action={
+                  <Link
+                    href={`/plan/${caseId}/resources`}
+                    className="text-xs font-semibold text-forest hover:text-forest-deep"
+                  >
+                    Directory &rarr;
+                  </Link>
+                }
+              />
+              <div className="rounded-xl border border-stone-line bg-surface p-4 shadow-2xs space-y-3">
+                <p className="text-xs text-muted leading-relaxed">
+                  Local senior move managers, safety contractors, and public/nonprofit support matched to {seniorProfile.name}&apos;s location.
+                </p>
+                <div className="p-2.5 rounded-lg bg-sage/50 border border-line text-xs text-ink flex items-start gap-2">
+                  <span className="text-evergreen font-bold text-sm">✦</span>
+                  <div>
+                    <span className="font-semibold text-ink block">Explore local options</span>
+                    <button
+                      type="button"
+                      onClick={() => openNoraWithPrompt('What free public or nonprofit assistance programs can help with this transition?')}
+                      className="text-evergreen hover:text-evergreen-dark font-medium underline underline-offset-2 mt-0.5 inline-block text-left"
+                    >
+                      Ask Nora about free or low-cost options &rarr;
+                    </button>
+                  </div>
+                </div>
               </div>
             </section>
 

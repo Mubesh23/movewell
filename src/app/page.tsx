@@ -22,6 +22,19 @@ import {
 export default function LandingPage() {
   const router = useRouter();
   const [loadingDemo, setLoadingDemo] = useState(false);
+  const [initialPrompt, setInitialPrompt] = useState('');
+  const [noraPreview, setNoraPreview] = useState<string | null>(null);
+
+  const handleHomepageNoraSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!initialPrompt.trim()) return;
+    setNoraPreview("I can help you work through that. I'll ask a few focused questions so I can build a plan around her situation.");
+  };
+
+  const handleContinueWithNora = () => {
+    if (!initialPrompt.trim()) return;
+    router.push(`/get-started?initial=${encodeURIComponent(initialPrompt.trim())}`);
+  };
 
   const handleExploreSamplePlan = async () => {
     setLoadingDemo(true);
@@ -84,7 +97,7 @@ export default function LandingPage() {
                 </button>
               </div>
 
-              <div className="mt-10 flex flex-wrap items-center gap-y-2 gap-x-6 text-xs text-muted-ink">
+              <div className="mt-8 flex flex-wrap items-center gap-y-2 gap-x-6 text-xs text-muted-ink">
                 <span className="inline-flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 text-evergreen" />
                   No sign-up required to get started
@@ -97,6 +110,94 @@ export default function LandingPage() {
                   <CheckCircle2 className="w-4 h-4 text-evergreen" />
                   Built for families coordinating near or far
                 </span>
+              </div>
+
+              {/* Lightweight Nora Entry Point */}
+              <div className="mt-8 p-5 sm:p-6 rounded-2xl bg-white border border-line shadow-2xs max-w-2xl">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-2 h-2 rounded-full bg-evergreen" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-evergreen">
+                    Not sure where to start?
+                  </span>
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-ink mb-1">
+                  Tell Nora what&apos;s happening.
+                </h3>
+                <p className="text-xs text-muted-ink mb-4">
+                  Share what&apos;s going on with your parent. Nora will ask a few focused questions and propose a structured plan.
+                </p>
+
+                {!noraPreview ? (
+                  <form onSubmit={handleHomepageNoraSubmit} className="space-y-3">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={initialPrompt}
+                        onChange={(e) => setInitialPrompt(e.target.value)}
+                        placeholder="My mom is being discharged Friday and lives alone..."
+                        className="w-full pl-4 pr-12 py-3 rounded-xl border border-line bg-cream text-ink text-sm placeholder:text-muted-ink/70 focus:outline-none focus:ring-2 focus:ring-evergreen/20 focus:border-evergreen transition-all"
+                      />
+                      <button
+                        type="submit"
+                        disabled={!initialPrompt.trim()}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-evergreen hover:bg-evergreen-dark text-white flex items-center justify-center transition-colors disabled:opacity-40"
+                        title="Start with Nora"
+                      >
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Suggestion Chips */}
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {[
+                        'My mom fell and is being discharged Friday.',
+                        'Mom lives alone and stairs are becoming unsafe.',
+                        'Need to find short-term rehab and local movers.',
+                      ].map((chip, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            setInitialPrompt(chip);
+                            setNoraPreview("I can help you work through that. I'll ask a few focused questions so I can build a plan around her situation.");
+                          }}
+                          className="text-[11px] px-3 py-1 rounded-full border border-line bg-white hover:bg-sage text-muted-ink hover:text-evergreen transition-colors text-left"
+                        >
+                          {chip}
+                        </button>
+                      ))}
+                    </div>
+                  </form>
+                ) : (
+                  <div className="space-y-4 pt-1">
+                    <div className="p-3 rounded-xl bg-sage/50 border border-line/80 text-xs leading-relaxed text-ink space-y-1">
+                      <div className="flex items-center gap-1.5 font-bold text-evergreen">
+                        <span>✦</span>
+                        <span>Nora:</span>
+                      </div>
+                      <p>{noraPreview}</p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={handleContinueWithNora}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-semibold text-xs shadow-2xs transition-all"
+                      >
+                        <span>Continue with Nora</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setNoraPreview(null)}
+                        className="text-xs text-muted-ink hover:text-ink underline"
+                      >
+                        Edit note
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
