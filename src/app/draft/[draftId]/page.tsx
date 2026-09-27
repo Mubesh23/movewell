@@ -73,7 +73,6 @@ export default function DraftReviewPage() {
   const [newMemberIsLocal, setNewMemberIsLocal] = useState(true);
   const [newMemberRole, setNewMemberRole] = useState<CaseMemberRole>('FAMILY');
   const [newMemberShouldInvite, setNewMemberShouldInvite] = useState(false);
-  const [newMemberChannel, setNewMemberChannel] = useState<'EMAIL' | 'SMS'>('EMAIL');
   const [newMemberContact, setNewMemberContact] = useState('');
 
   // Nora Draft Chat state
@@ -230,14 +229,12 @@ export default function DraftReviewPage() {
       city: newMemberCity.trim() || undefined,
       isLocal: newMemberIsLocal,
       role: newMemberRole,
-      email: newMemberShouldInvite && newMemberChannel === 'EMAIL' ? newMemberContact.trim() : undefined,
-      phone: newMemberShouldInvite && newMemberChannel === 'SMS' ? newMemberContact.trim() : undefined,
+      email: newMemberShouldInvite ? newMemberContact.trim() : undefined,
       invitation:
         newMemberShouldInvite && newMemberContact.trim()
           ? {
-              channel: newMemberChannel,
-              email: newMemberChannel === 'EMAIL' ? newMemberContact.trim() : undefined,
-              phone: newMemberChannel === 'SMS' ? newMemberContact.trim() : undefined,
+              channel: 'EMAIL',
+              email: newMemberContact.trim(),
               status: 'DRAFT',
             }
           : undefined,
@@ -640,8 +637,8 @@ export default function DraftReviewPage() {
                     {m.city && <div>📍 {m.city}</div>}
                     {m.invitation ? (
                       <div className="p-2.5 rounded-xl bg-orange-50/80 border border-orange-200/60 text-[11px] text-amber-950 font-medium">
-                        ✉️ Invite staged: {m.invitation.email || m.invitation.phone || m.email || m.phone}
-                        <span className="block text-[10px] text-muted-ink mt-0.5">Sends when plan starts</span>
+                        ✉️ Email invite staged: {m.invitation.email || m.email}
+                        <span className="block text-[10px] text-muted-ink mt-0.5">Sends to inbox when plan starts</span>
                       </div>
                     ) : m.role !== 'OWNER' ? (
                       <div className="text-[11px] text-muted-ink italic">
@@ -1127,46 +1124,21 @@ export default function DraftReviewPage() {
                       onChange={(e) => setNewMemberShouldInvite(e.target.checked)}
                       className="rounded text-evergreen focus:ring-evergreen"
                     />
-                    <span>Invite them to collaborate in MoveWell</span>
+                    <span>Invite them to collaborate via email</span>
                   </label>
 
                   {newMemberShouldInvite && (
-                    <div className="space-y-3 pl-6">
-                      <div className="flex gap-4">
-                        <label className="flex items-center gap-1.5 text-xs text-ink cursor-pointer">
-                          <input
-                            type="radio"
-                            checked={newMemberChannel === 'EMAIL'}
-                            onChange={() => setNewMemberChannel('EMAIL')}
-                            className="text-evergreen"
-                          />
-                          <span>Email</span>
-                        </label>
-                        <label className="flex items-center gap-1.5 text-xs text-ink cursor-pointer">
-                          <input
-                            type="radio"
-                            checked={newMemberChannel === 'SMS'}
-                            onChange={() => setNewMemberChannel('SMS')}
-                            className="text-evergreen"
-                          />
-                          <span>Text message (SMS)</span>
-                        </label>
-                      </div>
-
+                    <div className="space-y-2 pl-6">
                       <input
-                        type={newMemberChannel === 'EMAIL' ? 'email' : 'tel'}
+                        type="email"
                         required={newMemberShouldInvite}
                         value={newMemberContact}
                         onChange={(e) => setNewMemberContact(e.target.value)}
-                        placeholder={
-                          newMemberChannel === 'EMAIL'
-                            ? 'jennifer@example.com'
-                            : '(555) 123-4567'
-                        }
-                        className="w-full px-3 py-2 border border-line rounded-xl text-sm text-ink"
+                        placeholder="jennifer@example.com"
+                        className="w-full px-3 py-2 border border-line rounded-xl text-sm text-ink focus:outline-none focus:ring-1 focus:ring-evergreen"
                       />
                       <p className="text-[11px] text-muted-ink">
-                        Invitation will be staged and sent when you choose to start the plan.
+                        An email invitation will be staged and sent when you choose to start the plan.
                       </p>
                     </div>
                   )}

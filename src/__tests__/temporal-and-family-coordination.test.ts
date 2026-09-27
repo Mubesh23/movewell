@@ -4,6 +4,7 @@ import { resolveTemporalExpression } from '../lib/temporal';
 import { POST as intakePost } from '../app/api/ai/intake/route';
 import { POST as draftChatPost } from '../app/api/drafts/[draftId]/chat/route';
 import { draftService } from '../services/draft-service';
+import { caseService } from '../services/case-service';
 import { repository } from '../db/repository';
 import { IntakeDraft } from '../types';
 
@@ -83,6 +84,29 @@ describe('Temporal Reasoning, Coordinator Identity & Family Network Coordination
       expect(helper.invite).toBeDefined();
       expect(helper.invite.contact).toBe('jennifer@example.com');
       expect(helper.invite.channel).toBe('EMAIL');
+    });
+
+    it('does not stage an invite for phone numbers alone because invitations are email only', async () => {
+      const req = new NextRequest('http://localhost:3000/api/ai/intake', {
+        method: 'POST',
+        body: JSON.stringify({
+          message: "My sister Jennifer is helping, her cell is 555-234-5678.",
+          currentDraft: {
+            seniorName: 'Maria',
+            dischargeDate: '2026-10-02',
+          },
+        }),
+      });
+
+      const res = await intakePost(req);
+      const json = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(json.success).toBe(true);
+      expect(json.draft.localHelperName).toBe('Jennifer');
+      // No staged invitation because no email was provided
+      const helper = (json.draft.familyMembers || []).find((m: any) => m.name === 'Jennifer');
+      expect(helper?.invite).toBeUndefined();
     });
   });
 
@@ -208,6 +232,20 @@ describe('Temporal Reasoning, Coordinator Identity & Family Network Coordination
       expect(activatedHelper).toBeDefined();
       expect(activatedHelper?.invitationStatus).toBe('PENDING');
       expect(activatedHelper?.email).toBe('jennifer@example.com');
+      expect(activatedHelper?.invitationChannel).toBe('EMAIL');
+
+      // Add another member with email directly to the case
+      const newMember = await caseService.addMember(activation.caseId, {
+        name: 'Uncle David',
+        role: 'FAMILY',
+        relationship: 'Uncle',
+        isLocal: true,
+        email: 'david@example.com',
+      });
+
+      expect(newMember.invitationStatus).toBe('PENDING');
+      expect(newMember.invitationChannel).toBe('EMAIL');
+      expect(newMember.email).toBe('david@example.com');
     });
   });
 });

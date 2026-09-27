@@ -83,8 +83,10 @@ export class CaseService {
       isLocal: boolean;
       availability?: string;
       role: CaseMember['role'];
+      email?: string;
     }
   ): Promise<CaseMember> {
+    const emailClean = data.email?.trim() || undefined;
     const member: CaseMember = {
       id: 'mbr-' + Math.random().toString(36).substring(2, 9),
       caseId,
@@ -94,6 +96,9 @@ export class CaseService {
       isLocal: data.isLocal,
       availability: data.availability || undefined,
       role: data.role,
+      email: emailClean,
+      invitationStatus: emailClean ? 'PENDING' : 'NONE',
+      invitationChannel: emailClean ? 'EMAIL' : undefined,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -103,7 +108,16 @@ export class CaseService {
       memberId: saved.id,
       name: saved.name,
       role: saved.role,
+      email: saved.email,
     });
+    if (saved.email) {
+      await eventService.recordEvent(caseId, 'CASE_MEMBER_INVITED', {
+        memberId: saved.id,
+        name: saved.name,
+        email: saved.email,
+        channel: 'EMAIL',
+      });
+    }
     return saved;
   }
 

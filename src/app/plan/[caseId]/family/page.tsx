@@ -23,6 +23,7 @@ import {
   MessageCircle,
   ShieldCheck,
   Sparkles,
+  Mail,
 } from 'lucide-react';
 
 const AVATAR_TONES = [
@@ -58,6 +59,8 @@ export default function FamilyPage() {
   const [city, setCity] = useState('');
   const [isLocal, setIsLocal] = useState(true);
   const [availability, setAvailability] = useState('');
+  const [email, setEmail] = useState('');
+  const [sendInvite, setSendInvite] = useState(false);
 
   const fetchOverview = React.useCallback(async () => {
     try {
@@ -91,6 +94,7 @@ export default function FamilyPage() {
           city: city.trim() || undefined,
           isLocal,
           availability: availability.trim() || undefined,
+          email: sendInvite && email.trim() ? email.trim() : (email.trim() || undefined),
         }),
       });
 
@@ -102,6 +106,8 @@ export default function FamilyPage() {
         setCity('');
         setIsLocal(true);
         setAvailability('');
+        setEmail('');
+        setSendInvite(false);
         setIsAddModalOpen(false);
         await fetchOverview();
       } else {
@@ -263,6 +269,12 @@ export default function FamilyPage() {
                             <span>
                               {memberTasks.length} {memberTasks.length === 1 ? 'task' : 'tasks'} · {completedCount} completed
                             </span>
+                            {member.email && (
+                              <span className="inline-flex items-center gap-1 text-[#3f6c5c]">
+                                <Mail size={12} className="text-[#3f6c5c]" />
+                                {member.email}
+                              </span>
+                            )}
                             {member.city && (
                               <span className="inline-flex items-center gap-1">
                                 <MapPin size={12} className="text-[#a0aea8]" />
@@ -281,6 +293,12 @@ export default function FamilyPage() {
 
                       {/* Status + Actions */}
                       <div className="flex items-center gap-2.5 self-end sm:self-center">
+                        {member.invitationStatus === 'PENDING' && (
+                          <span className="w-fit rounded-full px-2.5 py-1 text-[11px] font-medium bg-[#e8f1ea] text-[#3f6c5c] inline-flex items-center gap-1">
+                            <Mail size={11} />
+                            Invited via email
+                          </span>
+                        )}
                         <span className={`w-fit rounded-full px-2.5 py-1 text-[11px] font-medium ${statusBadgeClass}`}>
                           {statusBadgeText}
                         </span>
@@ -480,6 +498,33 @@ export default function FamilyPage() {
             <label htmlFor="isLocal" className="text-xs text-[#183331] font-medium cursor-pointer">
               Local to {seniorProfile.name} (available for in-person support)
             </label>
+          </div>
+
+          <div className="space-y-2.5 pt-3 border-t border-[#edf2ee]">
+            <Input
+              label="Email Address"
+              type="email"
+              placeholder="e.g. sarah@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <div className="flex items-center gap-2.5 pt-0.5">
+              <input
+                type="checkbox"
+                id="sendInvite"
+                checked={sendInvite}
+                onChange={(e) => setSendInvite(e.target.checked)}
+                className="w-4 h-4 text-[#1f4d45] border-[#cbdcd0] rounded focus:ring-[#1f4d45] accent-[#1f4d45]"
+              />
+              <label htmlFor="sendInvite" className="text-xs text-[#183331] font-medium cursor-pointer">
+                Send an email invitation to collaborate on this plan
+              </label>
+            </div>
+            {sendInvite && (
+              <p className="text-[11px] text-[#71847d] pl-6">
+                They will receive an email invite with access to their assigned tasks.
+              </p>
+            )}
           </div>
 
           <div className="flex justify-end gap-2.5 pt-4 border-t border-[#e0e9e2]">

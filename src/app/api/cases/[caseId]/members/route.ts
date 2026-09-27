@@ -7,7 +7,7 @@ export async function POST(
 ) {
   try {
     const body = await req.json();
-    const { name, role, relationship, city, isLocal, availability } = body;
+    const { name, role, relationship, city, isLocal, availability, email } = body;
 
     if (!name || !role) {
       return NextResponse.json(
@@ -23,6 +23,7 @@ export async function POST(
       city,
       isLocal: isLocal ?? true,
       availability,
+      email,
     });
 
     return NextResponse.json({ success: true, data: member }, { status: 201 });

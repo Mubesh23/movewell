@@ -267,22 +267,22 @@ function deterministicExtract(
     updates.userIsRemote = true;
   }
 
-  // 8. Contact invitation parsing
+  // 8. Contact invitation parsing (email only)
   const emailMatch = text.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/);
-  const phoneMatch = text.match(/\b(?:\+?1[-. ]?)?\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})\b/);
   if (updates.localHelperName || currentDraft.localHelperName) {
     const helperName = updates.localHelperName || currentDraft.localHelperName;
-    if (emailMatch || phoneMatch) {
+    if (emailMatch) {
       const existingMembers = currentDraft.familyMembers || [];
       const memberIndex = existingMembers.findIndex(
         (m) => m.name.toLowerCase() === helperName?.toLowerCase()
       );
       const inviteData = {
-        channel: (emailMatch ? 'EMAIL' : 'SMS') as 'EMAIL' | 'SMS',
-        contact: emailMatch ? emailMatch[0] : (phoneMatch ? phoneMatch[0] : ''),
+        channel: 'EMAIL' as const,
+        contact: emailMatch[0],
       };
       if (memberIndex >= 0) {
         existingMembers[memberIndex].invite = inviteData;
+        existingMembers[memberIndex].email = emailMatch[0];
         updates.familyMembers = [...existingMembers];
       } else {
         updates.familyMembers = [
@@ -294,8 +294,7 @@ function deterministicExtract(
             isLocal: true,
             role: 'FAMILY',
             invite: inviteData,
-            email: emailMatch ? emailMatch[0] : undefined,
-            phone: phoneMatch ? phoneMatch[0] : undefined,
+            email: emailMatch[0],
           },
         ];
       }
@@ -437,7 +436,7 @@ RULES FOR EXTRACTION & TEMPORAL REASONING:
   - Extract coordinatorRelationship / userRelationship: user's relationship to the senior (e.g. "Son", "Daughter", "Child", "Spouse"). If user says "my parent", user is "Child". Do NOT assume son vs daughter unless explicitly stated.
 - HELP NETWORK & INVITATIONS:
   - If user mentions people helping (e.g. "my brother Jim, my sister Kim, and my aunt Jin"), capture them in draftMembers with their relationship to the senior.
-  - If user provides an email or phone number to invite someone, capture their contact details.
+  - We invite collaborators via email only. If user provides an email address to invite someone, capture their email address.
 - BUDGET: If the user says "leave it open", "live it open" (typo), "not sure", or "no budget", set budgetStatus: "UNSET" and budget: null.
 - LOCATION: If user provides a ZIP code or city/state, extract zipCode and/or city.
 - DO NOT invent fictional names, locations, or details. Leave missing fields null.
@@ -453,7 +452,7 @@ RULES FOR CONVERSATIONAL REPLY:
   - If COORDINATOR_NAME: "And before we build the plan, what should I call you?"
   - If COORDINATOR_RELATIONSHIP: "What is your relationship to ${currentDraft.seniorName || 'your family member'}?"
   - If LOCAL_SUPPORT: "Is there anyone nearby who can help in person, or are you coordinating mostly from a distance?"
-  - If asking to invite helper: "Would you like to invite [Name] to collaborate? If so, I can take their email or phone number."
+  - If asking to invite helper: "Would you like to invite [Name] to collaborate? If so, what's their email address?"
   - If LOCATION: "What address or ZIP code should I use when looking for nearby help? You can give me just the ZIP if you'd rather not share the exact address yet."
   - If BUDGET: "Do you already have a budget in mind, or should we leave that open for now?"
   NEVER ask multiple questions in the same turn.`;

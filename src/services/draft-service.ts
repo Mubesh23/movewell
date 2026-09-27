@@ -105,9 +105,8 @@ export class DraftService {
             phone: fm.phone,
             invitation: fm.invite
               ? {
-                  channel: fm.invite.channel,
-                  email: fm.email,
-                  phone: fm.phone,
+                  channel: 'EMAIL',
+                  email: fm.email || fm.invite.contact,
                   status: 'DRAFT',
                 }
               : undefined,
