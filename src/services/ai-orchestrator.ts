@@ -45,6 +45,15 @@ export class AIOrchestrator {
 
         const urgentTask = overview?.urgentTask || readyTasks[0];
 
+        const destStatusLabel =
+          caseData?.destinationStatus === 'REHAB_FIRST'
+            ? 'Confirmed Short-Term Rehab First'
+            : caseData?.destinationStatus === 'RETURN_HOME'
+            ? 'Confirmed Return Home'
+            : caseData?.destinationStatus === 'KNOWN'
+            ? 'Confirmed Destination Known'
+            : caseData?.destinationStatus || 'UNDECIDED';
+
         const systemInstruction = `You are Nora, an empathetic senior transition coordinator for MoveWell.
 You are helping coordinate a post-hospital senior transition plan.
 
@@ -54,7 +63,7 @@ You are helping coordinate a post-hospital senior transition plan.
 - Urgency Level: ${caseData?.urgency || 'URGENT'}
 - Discharge Date: ${caseData?.dischargeDate || 'Not set'}
 - Target Transition Date: ${caseData?.targetDate || 'Not set'}
-- Destination Status: ${caseData?.destinationStatus || 'UNDECIDED'}
+- Confirmed Discharge Destination: ${destStatusLabel}
 - Case Budget: $${caseData?.budget ? caseData.budget.toLocaleString() : '8,000'}
 - Transition Progress: ${overview?.progressPercent || 0}% (${completedTasks.length}/${tasks.length} tasks completed)
 
@@ -98,11 +107,12 @@ ${
 === CRITICAL MUTATION & CONVERSATIONAL POLICIES ===
 1. MUTATION TOOLS (complete_task, assign_task, update_case_context):
    - ONLY call mutation tools when the user explicitly instructs an action or clearly confirms a completed real-world action (e.g., "Set budget to $5,000", "Jennifer will handle packing", "Mark discharge complete", "The social worker confirmed rehab, mark that complete").
+   - Update destinationStatus (via update_case_context to REHAB_FIRST or RETURN_HOME) ONLY when the user explicitly confirms a real-world decision ("The social worker confirmed she is going to short-term rehab").
    - NEVER call mutation tools when the user is:
+     - Discussing hypothetically ("The doctor thinks rehab might be better", "Maybe rehab would be better", "What if I lower the budget?")
      - Asking why an action should happen ("Why would you mark that complete?", "Why is that important?")
      - Asking how to do something ("How do I confirm?", "What happens next?")
      - Questioning a suggestion ("Should I mark it complete?", "Would you mark it?")
-     - Discussing hypothetically ("Maybe Jennifer could handle it", "What if I lower the budget?")
      - Saying not to do something ("Don't change anything yet", "Not yet")
    - For questions and hypotheticals, provide a direct, warm, conversational response WITHOUT invoking mutation tools.
 
@@ -110,10 +120,11 @@ ${
    - Call find_resources when the user asks for local Houston resources, care options, movers, storage, housing, or support services.
    - Call get_plan when the user asks for a complete status summary or remaining task overview.
 
-3. CONVERSATIONAL GROUNDING & REFERENCE RESOLUTION:
-   - Use the conversation history to resolve pronouns and references ("confirm that", "assign it to Sarah", "can she do that instead?").
-   - Answer follow-up questions concisely based on case context without dumping the full plan repeatedly unless requested.
-   - Coordinate real-world progress empathetically.`;
+3. CONVERSATIONAL GROUNDING & FACTUAL DISCIPLINE:
+   - Treat structured case context (Destination Status, Budget, Tasks) as authoritative product truth. When asked about case state (e.g. "Where is Maria going after discharge?"), answer based on structured Destination Status ("${destStatusLabel}").
+   - NEVER invent or fabricate verification, certification, NASMM membership, partnership, phone numbers, addresses, prices, or service offerings beyond what tool results or structured case state contain.
+   - NEVER use terms like "partner", "MoveWell partner", "our providers", or "certified" unless explicitly present in tool verification data. Use neutral terms ("resource", "provider", "directory listing", "verified listing", "local service").
+   - Frame operational advice (how to talk with hospital staff) as general guidance ("A common next step is...", "You may want to ask..."). Do not present general advice as hospital-specific facts unless specified in case state.`;
 
         // Format conversation turns for Gemini API
         const geminiContents = messages.map((m) => ({
@@ -131,13 +142,18 @@ ${
                 functionDeclarations: [
                   {
                     name: 'update_case_context',
-                    description: 'Update the case dollar budget limit or target dates. Call this tool ONLY when user explicitly asks to set, update, or change the budget limit.',
+                    description: 'Update the case dollar budget limit, target dates, or confirmed discharge destination status (REHAB_FIRST, RETURN_HOME, KNOWN, UNKNOWN, UNDECIDED). Call this tool ONLY when user explicitly asks to update budget/dates or clearly confirms a real-world discharge decision (e.g. "social worker confirmed rehab" -> REHAB_FIRST). DO NOT call for hypotheticals.',
                     parameters: {
                       type: Type.OBJECT,
                       properties: {
                         budget: { type: Type.NUMBER, description: 'Updated dollar budget limit (e.g. 5000)' },
+                        targetDate: { type: Type.STRING, description: 'Updated target date YYYY-MM-DD' },
+                        dischargeDate: { type: Type.STRING, description: 'Updated discharge date YYYY-MM-DD' },
+                        destinationStatus: {
+                          type: Type.STRING,
+                          description: 'Confirmed discharge destination: REHAB_FIRST, RETURN_HOME, KNOWN, UNKNOWN, or UNDECIDED',
+                        },
                       },
-                      required: ['budget'],
                     },
                   },
                   {
@@ -154,11 +170,11 @@ ${
                   },
                   {
                     name: 'find_resources',
-                    description: 'Search for local verified senior transition services, Houston care options, housing, moving companies, storage, and community support resources.',
+                    description: 'Search for local senior transition services, Houston care options, housing, moving companies, storage, and community support resources in the MoveWell directory.',
                     parameters: {
                       type: Type.OBJECT,
                       properties: {
-                        category: { type: Type.STRING, description: 'Category: moving, storage, senior_move_management, donation, or ALL' },
+                        category: { type: Type.STRING, description: 'Category: moving, storage, senior_move_management, donation, home_modification, transportation, or ALL' },
                         zipCode: { type: Type.STRING, description: 'Local 5-digit ZIP code' },
                       },
                     },
@@ -210,8 +226,29 @@ ${
               } else if (typeof rawBudget === 'string') {
                 parsedBudget = parseInt(rawBudget.replace(/[^0-9]/g, ''), 10);
               }
-              if (parsedBudget !== undefined && !isNaN(parsedBudget) && parsedBudget > 0) {
-                toolResults.push(await AI_TOOLS_REGISTRY.update_case_context({ caseId, budget: parsedBudget }));
+              if (isNaN(parsedBudget as number)) parsedBudget = undefined;
+
+              const rawDest = args.destinationStatus || args.destination_status || args.destination;
+              let parsedDest: ('KNOWN' | 'UNKNOWN' | 'REHAB_FIRST' | 'RETURN_HOME' | 'UNDECIDED') | undefined = undefined;
+              if (rawDest && typeof rawDest === 'string') {
+                const dUpper = rawDest.toUpperCase();
+                if (dUpper.includes('REHAB')) parsedDest = 'REHAB_FIRST';
+                else if (dUpper.includes('HOME')) parsedDest = 'RETURN_HOME';
+                else if (['KNOWN', 'UNKNOWN', 'REHAB_FIRST', 'RETURN_HOME', 'UNDECIDED'].includes(dUpper)) {
+                  parsedDest = dUpper as any;
+                }
+              }
+
+              if (parsedBudget !== undefined || parsedDest !== undefined || args.targetDate || args.dischargeDate) {
+                toolResults.push(
+                  await AI_TOOLS_REGISTRY.update_case_context({
+                    caseId,
+                    budget: parsedBudget,
+                    destinationStatus: parsedDest,
+                    targetDate: args.targetDate,
+                    dischargeDate: args.dischargeDate,
+                  })
+                );
               }
             } else if (call.name === 'assign_task' && args.assigneeName) {
               toolResults.push(
@@ -258,7 +295,14 @@ ${
                     {
                       text: `Tool Execution Results:\n${toolResults
                         .map((tr) => `[Tool: ${tr.toolName}, Success: ${tr.success}]\n${tr.message}`)
-                        .join('\n\n')}\n\nInstruction: Using the conversation history and tool results above, synthesize an empathetic, clear, markdown-formatted response for the user. Highlight key details like resource names, verification status, contact numbers, or updated plan status. End with a context-aware next step recommendation.`,
+                        .join('\n\n')}\n\n` +
+                        `PASS 2 SYNTHESIS RULES:\n` +
+                        `- Treat tool results and structured case state as authoritative product truth.\n` +
+                        `- Do not invent or fabricate verification, certification, NASMM status, partnership, phone numbers, addresses, prices, availability, insurance acceptance, or service capabilities.\n` +
+                        `- Do NOT use words like "partner", "MoveWell partner", "our providers", or "certified" unless explicitly stated in the tool results.\n` +
+                        `- Clearly label general guidance as general guidance (e.g. "A common next step is...").\n` +
+                        `- If a fact is unavailable, state neutrally what is available in the directory rather than filling it in.\n` +
+                        `- Synthesize an empathetic, clear markdown response based strictly on conversation history, structured case state, and tool results.`,
                     },
                   ],
                 },

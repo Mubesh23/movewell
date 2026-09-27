@@ -11,11 +11,19 @@ describe('Resource Service Queries', () => {
     expect(mover?.verification?.verificationStatus).toContain('Verified');
   });
 
-  it('should filter resources by category', async () => {
+  it('should filter resources by category and strictly return only moving services for category "moving"', async () => {
     const movers = await resourceService.findResources('moving', '77004');
+    expect(movers.length).toBeGreaterThan(0);
     expect(movers.every((m) => m.category === 'moving')).toBe(true);
 
-    const storage = await resourceService.findResources('storage', '77004');
-    expect(storage.every((s) => s.category === 'storage')).toBe(true);
+    // Verify METROLift (paratransit/transportation) is NOT returned for moving company queries
+    const metrolift = movers.find((m) => m.name.includes('METROLift') || m.id.includes('metrolift'));
+    expect(metrolift).toBeUndefined();
+  });
+
+  it('should normalize category aliases like "movers" or "moving company"', async () => {
+    const moversAlias = await resourceService.findResources('movers', '77004');
+    expect(moversAlias.length).toBeGreaterThan(0);
+    expect(moversAlias.every((m) => m.category === 'moving')).toBe(true);
   });
 });

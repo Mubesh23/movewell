@@ -47,6 +47,7 @@ export const AI_TOOLS_REGISTRY = {
     budget?: number;
     targetDate?: string;
     dischargeDate?: string;
+    destinationStatus?: 'KNOWN' | 'UNKNOWN' | 'REHAB_FIRST' | 'RETURN_HOME' | 'UNDECIDED';
   }): Promise<ToolExecutionResult> => {
     const caseData = await repository.getCaseById(args.caseId);
     if (!caseData) return { toolName: 'update_case_context', success: false, message: 'Case not found' };
@@ -54,6 +55,12 @@ export const AI_TOOLS_REGISTRY = {
     if (args.budget !== undefined) caseData.budget = Number(args.budget);
     if (args.targetDate) caseData.targetDate = args.targetDate;
     if (args.dischargeDate) caseData.dischargeDate = args.dischargeDate;
+    if (args.destinationStatus) {
+      const allowed = ['KNOWN', 'UNKNOWN', 'REHAB_FIRST', 'RETURN_HOME', 'UNDECIDED'];
+      if (allowed.includes(args.destinationStatus)) {
+        caseData.destinationStatus = args.destinationStatus;
+      }
+    }
     caseData.updatedAt = new Date().toISOString();
 
     await repository.saveCase(caseData);
@@ -64,6 +71,7 @@ export const AI_TOOLS_REGISTRY = {
       {
         budget: caseData.budget,
         targetDate: caseData.targetDate,
+        destinationStatus: caseData.destinationStatus,
         updatedBy: 'AI Assistant',
       },
       'AI'
@@ -73,6 +81,15 @@ export const AI_TOOLS_REGISTRY = {
     if (args.budget !== undefined) updates.push(`Updated case budget to $${caseData.budget.toLocaleString()}.`);
     if (args.targetDate) updates.push(`Updated target date to ${caseData.targetDate}.`);
     if (args.dischargeDate) updates.push(`Updated discharge date to ${caseData.dischargeDate}.`);
+    if (args.destinationStatus) {
+      const destName =
+        args.destinationStatus === 'REHAB_FIRST'
+          ? 'short-term rehab'
+          : args.destinationStatus === 'RETURN_HOME'
+          ? 'return home'
+          : args.destinationStatus;
+      updates.push(`Updated discharge destination status to ${destName} (${args.destinationStatus}).`);
+    }
 
     return {
       toolName: 'update_case_context',
@@ -210,7 +227,7 @@ export const AI_TOOLS_REGISTRY = {
     return {
       toolName: 'find_resources',
       success: true,
-      message: `**Verified Houston Care & Transition Resources:**\n\n${formattedList}`,
+      message: `**Houston Care & Transition Directory Resources:**\n\n${formattedList}`,
       data: resources,
     };
   },
