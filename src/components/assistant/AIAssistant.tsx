@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Sparkles, Send, X, Bot, CheckCircle2, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Send, X, Trash2, CheckCircle2, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { cn } from '@/lib/utils';
 
 interface AIAssistantProps {
   caseId: string;
@@ -21,37 +23,40 @@ function renderFormattedText(text: string) {
     const trimmed = line.trim();
 
     if (!trimmed) {
-      return <div key={lineIdx} className="h-1.5" />;
+      return <div key={lineIdx} className="h-2" />;
     }
 
     // Horizontal Rule
     if (trimmed === '---' || trimmed === '***') {
-      return <hr key={lineIdx} className="my-2.5 border-stone-200" />;
+      return <hr key={lineIdx} className="my-3 border-stone-line" />;
     }
 
-    // Markdown Headings: ### Heading, ## Heading, # Heading
+    // Markdown Headings
     if (trimmed.startsWith('#')) {
       const headingText = trimmed.replace(/^#+\s*/, '');
       return (
-        <div key={lineIdx} className="font-bold text-stone-900 mt-2.5 mb-1 text-[11px] uppercase tracking-wider text-brand-900">
+        <div
+          key={lineIdx}
+          className="font-serif font-bold text-charcoal mt-3 mb-1 text-sm tracking-tight"
+        >
           {renderInlineFormatting(headingText)}
         </div>
       );
     }
 
-    // Bullet points: • item, * item, - item
+    // Bullet points
     if (/^[\u2022\*\-]\s+/.test(trimmed)) {
       const bulletContent = trimmed.replace(/^[\u2022\*\-]\s+/, '');
       return (
-        <div key={lineIdx} className="flex items-start space-x-1.5 my-1 pl-1">
-          <span className="text-brand-700 font-bold text-[11px] select-none mt-0.5">&bull;</span>
-          <div className="flex-1 text-stone-800 leading-relaxed">{renderInlineFormatting(bulletContent)}</div>
+        <div key={lineIdx} className="flex items-start gap-2 my-1 pl-1">
+          <span className="text-forest font-bold select-none mt-0.5">&bull;</span>
+          <div className="flex-1 text-charcoal leading-relaxed">{renderInlineFormatting(bulletContent)}</div>
         </div>
       );
     }
 
     return (
-      <div key={lineIdx} className="my-0.5 leading-relaxed">
+      <div key={lineIdx} className="my-0.5 leading-relaxed text-charcoal">
         {renderInlineFormatting(line)}
       </div>
     );
@@ -63,14 +68,14 @@ function renderInlineFormatting(text: string) {
   return parts.map((part, partIdx) => {
     if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
       return (
-        <strong key={partIdx} className="font-bold text-stone-900">
+        <strong key={partIdx} className="font-semibold text-charcoal">
           {part.slice(2, -2)}
         </strong>
       );
     }
     if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
       return (
-        <em key={partIdx} className="italic text-stone-800 font-medium">
+        <em key={partIdx} className="italic text-charcoal/90">
           {part.slice(1, -1)}
         </em>
       );
@@ -89,11 +94,12 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const initialWelcomeMessage: ChatMessage = {
     sender: 'ai',
-    text: "Hello Sarah! I'm Nora, your MoveWell transition companion. I can help coordinate tasks, update budgets, or search verified Houston resources.\n\ne.g., 'Set budget to $5,000' or 'Jennifer will handle packing'.",
-    suggestionChip: 'Set budget to $5,000',
+    text: "Hi, I'm Nora.\n\nI can help you understand the plan, coordinate tasks, work through changes, and find relevant resources.\n\nWhat would you like help with?",
+    suggestionChip: "What needs attention today?",
   };
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
@@ -108,7 +114,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
     return [initialWelcomeMessage];
   });
 
-  // Sync state to localStorage whenever messages change
+  // Sync state to localStorage
   useEffect(() => {
     if (typeof window !== 'undefined' && caseId) {
       try {
@@ -119,6 +125,12 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
     }
   }, [messages, caseId]);
 
+  useEffect(() => {
+    if (isOpen && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isOpen, loading]);
+
   const handleClearHistory = () => {
     const defaultList = [initialWelcomeMessage];
     setMessages(defaultList);
@@ -127,7 +139,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
     }
   };
 
-  const executePromptRef = React.useRef<(text: string) => Promise<void>>();
+  const executePromptRef = useRef<(text: string) => Promise<void>>();
 
   const executePrompt = async (promptText: string) => {
     if (!promptText.trim() || loading) return;
@@ -137,7 +149,6 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
     setMessages(updatedMessages);
     setLoading(true);
 
-    // Bounded recent message window (last 12 messages)
     const conversationHistory = updatedMessages.slice(-12).map((m) => ({
       role: m.sender === 'user' ? ('user' as const) : ('assistant' as const),
       text: m.text,
@@ -177,14 +188,14 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
           ...prev,
           {
             sender: 'ai',
-            text: data.error || 'Sorry, I encountered an error processing your request.',
+            text: data.error || 'I had trouble processing that request. Please try again or ask another question.',
           },
         ]);
       }
     } catch (err) {
       setMessages((prev) => [
         ...prev,
-        { sender: 'ai', text: 'Sorry, I encountered an error processing your request.' },
+        { sender: 'ai', text: 'I had trouble reaching the coordination service. Please try again.' },
       ]);
     } finally {
       setLoading(false);
@@ -215,112 +226,138 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-20 md:bottom-6 right-6 z-50 bg-brand-900 hover:bg-brand-800 text-white font-bold text-xs py-3 px-4 rounded-full shadow-2xl transition flex items-center space-x-2 border-2 border-white/20"
+        aria-label="Open Nora assistant"
+        className="fixed bottom-18 md:bottom-6 right-5 z-40 flex items-center gap-2.5 px-4 py-3 rounded-full bg-forest text-surface shadow-lg hover:bg-forest-deep transition-all duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
       >
-        <Sparkles className="w-4 h-4 text-amber-300" />
-        <span>Ask Nora AI</span>
+        <span className="w-5 h-5 rounded-full bg-surface/20 text-surface font-serif text-xs font-bold flex items-center justify-center">
+          N
+        </span>
+        <span className="text-sm font-medium pr-0.5">Ask Nora</span>
       </button>
     );
   }
 
   return (
-    <div className="fixed bottom-20 md:bottom-6 right-4 sm:right-6 z-50 w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-stone-200 flex flex-col overflow-hidden max-h-[500px]">
-      {/* Header */}
-      <div className="bg-brand-900 text-white px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <div className="w-7 h-7 rounded-lg bg-brand-800 flex items-center justify-center font-bold text-amber-300 text-xs">
+    <aside
+      aria-label="Nora transition assistant panel"
+      className="fixed inset-y-0 right-0 z-50 w-full sm:w-[420px] bg-surface shadow-2xl border-l border-stone-line flex flex-col animate-in slide-in-from-right duration-200"
+    >
+      {/* Editorial Assistant Header */}
+      <header className="px-5 py-4 border-b border-stone-line bg-surface/90 backdrop-blur-xs flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <span className="w-7 h-7 rounded-md bg-forest text-surface font-serif font-bold text-sm flex items-center justify-center tracking-tight">
             N
-          </div>
+          </span>
           <div>
-            <h4 className="font-bold text-xs">Nora &bull; MoveWell Companion</h4>
-            <p className="text-[10px] text-brand-200">Transition Assistant</p>
+            <h3 className="font-serif font-bold text-sm text-charcoal leading-tight">
+              Nora
+            </h3>
+            <p className="text-[11px] text-muted">
+              MoveWell Transition Coordinator
+            </p>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
+
+        <div className="flex items-center gap-1">
           <button
             onClick={handleClearHistory}
-            title="Clear Chat History"
-            className="text-brand-200 hover:text-white transition p-1"
+            title="Reset conversation"
+            className="p-1.5 text-muted hover:text-charcoal rounded-md hover:bg-stone-subtle transition-colors"
           >
-            <Trash2 className="w-3.5 h-3.5" />
+            <Trash2 className="w-4 h-4" />
           </button>
-          <button onClick={() => setIsOpen(false)} className="text-brand-200 hover:text-white p-1">
+          <button
+            onClick={() => setIsOpen(false)}
+            aria-label="Close assistant"
+            className="p-1.5 text-muted hover:text-charcoal rounded-md hover:bg-stone-subtle transition-colors"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
-      </div>
+      </header>
 
       {/* Messages Feed */}
-      <div className="p-4 flex-1 overflow-y-auto space-y-3 bg-sand-50/50 min-h-[220px]">
+      <div className="p-5 flex-1 overflow-y-auto space-y-4 bg-canvas/40 text-sm">
         {messages.map((m, idx) => (
           <div
             key={idx}
-            className={`flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}`}
+            className={cn('flex flex-col', m.sender === 'user' ? 'items-end' : 'items-start')}
           >
-            <div
-              className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-xs ${
-                m.sender === 'user'
-                  ? 'bg-brand-900 text-white rounded-br-none'
-                  : 'bg-white border border-stone-200 text-stone-900 rounded-bl-none shadow-xs'
-              }`}
-            >
-              {renderFormattedText(m.text)}
-            </div>
-
-            {/* Tool confirmation badges */}
-            {m.toolConfirmations && m.toolConfirmations.length > 0 && (
-              <div className="mt-1 space-y-1 max-w-[85%]">
-                {m.toolConfirmations.map((tc, tcIdx) => (
-                  <div
-                    key={tcIdx}
-                    className="flex items-center space-x-1 bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-semibold px-2.5 py-1 rounded-lg"
-                  >
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600 flex-shrink-0" />
-                    <span>{tc}</span>
-                  </div>
-                ))}
+            {m.sender === 'user' ? (
+              <div className="max-w-[85%] px-4 py-2.5 rounded-xl bg-forest text-surface text-xs sm:text-sm font-medium leading-relaxed">
+                {m.text}
               </div>
-            )}
+            ) : (
+              <div className="max-w-[95%] text-xs sm:text-sm leading-relaxed space-y-1">
+                <div className="text-charcoal">
+                  {renderFormattedText(m.text)}
+                </div>
 
-            {/* Quick Action Suggestion Chip */}
-            {m.suggestionChip && (
-              <button
-                type="button"
-                onClick={() => executePrompt(m.suggestionChip!)}
-                disabled={loading}
-                className="mt-1.5 text-[11px] font-bold text-brand-900 bg-brand-50 hover:bg-brand-100 border border-brand-200 px-3 py-1.5 rounded-full transition flex items-center space-x-1"
-              >
-                <Sparkles className="w-3 h-3 text-brand-700" />
-                <span>Quick do: {m.suggestionChip}</span>
-              </button>
+                {/* Grounded Tool Confirmations */}
+                {m.toolConfirmations && m.toolConfirmations.length > 0 && (
+                  <div className="mt-2 space-y-1.5">
+                    {m.toolConfirmations.map((tc, tcIdx) => (
+                      <div
+                        key={tcIdx}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-sage-subtle text-forest text-xs font-medium border border-sage-border/40"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                        <span>{tc}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Suggested Action Chip */}
+                {m.suggestionChip && (
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => executePrompt(m.suggestionChip!)}
+                      disabled={loading}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-forest bg-surface hover:bg-forest/5 border border-forest/20 px-3 py-1.5 rounded-lg transition-colors text-left"
+                    >
+                      <span>Suggested action: {m.suggestionChip}</span>
+                      <ChevronRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         ))}
+
         {loading && (
-          <div className="flex items-center space-x-2 text-xs text-stone-400 font-medium">
-            <Bot className="w-4 h-4 animate-spin text-brand-700" />
-            <span>Thinking &amp; executing tools...</span>
+          <div className="flex items-center gap-2 text-xs text-muted pt-1">
+            <span className="w-3.5 h-3.5 border-2 border-forest border-t-transparent rounded-full animate-spin shrink-0" />
+            <span>Checking the plan…</span>
           </div>
         )}
+
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Input Form */}
-      <form onSubmit={handleSend} className="p-3 bg-white border-t border-stone-200 flex items-center space-x-2">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask Nora (e.g. Set budget to $5,000)..."
-          className="flex-1 px-3 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-brand-800"
-        />
-        <button
-          type="submit"
-          disabled={loading || !input.trim()}
-          className="bg-brand-900 hover:bg-brand-800 text-white p-2 rounded-xl transition disabled:opacity-50"
-        >
-          <Send className="w-3.5 h-3.5" />
-        </button>
-      </form>
-    </div>
+      <footer className="p-4 border-t border-stone-line bg-surface">
+        <form onSubmit={handleSend} className="flex items-center gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask Nora or give an instruction..."
+            className="flex-1 px-3.5 py-2.5 text-sm rounded-lg border border-stone-line bg-surface text-charcoal placeholder:text-muted/60 focus:outline-none focus:border-forest focus:ring-1 focus:ring-forest transition-colors"
+          />
+          <Button
+            type="submit"
+            variant="default"
+            size="default"
+            disabled={loading || !input.trim()}
+            className="h-10 px-3 shrink-0"
+          >
+            <Send className="w-4 h-4" />
+          </Button>
+        </form>
+      </footer>
+    </aside>
   );
 };

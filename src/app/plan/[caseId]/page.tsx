@@ -2,24 +2,20 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Navbar } from '@/components/layout/Navbar';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { AIAssistant, openNoraWithPrompt } from '@/components/assistant/AIAssistant';
 import { CaseOverview, TransitionTask } from '@/types';
-import {
-  Clock,
-  CheckCircle2,
-  AlertCircle,
-  DollarSign,
-  Calendar,
-  Users,
-  ArrowRight,
-  ShieldAlert,
-  Sparkles,
-  Share2,
-  Printer,
-  ChevronRight,
-} from 'lucide-react';
+import { PageHeader } from '@/components/movewell/PageHeader';
+import { SectionHeader } from '@/components/movewell/SectionHeader';
+import { PriorityAction } from '@/components/movewell/PriorityAction';
+import { TaskRow } from '@/components/movewell/TaskRow';
+import { PersonSummary } from '@/components/movewell/PersonSummary';
+import { BudgetSummary } from '@/components/movewell/BudgetSummary';
+import { ActivityTimeline } from '@/components/movewell/ActivityTimeline';
+import { Button } from '@/components/ui/Button';
+import { AlertCircle, ArrowRight, CheckCircle2, ChevronRight } from 'lucide-react';
 
 export default function DashboardPage() {
   const params = useParams();
@@ -51,17 +47,21 @@ export default function DashboardPage() {
     if (caseId) fetchOverview();
   }, [caseId, fetchOverview]);
 
-  const handleCompleteTask = async (taskId: string) => {
-    setUpdatingTaskId(taskId);
+  const handleCompleteTask = async (task: TransitionTask, note?: string) => {
+    setUpdatingTaskId(task.id);
     try {
-      const res = await fetch(`/api/cases/${caseId}/tasks/${taskId}`, {
+      const res = await fetch(`/api/cases/${caseId}/tasks/${task.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'COMPLETE', actorName: 'Sarah' }),
+        body: JSON.stringify({
+          action: 'COMPLETE',
+          actorName: 'Family Coordinator',
+          completionNotes: note,
+        }),
       });
       const data = await res.json();
       if (data.success) {
-        await fetchOverview(); // Refresh overview and dependency statuses
+        await fetchOverview();
       }
     } catch (err) {
       console.error(err);
@@ -70,12 +70,53 @@ export default function DashboardPage() {
     }
   };
 
+  const handleReopenTask = async (task: TransitionTask) => {
+    setUpdatingTaskId(task.id);
+    try {
+      const res = await fetch(`/api/cases/${caseId}/tasks/${task.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'REOPEN',
+          actorName: 'Family Coordinator',
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchOverview();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUpdatingTaskId(null);
+    }
+  };
+
+  const handleAssignTask = async (taskId: string, memberId: string) => {
+    try {
+      const res = await fetch(`/api/cases/${caseId}/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'ASSIGN',
+          assigneeId: memberId || null,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchOverview();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-sand-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-10 h-10 border-4 border-brand-900 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-          <p className="text-sm font-semibold text-brand-950">Loading Transition Plan...</p>
+      <div className="min-h-screen bg-canvas flex items-center justify-center">
+        <div className="text-center space-y-2">
+          <div className="w-8 h-8 border-2 border-forest border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs text-muted font-medium">Opening transition plan...</p>
         </div>
       </div>
     );
@@ -83,348 +124,292 @@ export default function DashboardPage() {
 
   if (error || !overview) {
     return (
-      <div className="min-h-screen bg-sand-100 flex flex-col items-center justify-center px-4">
-        <div className="bg-white p-6 rounded-3xl border border-rose-200 text-center max-w-md shadow-md">
-          <AlertCircle className="w-10 h-10 text-rose-600 mx-auto mb-2" />
-          <h2 className="text-lg font-bold text-stone-900 mb-1">Plan Not Found</h2>
-          <p className="text-xs text-stone-600 mb-4">{error || 'Could not load case data.'}</p>
-          <button
-            onClick={() => router.push('/')}
-            className="bg-brand-900 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs"
-          >
+      <div className="min-h-screen bg-canvas flex flex-col items-center justify-center px-4">
+        <div className="bg-surface p-6 rounded-xl border border-stone-line text-center max-w-md shadow-2xs space-y-3">
+          <AlertCircle className="w-8 h-8 text-status-critical mx-auto" />
+          <h2 className="text-lg font-serif font-bold text-charcoal">Plan Not Found</h2>
+          <p className="text-xs text-muted">{error || 'Could not load case data.'}</p>
+          <Button variant="default" size="sm" onClick={() => router.push('/')}>
             Return to Home
-          </button>
+          </Button>
         </div>
       </div>
     );
   }
 
-  const { caseData, seniorProfile, members, tasks, events, costSummary, progressPercent, daysUntilDischarge, urgentTask } = overview;
+  const {
+    caseData,
+    seniorProfile,
+    members,
+    tasks,
+    events,
+    costSummary,
+    progressPercent,
+    daysUntilDischarge,
+    urgentTask,
+    costItems,
+  } = overview;
 
-  const urgentTasks = tasks.filter((t) => t.status === 'READY' || t.status === 'IN_PROGRESS');
+  // Up next tasks (ready tasks excluding the urgent priority)
+  const upNextTasks = tasks.filter(
+    (t) => t.status === 'READY' && t.id !== urgentTask?.id
+  );
   const blockedTasks = tasks.filter((t) => t.status === 'BLOCKED');
 
+  const summaryStrip = [
+    {
+      label: 'Hospital discharge',
+      value: daysUntilDischarge !== undefined ? `In ${daysUntilDischarge} days` : 'Pending',
+      tone: (daysUntilDischarge !== undefined && daysUntilDischarge <= 5) ? ('urgent' as const) : ('default' as const),
+    },
+    {
+      label: 'Progress',
+      value: `${progressPercent}% complete`,
+      tone: progressPercent > 50 ? ('success' as const) : ('default' as const),
+    },
+    {
+      label: 'Estimated cost',
+      value: `$${costSummary.minTotal.toLocaleString()}–$${costSummary.maxTotal.toLocaleString()}`,
+      tone: 'default' as const,
+    },
+    {
+      label: 'Target move',
+      value: caseData.targetDate ? caseData.targetDate : 'TBD',
+      tone: 'default' as const,
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-sand-100 flex flex-col">
+    <div className="min-h-screen bg-canvas flex flex-col text-charcoal selection:bg-forest/10 selection:text-forest-deep">
       <Navbar
         caseId={caseId}
-        seniorName={`${seniorProfile.name}'s Transition`}
+        seniorName={seniorProfile.name}
         daysUntilDischarge={daysUntilDischarge}
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1 space-y-6">
-        {/* Top Command Banner */}
-        <div className="bg-white rounded-3xl p-5 sm:p-6 border border-stone-200/80 shadow-xs flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <div className="flex items-center space-x-2 mb-1">
-              <h1 className="text-2xl sm:text-3xl font-serif font-bold text-brand-950 tracking-tight">
-                {seniorProfile.name}&apos;s Transition
-              </h1>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
-                {caseData.urgency}
-              </span>
-            </div>
-            <p className="text-xs sm:text-sm text-stone-600 font-medium">
-              Post-hospital discharge &bull; ZIP {caseData.zipCode} &bull; {seniorProfile.homeType || 'Residential home'}
-            </p>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <button
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1 space-y-10">
+        {/* Editorial Page Header & Quiet Summary Strip */}
+        <PageHeader
+          title={seniorProfile.name}
+          subtitle={`Post-hospital transition · ZIP ${caseData.zipCode} · ${seniorProfile.homeType || 'Residential home'}`}
+          urgency={caseData.urgency}
+          summaryItems={summaryStrip}
+          action={
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={() => router.push(`/plan/${caseId}/tasks`)}
-              className="bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center space-x-1.5"
+              className="text-xs"
             >
-              <span>View Full Plan</span>
-              <ChevronRight className="w-4 h-4 text-stone-500" />
-            </button>
-          </div>
-        </div>
+              <span>Full transition plan</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Button>
+          }
+        />
 
-        {/* 4 Metric Badges Row */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {/* Card 1 */}
-          <div className="bg-white p-4 rounded-2xl border border-stone-200/80 shadow-xs flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center font-bold">
-              <Clock className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xl font-bold text-stone-900 leading-tight">
-                {daysUntilDischarge ?? 5} <span className="text-xs font-normal text-stone-500">days</span>
-              </p>
-              <p className="text-[11px] text-stone-500 font-medium uppercase tracking-wide">until discharge</p>
-            </div>
-          </div>
+        {/* Main Editorial Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+          {/* Left Column (8 cols): Primary Focus & Next Tasks */}
+          <div className="lg:col-span-8 space-y-10">
+            {/* 1. What Needs Attention Today */}
+            <section aria-labelledby="section-priority">
+              <SectionHeader
+                eyebrow="What needs attention"
+                title="Today's Primary Decision"
+                description="Resolving this item unlocks downstream scheduling and care coordination."
+              />
 
-          {/* Card 2 */}
-          <div className="bg-white p-4 rounded-2xl border border-stone-200/80 shadow-xs flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center font-bold">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xl font-bold text-stone-900 leading-tight">{progressPercent}%</p>
-              <p className="text-[11px] text-stone-500 font-medium uppercase tracking-wide">plan complete</p>
-            </div>
-          </div>
-
-          {/* Card 3 */}
-          <div className="bg-white p-4 rounded-2xl border border-stone-200/80 shadow-xs flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center font-bold">
-              <DollarSign className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-base sm:text-lg font-bold text-stone-900 leading-tight">
-                ${costSummary.minTotal.toLocaleString()} &ndash; ${costSummary.maxTotal.toLocaleString()}
-              </p>
-              <p className="text-[11px] text-stone-500 font-medium uppercase tracking-wide">estimated cost</p>
-            </div>
-          </div>
-
-          {/* Card 4 */}
-          <div className="bg-white p-4 rounded-2xl border border-stone-200/80 shadow-xs flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-900 flex items-center justify-center font-bold">
-              <Calendar className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-base sm:text-lg font-bold text-stone-900 leading-tight">
-                {caseData.targetDate ? new Date(caseData.targetDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'TBD'}
-              </p>
-              <p className="text-[11px] text-stone-500 font-medium uppercase tracking-wide">target date</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Dashboard Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column (2 cols): Guided Calm Hero & Tasks Needing Attention */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Guided Calm Focus Hero Card */}
-            {urgentTask && urgentTask.status !== 'COMPLETED' ? (
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border-2 border-brand-900 shadow-md relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-brand-50 rounded-bl-full opacity-50 -z-0 pointer-events-none"></div>
-
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-rose-100 text-rose-800 text-xs font-bold tracking-wide">
-                      <ShieldAlert className="w-3.5 h-3.5" />
-                      <span>URGENT PRIORITY TODAY</span>
-                    </span>
-                    <span className="text-xs text-stone-500 font-medium">Due Today</span>
-                  </div>
-
-                  <h2 className="text-2xl sm:text-3xl font-serif font-bold text-brand-950 mb-2">
-                    {urgentTask.title}
-                  </h2>
-
-                  <p className="text-stone-600 text-sm leading-relaxed mb-6">
-                    {urgentTask.whyItMatters || urgentTask.description}
+              {urgentTask && urgentTask.status !== 'COMPLETED' ? (
+                <PriorityAction
+                  task={urgentTask}
+                  seniorName={seniorProfile.name}
+                  onComplete={() => handleCompleteTask(urgentTask)}
+                  onAskNora={() =>
+                    openNoraWithPrompt(
+                      `How do I confirm the discharge destination for ${seniorProfile.name}?`
+                    )
+                  }
+                  isUpdating={updatingTaskId === urgentTask.id}
+                />
+              ) : (
+                <div className="p-6 rounded-xl border border-forest/20 bg-surface text-center space-y-2">
+                  <CheckCircle2 className="w-7 h-7 text-forest mx-auto" />
+                  <h3 className="font-serif font-bold text-charcoal text-lg">
+                    Critical path decisions complete
+                  </h3>
+                  <p className="text-xs text-muted max-w-md mx-auto">
+                    The safe discharge destination has been confirmed. You can now proceed with downstream accessibility, inventory, and moving logistics.
                   </p>
+                </div>
+              )}
+            </section>
 
-                  <div className="flex flex-wrap items-center gap-3">
-                    <button
-                      onClick={() => handleCompleteTask(urgentTask.id)}
-                      disabled={updatingTaskId === urgentTask.id}
-                      className="bg-brand-900 hover:bg-brand-800 text-white font-bold text-sm py-3 px-6 rounded-2xl shadow-md transition flex items-center space-x-2 disabled:opacity-50"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>{updatingTaskId === urgentTask.id ? 'Updating...' : 'Mark Task Complete'}</span>
-                    </button>
+            {/* 2. Up Next Tasks */}
+            <section aria-labelledby="section-up-next">
+              <SectionHeader
+                eyebrow="Up next"
+                title="Ready for Attention"
+                description="Tasks that can be worked on right now without waiting on other decisions."
+                action={
+                  <Link
+                    href={`/plan/${caseId}/tasks`}
+                    className="text-xs font-semibold text-forest hover:text-forest-deep inline-flex items-center gap-1"
+                  >
+                    <span>View all {tasks.length} tasks</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </Link>
+                }
+              />
 
-                    <button
-                      onClick={() => openNoraWithPrompt(`How do I confirm the discharge destination for ${seniorProfile.name}?`)}
-                      className="bg-brand-50 hover:bg-brand-100 text-brand-900 border border-brand-200 font-bold text-xs py-3 px-4 rounded-2xl transition flex items-center space-x-1.5"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-brand-700" />
-                      <span>Ask Nora How to Confirm</span>
-                    </button>
+              {upNextTasks.length > 0 ? (
+                <div className="rounded-xl border border-stone-line bg-surface px-5 shadow-2xs divide-y divide-stone-line/70">
+                  {upNextTasks.slice(0, 4).map((task) => (
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      allTasks={tasks}
+                      members={members}
+                      onComplete={handleCompleteTask}
+                      onReopen={handleReopenTask}
+                      onAssign={handleAssignTask}
+                      onAskNora={(t) =>
+                        openNoraWithPrompt(
+                          `Can you help explain the task "${t.title}" and what needs to be done next?`
+                        )
+                      }
+                      isUpdating={updatingTaskId === task.id}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted italic">All currently ready tasks are complete.</p>
+              )}
+            </section>
 
-                    {urgentTask.assignee && (
-                      <span className="text-xs text-stone-500 font-medium bg-sand-200/60 px-3 py-2.5 rounded-xl">
-                        Assigned to: <strong>{urgentTask.assignee.name}</strong>
+            {/* 3. Blocked / Waiting Awareness (Subtle) */}
+            {blockedTasks.length > 0 && (
+              <section className="pt-2">
+                <div className="rounded-xl border border-stone-line/80 bg-surface/50 p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+                      Waiting on Prerequisites ({blockedTasks.length})
+                    </p>
+                    <span className="text-[11px] text-muted">Automatically unlocks when dependencies finish</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {blockedTasks.slice(0, 3).map((bt) => (
+                      <span
+                        key={bt.id}
+                        className="text-xs px-2.5 py-1 rounded-md bg-stone-subtle text-muted border border-stone-line"
+                      >
+                        {bt.title}
+                      </span>
+                    ))}
+                    {blockedTasks.length > 3 && (
+                      <span className="text-xs px-2.5 py-1 text-muted">
+                        +{blockedTasks.length - 3} more
                       </span>
                     )}
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div className="bg-emerald-50 rounded-3xl p-6 border border-emerald-200 text-center">
-                <CheckCircle2 className="w-10 h-10 text-emerald-700 mx-auto mb-2" />
-                <h3 className="font-bold text-emerald-950 text-lg">Top priority tasks completed!</h3>
-                <p className="text-xs text-emerald-800">You are making steady progress on {seniorProfile.name}&apos;s transition plan.</p>
-              </div>
-            )}
-
-            {/* Tasks Needing Attention */}
-            <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-xs">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-serif font-bold text-brand-950">Tasks Needing Attention</h3>
-                <button
-                  onClick={() => router.push(`/plan/${caseId}/tasks`)}
-                  className="text-xs font-bold text-brand-900 hover:text-brand-700 flex items-center space-x-1"
-                >
-                  <span>View all tasks</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                {urgentTasks.slice(0, 4).map((task) => (
-                  <div
-                    key={task.id}
-                    className="p-4 rounded-2xl border border-stone-200 hover:border-brand-200 transition bg-sand-50/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center space-x-2">
-                        <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                        <h4 className="font-bold text-sm text-stone-900">{task.title}</h4>
-                      </div>
-                      <p className="text-xs text-stone-500 line-clamp-1">{task.whyItMatters || task.description}</p>
-                    </div>
-
-                    <button
-                      onClick={() => handleCompleteTask(task.id)}
-                      disabled={updatingTaskId === task.id}
-                      className="bg-white hover:bg-stone-100 text-brand-900 border border-stone-300 font-bold text-xs px-3.5 py-2 rounded-xl transition flex-shrink-0"
-                    >
-                      Complete
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Blocked Tasks Awareness */}
-            {blockedTasks.length > 0 && (
-              <div className="bg-amber-50/60 rounded-3xl p-5 border border-amber-200/80">
-                <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wider mb-2 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1.5 text-amber-700" />
-                  <span>{blockedTasks.length} Tasks Waiting on Dependencies</span>
-                </h4>
-                <p className="text-xs text-amber-800 leading-relaxed mb-3">
-                  These tasks are deterministically locked until upstream discharge and destination decisions are finalized:
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {blockedTasks.slice(0, 3).map((bt) => (
-                    <span key={bt.id} className="bg-white px-3 py-1 rounded-full text-xs font-medium text-amber-900 border border-amber-200">
-                      {bt.title}
-                    </span>
-                  ))}
-                </div>
-              </div>
+              </section>
             )}
           </div>
 
-          {/* Right Column (1 col): Family, Budget & Activity */}
-          <div className="space-y-6">
-            {/* Family Members Card */}
-            <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-xs">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-serif font-bold text-brand-950">Family Team</h3>
-                <button
-                  onClick={() => router.push(`/plan/${caseId}/family`)}
-                  className="text-xs font-bold text-brand-900"
-                >
-                  Manage
-                </button>
-              </div>
+          {/* Right Column (4 cols): Budget, Family & Activity */}
+          <div className="lg:col-span-4 space-y-8">
+            {/* Budget Ledger Preview */}
+            <section>
+              <SectionHeader
+                eyebrow="Financial ledger"
+                title="Budget &amp; Costs"
+                action={
+                  <Link
+                    href={`/plan/${caseId}/budget`}
+                    className="text-xs font-semibold text-forest hover:text-forest-deep"
+                  >
+                    Details &rarr;
+                  </Link>
+                }
+              />
 
-              <div className="space-y-3">
-                {members.map((member) => (
-                  <div key={member.id} className="flex items-center justify-between p-3 rounded-2xl bg-sand-50 border border-stone-200/60">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-9 h-9 rounded-full bg-brand-100 text-brand-900 font-bold flex items-center justify-center text-xs">
-                        {member.name.substring(0, 2).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-stone-900">{member.name}</p>
-                        <p className="text-xs text-stone-500">{member.relationship} &bull; {member.city}</p>
-                      </div>
-                    </div>
-                    <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-stone-200/70 text-stone-700">
-                      {member.isLocal ? 'Local' : 'Remote'}
+              <div className="rounded-xl border border-stone-line bg-surface p-5 shadow-2xs space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-baseline justify-between text-sm">
+                    <span className="text-muted">Available Budget</span>
+                    <span className="font-serif font-bold text-charcoal">
+                      ${costSummary.userBudget.toLocaleString()}
                     </span>
                   </div>
-                ))}
-              </div>
-            </div>
 
-            {/* Budget Overview Widget */}
-            <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-xs space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-serif font-bold text-brand-950">Budget Overview</h3>
-                <button
-                  onClick={() => router.push(`/plan/${caseId}/budget`)}
-                  className="text-xs font-bold text-brand-900"
-                >
-                  Details
-                </button>
-              </div>
+                  <div className="flex items-baseline justify-between text-sm">
+                    <span className="text-muted">Expected Range</span>
+                    <span className="font-serif font-bold text-forest">
+                      ${costSummary.minTotal.toLocaleString()} &ndash; ${costSummary.maxTotal.toLocaleString()}
+                    </span>
+                  </div>
 
-              <div>
-                <div className="flex items-baseline justify-between mb-1">
-                  <span className="text-xs text-stone-500 font-bold uppercase tracking-wider">Estimated Total</span>
-                  <span className="text-lg font-bold text-brand-900">
-                    ${costSummary.minTotal.toLocaleString()} &ndash; ${costSummary.maxTotal.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex items-baseline justify-between mb-2">
-                  <span className="text-xs text-stone-500 font-bold uppercase tracking-wider">User Budget</span>
-                  <span className="text-sm font-bold text-stone-800">${costSummary.userBudget.toLocaleString()}</span>
+                  {costSummary.confirmedQuotesTotal ? (
+                    <div className="flex items-baseline justify-between text-xs pt-1 border-t border-stone-line/60">
+                      <span className="text-forest font-medium">Confirmed Quotes</span>
+                      <span className="font-serif font-bold text-forest">
+                        ${costSummary.confirmedQuotesTotal.toLocaleString()}
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
 
-                {/* Progress bar */}
-                <div className="w-full bg-stone-100 h-2.5 rounded-full overflow-hidden mb-2">
-                  <div
-                    className="bg-brand-900 h-full rounded-full"
-                    style={{
-                      width: `${Math.min(100, (costSummary.maxTotal / costSummary.userBudget) * 100)}%`,
-                    }}
-                  ></div>
-                </div>
-
-                <div className="pt-1 flex items-center justify-between">
+                <div className="pt-2 border-t border-stone-line/60">
                   <button
-                    onClick={() => openNoraWithPrompt("Why did our estimate change and what are the largest expected costs?")}
-                    className="text-[11px] text-brand-800 hover:text-brand-900 font-semibold underline flex items-center space-x-1"
+                    type="button"
+                    onClick={() =>
+                      openNoraWithPrompt(
+                        'What are the largest expected costs in our transition plan and how is the budget allocated?'
+                      )
+                    }
+                    className="text-xs text-forest hover:text-forest-deep underline underline-offset-4 font-medium text-left"
                   >
-                    <Sparkles className="w-3 h-3 text-brand-700" />
-                    <span>Ask Nora about budget breakdown</span>
+                    Ask Nora to analyze our budget breakdown &rarr;
                   </button>
                 </div>
               </div>
+            </section>
 
-              {/* Mandatory Product Disclaimer */}
-              <div className="p-3 bg-sand-100 rounded-xl border border-sand-300">
-                <p className="text-[11px] font-semibold text-stone-600 italic text-center">
-                  &ldquo;{costSummary.disclaimer}&rdquo;
-                </p>
-              </div>
-            </div>
+            {/* Family Coordination Summary */}
+            <section>
+              <SectionHeader
+                eyebrow="Family team"
+                title="Coordination"
+                action={
+                  <Link
+                    href={`/plan/${caseId}/family`}
+                    className="text-xs font-semibold text-forest hover:text-forest-deep"
+                  >
+                    Manage &rarr;
+                  </Link>
+                }
+              />
 
-            {/* Activity Feed */}
-            <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-xs">
-              <h3 className="text-lg font-serif font-bold text-brand-950 mb-4">Recent Activity</h3>
-              <div className="space-y-3">
-                {events.slice(0, 5).map((evt) => (
-                  <div key={evt.id} className="text-xs border-l-2 border-brand-800 pl-3 py-1">
-                    <p className="font-bold text-stone-800">
-                      {evt.type === 'CASE_CREATED' && 'Case Created'}
-                      {evt.type === 'PLAN_GENERATED' && 'Post-Hospital Plan Generated'}
-                      {evt.type === 'TASK_COMPLETED' && `Task Completed: ${evt.payload.taskTitle}`}
-                      {evt.type === 'TASK_REOPENED' && `Task Reopened: ${evt.payload.taskTitle}`}
-                      {evt.type === 'TASK_ASSIGNED' && `Task Assigned: ${evt.payload.taskTitle}`}
-                    </p>
-                    {evt.type === 'TASK_COMPLETED' && evt.payload.completionNotes && (
-                      <p className="text-[11px] text-stone-600 italic mt-0.5 bg-sand-50 p-1.5 rounded-md border border-stone-200">
-                        Note: &ldquo;{evt.payload.completionNotes}&rdquo;
-                      </p>
-                    )}
-                    <p className="text-stone-500 text-[10px] mt-0.5">
-                      {new Date(evt.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
+              <div className="rounded-xl border border-stone-line bg-surface p-4 shadow-2xs divide-y divide-stone-line/70">
+                {members.map((member) => (
+                  <PersonSummary
+                    key={member.id}
+                    member={member}
+                    tasks={tasks}
+                    onSelect={() => router.push(`/plan/${caseId}/family`)}
+                  />
                 ))}
               </div>
-            </div>
+            </section>
+
+            {/* Recent Activity Trail */}
+            <section>
+              <SectionHeader eyebrow="Audit log" title="Recent Activity" />
+              <div className="rounded-xl border border-stone-line bg-surface p-4 shadow-2xs">
+                <ActivityTimeline events={events} limit={4} />
+              </div>
+            </section>
           </div>
         </div>
       </div>

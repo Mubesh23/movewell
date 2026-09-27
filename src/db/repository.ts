@@ -598,6 +598,7 @@ export class Repository {
         return {
           ...s,
           organizationName: org?.name,
+          website: org?.website,
           location: loc,
           verification: ver,
         };

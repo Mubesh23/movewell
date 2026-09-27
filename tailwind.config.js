@@ -8,6 +8,41 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        canvas: '#F7F5F0',
+        surface: '#FFFFFF',
+        forest: {
+          DEFAULT: '#183C32',
+          deep: '#102A23',
+          light: '#EBF2EE',
+          border: '#245044',
+        },
+        charcoal: '#262824',
+        muted: '#6F716C',
+        sage: {
+          DEFAULT: '#789184',
+          subtle: '#EEF3F0',
+          border: '#C3D1CA',
+        },
+        stone: {
+          warm: '#D8D1C5',
+          subtle: '#EDE8E0',
+          line: '#E5DFD5',
+        },
+        clay: {
+          DEFAULT: '#C66D45',
+          subtle: '#FDF1EB',
+          border: '#E8A78A',
+        },
+        status: {
+          success: '#3E745D',
+          'success-bg': '#EFF7F3',
+          warning: '#B7803B',
+          'warning-bg': '#FEF7EC',
+          critical: '#A95145',
+          'critical-bg': '#FDF2F0',
+          neutral: '#7C8079',
+          'neutral-bg': '#F2F2F0',
+        },
         brand: {
           50: '#f2f8f5',
           100: '#dfefe8',
@@ -18,36 +53,42 @@ module.exports = {
           600: '#387762',
           700: '#2d6050',
           800: '#264d41',
-          900: '#1b4d3e', // Primary deep forest green
-          950: '#112b23',
+          900: '#183C32',
+          950: '#102A23',
         },
         sand: {
           50: '#fdfbf7',
-          100: '#fbf9f5', // Warm sand background
-          200: '#f5efe6',
+          100: '#F7F5F0',
+          200: '#f2ece2',
           300: '#ebe1d1',
           400: '#dcceb7',
         },
         coral: {
           50: '#fdf3f2',
           100: '#fce5e3',
-          500: '#e76f51',
-          600: '#d95338',
-          700: '#b63b23',
+          500: '#C66D45',
+          600: '#b63b23',
         },
         amber: {
-          500: '#f4a261',
-          600: '#e78a42',
-        }
+          50: '#fef9ed',
+          100: '#fcf0d3',
+          500: '#B7803B',
+          600: '#9e6d30',
+        },
       },
       fontFamily: {
-        sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
-        serif: ['var(--font-serif)', 'Georgia', 'serif'],
+        sans: ['var(--font-sans)', 'Inter', 'system-ui', 'sans-serif'],
+        serif: ['var(--font-serif)', 'Newsreader', 'Georgia', 'serif'],
       },
       borderRadius: {
-        '2xl': '1rem',
-        '3xl': '1.5rem',
-      }
+        DEFAULT: '0.5rem',  // 8px
+        md: '0.625rem',     // 10px
+        lg: '0.75rem',      // 12px
+        xl: '0.875rem',     // 14px
+        '2xl': '1rem',      // 16px (standard surface)
+        '3xl': '1.125rem',  // 18px (max feature area)
+        full: '9999px',
+      },
     },
   },
   plugins: [],

@@ -6,8 +6,13 @@ import { Navbar } from '@/components/layout/Navbar';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { AIAssistant } from '@/components/assistant/AIAssistant';
 import { QuoteUploader } from '@/components/documents/QuoteUploader';
+import { PageHeader } from '@/components/movewell/PageHeader';
+import { SectionHeader } from '@/components/movewell/SectionHeader';
+import { BudgetSummary } from '@/components/movewell/BudgetSummary';
+import { CostLine } from '@/components/movewell/CostLine';
+import { QuoteSummary } from '@/components/movewell/QuoteSummary';
+import { Section } from '@/components/ui/Section';
 import { CaseOverview } from '@/types';
-import { DollarSign, AlertCircle, CheckCircle2, ShieldAlert } from 'lucide-react';
 
 export default function BudgetPage() {
   const params = useParams();
@@ -34,131 +39,113 @@ export default function BudgetPage() {
 
   if (loading || !overview) {
     return (
-      <div className="min-h-screen bg-sand-100 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-brand-900 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-canvas flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-forest border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
-  const { costSummary, tasks, seniorProfile, daysUntilDischarge } = overview;
+  const { costSummary, tasks, seniorProfile, daysUntilDischarge, costItems = [] } = overview;
+  const isOver = costSummary.budgetGap > 0;
+
+  const summaryItems = [
+    { label: 'Available Budget', value: `$${costSummary.userBudget.toLocaleString()}` },
+    {
+      label: 'Expected Total',
+      value: `$${costSummary.minTotal.toLocaleString()} \u2013 $${costSummary.maxTotal.toLocaleString()}`,
+    },
+    {
+      label: 'Status',
+      value: isOver
+        ? `+$${costSummary.budgetGap.toLocaleString()} Over`
+        : 'Funded',
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-sand-100 flex flex-col">
+    <div className="min-h-screen bg-canvas flex flex-col font-sans">
       <Navbar
         caseId={caseId}
         seniorName={`${seniorProfile.name}'s Budget`}
         daysUntilDischarge={daysUntilDischarge}
       />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1 space-y-6">
-        {/* Header */}
-        <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-xs">
-          <h1 className="text-2xl font-serif font-bold text-brand-950">Cost &amp; Budget Estimation</h1>
-          <p className="text-xs text-stone-500 font-medium mt-1">
-            Deterministic planning ranges for {seniorProfile.name}&apos;s post-hospital transition
-          </p>
-        </div>
-
-        {/* Disclaimer Alert Box */}
-        <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200 flex items-center space-x-3">
-          <AlertCircle className="w-5 h-5 text-amber-700 flex-shrink-0" />
-          <p className="text-xs text-amber-900 font-semibold italic">
-            &ldquo;{costSummary.disclaimer}&rdquo;
-          </p>
-        </div>
-
-        {/* Moving Quote Intelligence Upload Section */}
-        <QuoteUploader
-          caseId={caseId}
-          currentBudget={costSummary.userBudget}
-          onBudgetUpdated={() => fetchOverview()}
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1 space-y-8">
+        <PageHeader
+          title="Cost & Budget Ledger"
+          subtitle={`Deterministic planning ranges and vendor quotes for ${seniorProfile.name}'s post-hospital transition.`}
+          statusLabel={isOver ? `+$${costSummary.budgetGap.toLocaleString()} Over` : 'Within Budget'}
+          statusVariant={isOver ? 'warning' : 'completed'}
+          summaryItems={summaryItems}
         />
 
-        {/* Budget Comparison Card */}
-        <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-xs space-y-6">
-          <div className={`grid grid-cols-1 ${costSummary.confirmedQuotesTotal ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-4 text-center`}>
-            <div className="p-4 rounded-2xl bg-sand-50 border border-sand-300">
-              <p className="text-xs text-stone-500 font-bold uppercase tracking-wider mb-1">User Budget</p>
-              <p className="text-2xl font-bold text-stone-900">${costSummary.userBudget.toLocaleString()}</p>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-brand-50 border border-brand-200">
-              <p className="text-xs text-brand-800 font-bold uppercase tracking-wider mb-1">Estimated Range</p>
-              <p className="text-2xl font-bold text-brand-950">
-                ${costSummary.minTotal.toLocaleString()} &ndash; ${costSummary.maxTotal.toLocaleString()}
-              </p>
-            </div>
-
-            {costSummary.confirmedQuotesTotal ? (
-              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200">
-                <p className="text-xs text-emerald-800 font-bold uppercase tracking-wider mb-1">Confirmed Quotes</p>
-                <p className="text-2xl font-bold text-emerald-950">
-                  ${costSummary.confirmedQuotesTotal.toLocaleString()}
-                </p>
-              </div>
-            ) : null}
-
-            <div className="p-4 rounded-2xl bg-sand-50 border border-sand-300">
-              <p className="text-xs text-stone-500 font-bold uppercase tracking-wider mb-1">Max Budget Status</p>
-              <p className={`text-xl font-bold ${costSummary.budgetGap > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
-                {costSummary.budgetGap > 0
-                  ? `+$${costSummary.budgetGap.toLocaleString()} Over`
-                  : `Within Budget`}
-              </p>
-            </div>
+        {/* Ledger Overview */}
+        <Section>
+          <SectionHeader
+            eyebrow="Financial Ledger"
+            title="Overview & Contingency"
+            subtitle="Comparing family budget against calculated ranges and verified quotes."
+          />
+          <div className="mt-4">
+            <BudgetSummary costSummary={costSummary} costItems={costItems} />
           </div>
-        </div>
+        </Section>
 
-        {/* Confirmed Quotes Breakdown */}
-        {overview.costItems && overview.costItems.length > 0 && (
-          <div className="bg-white rounded-3xl p-6 border border-emerald-200 shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-serif font-bold text-brand-950 flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                Confirmed Vendor Quotes Applied
-              </h3>
-              <span className="text-xs font-semibold px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full">
-                Substituted for estimates
-              </span>
-            </div>
-            <div className="space-y-3">
-              {overview.costItems.map((item) => (
-                <div key={item.id} className="flex items-center justify-between p-4 rounded-2xl bg-emerald-50/50 border border-emerald-100">
-                  <div>
-                    <p className="font-bold text-sm text-stone-900">{item.providerName || item.description}</p>
-                    <p className="text-xs text-stone-500 capitalize">
-                      {item.category} quote {item.documentName ? `• ${item.documentName}` : ''}
-                    </p>
-                  </div>
-                  <p className="font-bold text-base text-emerald-800">
-                    ${item.amount?.toLocaleString()}
-                  </p>
-                </div>
+        {/* Quote Intelligence */}
+        <Section>
+          <SectionHeader
+            eyebrow="Quote Intelligence"
+            title="Vendor Quote Intake"
+            subtitle="Upload or paste vendor estimates. MoveWell extracts amounts and line items to refine your plan without overwriting your stated budget."
+          />
+          <div className="mt-4">
+            <QuoteUploader
+              caseId={caseId}
+              currentBudget={costSummary.userBudget}
+              onBudgetUpdated={() => fetchOverview()}
+            />
+          </div>
+        </Section>
+
+        {/* Applied Quotes */}
+        {costItems.length > 0 && (
+          <Section>
+            <SectionHeader
+              eyebrow="Verified Quotes"
+              title="Applied Vendor Quotes"
+              subtitle="These quotes have replaced planning estimates in your total expected costs."
+            />
+            <div className="mt-4 space-y-3">
+              {costItems.map((quote) => (
+                <QuoteSummary key={quote.id} quote={quote} />
               ))}
             </div>
-          </div>
+          </Section>
         )}
 
-        {/* Breakdown Table */}
-        <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-xs space-y-4">
-          <h3 className="text-lg font-serif font-bold text-brand-950">Task Cost Breakdown</h3>
-          <div className="space-y-3">
+        {/* Task Cost Breakdown */}
+        <Section>
+          <SectionHeader
+            eyebrow="Itemized Breakdown"
+            title="Task Cost Estimates"
+            subtitle="Individual cost ranges assigned to action items across all transition phases."
+          />
+          <div className="mt-4 divide-y divide-stone-line/60">
             {tasks
               .filter((t) => t.minEstimatedCost > 0 || t.maxEstimatedCost > 0)
               .map((t) => (
-                <div key={t.id} className="flex items-center justify-between p-4 rounded-2xl bg-sand-50 border border-stone-200">
-                  <div>
-                    <p className="font-bold text-sm text-stone-900">{t.title}</p>
-                    <p className="text-xs text-stone-500">{t.phase.replace('_', ' ')}</p>
-                  </div>
-                  <p className="font-bold text-sm text-brand-900">
-                    ${t.minEstimatedCost} &ndash; ${t.maxEstimatedCost}
-                  </p>
-                </div>
+                <CostLine
+                  key={t.id}
+                  category={t.phase.replace('_', ' ')}
+                  title={t.title}
+                  subtitle={t.whyItMatters || t.description}
+                  amount={`$${t.minEstimatedCost.toLocaleString()} \u2013 $${t.maxEstimatedCost.toLocaleString()}`}
+                  type="ESTIMATE"
+                />
               ))}
           </div>
-        </div>
-      </div>
+        </Section>
+      </main>
 
       <AIAssistant caseId={caseId} onPlanUpdated={fetchOverview} />
       <MobileNav caseId={caseId} />

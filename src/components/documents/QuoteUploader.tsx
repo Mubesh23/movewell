@@ -2,6 +2,9 @@
 
 import React, { useState } from 'react';
 import { Upload, FileText, CheckCircle2, AlertCircle, Sparkles, ArrowRight, FileCheck } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { Textarea } from '@/components/ui/Textarea';
+import { Badge } from '@/components/ui/Badge';
 
 interface QuoteUploaderProps {
   caseId: string;
@@ -14,8 +17,8 @@ export function QuoteUploader({ caseId, currentBudget, onBudgetUpdated }: QuoteU
   const [quoteData, setQuoteData] = useState<any | null>(null);
   const [applied, setApplied] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'upload' | 'sample'>('sample');
-  const [fileText, setFileText] = useState('');
+  const [mode, setMode] = useState<'sample' | 'text'>('sample');
+  const [pastedText, setPastedText] = useState('');
   const [fileName, setFileName] = useState('');
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -30,17 +33,17 @@ export function QuoteUploader({ caseId, currentBudget, onBudgetUpdated }: QuoteU
     const reader = new FileReader();
     reader.onload = (event) => {
       const content = event.target?.result as string;
-      setFileText(content || '');
+      setPastedText(content || '');
     };
     reader.onerror = () => {
-      setError('Could not read the selected file.');
+      setError('Could not read the selected text document.');
     };
     reader.readAsText(file);
   };
 
   const handleExtractFromText = async () => {
-    if (!fileText.trim()) {
-      setError('Please select or paste document content to analyze.');
+    if (!pastedText.trim()) {
+      setError('Please paste or upload document text to extract costs.');
       return;
     }
 
@@ -53,8 +56,8 @@ export function QuoteUploader({ caseId, currentBudget, onBudgetUpdated }: QuoteU
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          documentText: fileText,
-          fileName: fileName || 'Uploaded_Document.txt',
+          documentText: pastedText,
+          fileName: fileName || 'Vendor_Quote.txt',
           isSample: false,
         }),
       });
@@ -63,7 +66,7 @@ export function QuoteUploader({ caseId, currentBudget, onBudgetUpdated }: QuoteU
       if (data.success && data.quote) {
         setQuoteData(data.quote);
       } else {
-        setError(data.error || 'Unable to extract quote details from document.');
+        setError(data.error || 'Unable to extract structured quote details.');
       }
     } catch (err: any) {
       setError('Error analyzing document: ' + err.message);
@@ -87,6 +90,7 @@ export function QuoteUploader({ caseId, currentBudget, onBudgetUpdated }: QuoteU
       const data = await res.json();
       if (data.success && data.quote) {
         setQuoteData(data.quote);
+        setFileName('Caring_Transitions_Houston_Quote.txt');
       } else {
         setError(data.error || 'Failed to load sample quote.');
       }
@@ -105,7 +109,7 @@ export function QuoteUploader({ caseId, currentBudget, onBudgetUpdated }: QuoteU
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           quote: quoteData,
-          documentName: fileName || 'Caring_Transitions_Quote.pdf',
+          documentName: fileName || 'Caring_Transitions_Houston_Quote.txt',
         }),
       });
       const data = await res.json();
@@ -123,174 +127,184 @@ export function QuoteUploader({ caseId, currentBudget, onBudgetUpdated }: QuoteU
   };
 
   return (
-    <div className="bg-white rounded-3xl p-6 border border-stone-200/90 shadow-sm">
-      <div className="flex items-center space-x-3 mb-4">
-        <div className="w-10 h-10 rounded-2xl bg-brand-50 border border-brand-200 text-brand-900 flex items-center justify-center">
-          <FileText className="w-5 h-5" />
-        </div>
+    <div className="rounded-xl border border-stone-line bg-surface p-6 shadow-2xs space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-stone-line/70 pb-3">
         <div>
-          <h3 className="font-bold text-stone-900 text-base">Moving Quote Intelligence</h3>
-          <p className="text-xs text-stone-500">
-            Compare vendor quotes against planning estimates ($1,200 – $2,400) without altering family available budget (${currentBudget.toLocaleString()})
+          <h3 className="font-serif font-semibold text-lg text-charcoal tracking-tight">
+            Vendor Quote Intelligence
+          </h3>
+          <p className="text-xs text-muted mt-0.5">
+            Substitute confirmed vendor prices for planning estimates without modifying total available budget (${currentBudget.toLocaleString()}).
           </p>
         </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="flex space-x-2 border-b border-stone-200 pb-3 mb-4">
-        <button
-          onClick={() => { setActiveTab('sample'); setError(null); }}
-          className={`text-xs font-bold px-3 py-1.5 rounded-xl transition ${
-            activeTab === 'sample' ? 'bg-brand-900 text-white' : 'bg-sand-50 text-stone-600 hover:text-stone-900'
-          }`}
-        >
-          Try Sample Moving Quote
-        </button>
-        <button
-          onClick={() => { setActiveTab('upload'); setError(null); }}
-          className={`text-xs font-bold px-3 py-1.5 rounded-xl transition ${
-            activeTab === 'upload' ? 'bg-brand-900 text-white' : 'bg-sand-50 text-stone-600 hover:text-stone-900'
-          }`}
-        >
-          Upload Vendor Quote (PDF/Text)
-        </button>
+        {/* Mode Selector */}
+        <div className="flex items-center gap-1.5 self-start sm:self-auto shrink-0">
+          <button
+            type="button"
+            onClick={() => { setMode('sample'); setError(null); }}
+            className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
+              mode === 'sample'
+                ? 'bg-forest text-surface font-semibold'
+                : 'text-muted hover:text-charcoal bg-stone-subtle/60'
+            }`}
+          >
+            Try Sample Quote
+          </button>
+          <button
+            type="button"
+            onClick={() => { setMode('text'); setError(null); }}
+            className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
+              mode === 'text'
+                ? 'bg-forest text-surface font-semibold'
+                : 'text-muted hover:text-charcoal bg-stone-subtle/60'
+            }`}
+          >
+            Paste or Upload Text
+          </button>
+        </div>
       </div>
 
       {!quoteData ? (
-        <div className="border-2 border-dashed border-stone-200 rounded-2xl p-6 text-center bg-sand-50/50">
-          {activeTab === 'sample' ? (
-            <div>
-              <p className="text-xs font-semibold text-stone-800 mb-1">
-                Demonstration Sample: Caring Transitions Rightsizing &amp; Moving Quote
-              </p>
-              <p className="text-[11px] text-stone-500 mb-4 max-w-md mx-auto">
-                Test how MoveWell extracts itemized packing, transport, and supplies costs from a senior move manager quote.
-              </p>
-              <button
+        <div className="rounded-lg border border-dashed border-stone-line p-6 text-center bg-canvas/40 space-y-3">
+          {mode === 'sample' ? (
+            <div className="space-y-3 max-w-md mx-auto">
+              <div>
+                <p className="text-sm font-semibold text-charcoal">
+                  Demonstration Quote: Caring Transitions of Greater Houston
+                </p>
+                <p className="text-xs text-muted mt-1 leading-relaxed">
+                  Test how MoveWell extracts rightsizing, packing, transport, and supplies itemizations ($2,150) and replaces the estimated moving range ($1,200–$2,400).
+                </p>
+              </div>
+
+              <Button
+                type="button"
+                variant="default"
+                size="default"
+                isLoading={analyzing}
                 onClick={handleLoadSample}
-                disabled={analyzing}
-                className="bg-brand-900 hover:bg-brand-800 text-white font-bold text-xs py-2.5 px-5 rounded-xl shadow-xs transition inline-flex items-center space-x-2 disabled:opacity-50"
               >
-                {analyzing ? (
-                  <>
-                    <Sparkles className="w-4 h-4 animate-spin" />
-                    <span>Extracting Quote...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" />
-                    <span>Load Sample Quote ($2,150)</span>
-                  </>
-                )}
-              </button>
+                <Sparkles className="w-4 h-4 mr-1" />
+                Load Sample Moving Quote ($2,150)
+              </Button>
             </div>
           ) : (
-            <div>
-              <Upload className="w-8 h-8 text-stone-400 mx-auto mb-2" />
-              <p className="text-xs font-semibold text-stone-700 mb-1">
-                Select a quote file (PDF, TXT) or paste quote text
-              </p>
-              <p className="text-[11px] text-stone-500 mb-4">
-                MoveWell parses provider name and itemized costs directly from the document.
-              </p>
-              <div className="max-w-md mx-auto space-y-3">
-                <input
-                  type="file"
-                  accept=".txt,.pdf,.md,.csv"
-                  onChange={handleFileUpload}
-                  className="block w-full text-xs text-stone-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-900 hover:file:bg-brand-100"
-                />
-
-                {fileName && (
-                  <p className="text-xs text-stone-600 font-medium">
-                    Selected: <strong>{fileName}</strong> ({fileText.length} characters loaded)
-                  </p>
-                )}
-
-                <button
-                  onClick={handleExtractFromText}
-                  disabled={analyzing || !fileText.trim()}
-                  className="w-full bg-brand-900 hover:bg-brand-800 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow-xs transition flex items-center justify-center space-x-2 disabled:opacity-50"
-                >
-                  {analyzing ? (
-                    <>
-                      <Sparkles className="w-4 h-4 animate-spin" />
-                      <span>Parsing Document with Gemini...</span>
-                    </>
-                  ) : (
-                    <span>Extract Quote From Document</span>
-                  )}
-                </button>
+            <div className="space-y-4 max-w-lg mx-auto text-left">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-1">
+                  Upload text document or paste quote text
+                </p>
+                <p className="text-xs text-muted mb-3">
+                  Supported formats: Plain text (.txt), Markdown (.md), or CSV documents.
+                </p>
               </div>
+
+              <input
+                type="file"
+                accept=".txt,.md,.csv"
+                onChange={handleFileUpload}
+                className="block w-full text-xs text-muted file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-stone-line file:text-xs file:font-medium file:bg-surface file:text-charcoal hover:file:bg-stone-subtle cursor-pointer"
+              />
+
+              <Textarea
+                rows={4}
+                value={pastedText}
+                onChange={(e) => setPastedText(e.target.value)}
+                placeholder="Or paste quote text here (e.g. Caring Transitions Estimate #1042: Packing $600, Loading & Transport $1,350, Materials $200. Total: $2,150)..."
+                className="text-xs"
+              />
+
+              <Button
+                type="button"
+                variant="default"
+                size="default"
+                isLoading={analyzing}
+                disabled={!pastedText.trim()}
+                onClick={handleExtractFromText}
+                className="w-full"
+              >
+                <span>Extract Quote Details with Gemini</span>
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
             </div>
           )}
         </div>
       ) : (
-        <div className="space-y-4">
-          <div className="bg-brand-50/60 rounded-2xl p-4 border border-brand-200 text-stone-900 text-xs">
-            <div className="flex items-center justify-between mb-3 border-b border-brand-200/60 pb-2">
-              <span className="font-bold text-sm text-brand-950 flex items-center space-x-1.5">
-                <FileCheck className="w-4 h-4 text-emerald-600" />
-                <span>Quote Extracted: {quoteData.providerName}</span>
-              </span>
-              <span className="bg-sand-200 text-stone-800 font-medium px-2.5 py-0.5 rounded-full text-[11px]">
-                Document Parsed
+        <div className="rounded-lg border border-forest/20 bg-surface p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-stone-line pb-3">
+            <div className="flex items-center gap-2">
+              <FileCheck className="w-4 h-4 text-forest" />
+              <span className="font-serif font-bold text-charcoal text-base">
+                {quoteData.providerName}
               </span>
             </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3 text-stone-700">
-              <div className="bg-white p-2.5 rounded-xl border border-stone-200">
-                <span className="text-[10px] text-stone-400 block uppercase font-medium">Packing Labor</span>
-                <span className="font-bold text-stone-900">${quoteData.packingAmount || 600}</span>
-              </div>
-              <div className="bg-white p-2.5 rounded-xl border border-stone-200">
-                <span className="text-[10px] text-stone-400 block uppercase font-medium">Moving Transport</span>
-                <span className="font-bold text-stone-900">${quoteData.movingAmount || 1350}</span>
-              </div>
-              <div className="bg-white p-2.5 rounded-xl border border-stone-200">
-                <span className="text-[10px] text-stone-400 block uppercase font-medium">Materials</span>
-                <span className="font-bold text-stone-900">${quoteData.materialsAmount || 200}</span>
-              </div>
-              <div className="bg-white p-2.5 rounded-xl border border-emerald-300 bg-emerald-50/30">
-                <span className="text-[10px] text-emerald-700 block uppercase font-bold">Total Quote</span>
-                <span className="font-extrabold text-emerald-950">${quoteData.totalAmount}</span>
-              </div>
-            </div>
-
-            <div className="bg-white p-3 rounded-xl border border-stone-200 text-[11px] text-stone-600 space-y-1 mb-3">
-              <p><strong>Move Date:</strong> {quoteData.moveDate || 'Oct 18, 2026'}</p>
-              <p><strong>Comparison:</strong> MoveWell planning estimate range for moving is $1,200 – $2,400. This $2,150 quote fits comfortably within planning estimates.</p>
-              <p className="text-stone-500"><strong>Budget Integrity Note:</strong> Applying this quote updates the moving category cost item in your plan without altering your family&apos;s ${currentBudget.toLocaleString()} total available budget.</p>
-            </div>
-
-            {!applied ? (
-              <button
-                onClick={handleApplyQuoteToPlan}
-                className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-2.5 px-4 rounded-xl shadow-xs transition flex items-center justify-center space-x-2"
-              >
-                <span>Apply $2,150 Moving Quote to Plan</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            ) : (
-              <div className="bg-emerald-100 border border-emerald-300 text-emerald-900 p-2.5 rounded-xl text-center font-bold flex items-center justify-center space-x-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-700" />
-                <span>Moving quote ($2,150) applied to plan! Family budget remains ${currentBudget.toLocaleString()}.</span>
-              </div>
-            )}
+            <Badge variant="ready">Parsed Successfully</Badge>
           </div>
 
-          <button
-            onClick={() => { setQuoteData(null); setApplied(false); setFileText(''); setFileName(''); }}
-            className="text-xs text-stone-500 hover:text-stone-800 font-medium underline"
-          >
-            Reset / Analyze another document
-          </button>
+          {/* Itemized summary */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div className="p-2.5 rounded-md bg-stone-subtle/50 border border-stone-line">
+              <span className="text-muted block text-[10px] uppercase tracking-wider">Transport</span>
+              <strong className="text-charcoal">${quoteData.movingAmount?.toLocaleString() || '—'}</strong>
+            </div>
+            <div className="p-2.5 rounded-md bg-stone-subtle/50 border border-stone-line">
+              <span className="text-muted block text-[10px] uppercase tracking-wider">Packing</span>
+              <strong className="text-charcoal">${quoteData.packingAmount?.toLocaleString() || '—'}</strong>
+            </div>
+            <div className="p-2.5 rounded-md bg-stone-subtle/50 border border-stone-line">
+              <span className="text-muted block text-[10px] uppercase tracking-wider">Materials</span>
+              <strong className="text-charcoal">${quoteData.materialsAmount?.toLocaleString() || '—'}</strong>
+            </div>
+            <div className="p-2.5 rounded-md bg-forest/10 border border-forest/20">
+              <span className="text-forest block text-[10px] uppercase tracking-wider font-semibold">Total Quote</span>
+              <strong className="text-forest text-sm font-serif font-bold">${quoteData.totalAmount?.toLocaleString()}</strong>
+            </div>
+          </div>
+
+          {quoteData.notes && (
+            <p className="text-xs text-muted leading-relaxed italic">
+              Scope: &ldquo;{quoteData.notes}&rdquo;
+            </p>
+          )}
+
+          {/* Action to Apply */}
+          <div className="pt-2 flex items-center justify-between gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setQuoteData(null);
+                setApplied(false);
+              }}
+            >
+              Reset
+            </Button>
+
+            {!applied ? (
+              <Button
+                type="button"
+                variant="default"
+                size="default"
+                onClick={handleApplyQuoteToPlan}
+                className="font-semibold"
+              >
+                <span>Apply ${quoteData.totalAmount?.toLocaleString()} Moving Quote to Plan</span>
+                <CheckCircle2 className="w-4 h-4 ml-1" />
+              </Button>
+            ) : (
+              <Badge variant="completed" className="px-3 py-1 text-xs">
+                Applied to plan &bull; Estimate updated
+              </Badge>
+            )}
+          </div>
         </div>
       )}
 
       {error && (
-        <div className="mt-3 bg-rose-50 text-rose-800 p-3 rounded-xl text-xs flex items-center space-x-2">
-          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+        <div className="p-3 bg-status-critical-bg border border-status-critical/20 rounded-md text-xs text-status-critical flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{error}</span>
         </div>
       )}

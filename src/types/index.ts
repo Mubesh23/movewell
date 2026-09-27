@@ -262,6 +262,7 @@ export interface ServiceResource {
   description: string;
   costType: ResourceCostType | string;
   organizationName?: string;
+  website?: string;
   location?: Location;
   verification?: ResourceVerification;
 }
@@ -299,6 +300,15 @@ export interface CostItem {
   updatedAt: string;
 }
 
+export interface CostSummary {
+  minTotal: number;
+  maxTotal: number;
+  userBudget: number;
+  budgetGap: number;
+  disclaimer: string;
+  confirmedQuotesTotal?: number;
+}
+
 export interface CaseOverview {
   caseData: TransitionCase;
   seniorProfile: SeniorProfile;
@@ -306,14 +316,7 @@ export interface CaseOverview {
   tasks: TransitionTask[];
   events: CaseEvent[];
   costItems?: CostItem[];
-  costSummary: {
-    minTotal: number;
-    maxTotal: number;
-    userBudget: number;
-    budgetGap: number;
-    disclaimer: string;
-    confirmedQuotesTotal?: number;
-  };
+  costSummary: CostSummary;
   progressPercent: number;
   daysUntilDischarge?: number;
   urgentTask?: TransitionTask;

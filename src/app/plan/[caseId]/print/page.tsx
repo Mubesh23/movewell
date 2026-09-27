@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { CaseOverview } from '@/types';
-import { Printer, CheckCircle2, Phone, MapPin, Calendar, Clock } from 'lucide-react';
+import { Printer, CheckCircle2 } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 export default function PrintPlanPage() {
   const params = useParams();
@@ -19,120 +20,147 @@ export default function PrintPlanPage() {
         .then((data) => {
           if (data.success) setOverview(data.data);
           setLoading(false);
-        });
+        })
+        .catch(() => setLoading(false));
     }
   }, [caseId]);
 
   if (loading || !overview) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-8">
-        <p className="text-sm font-bold text-stone-700">Loading Printable Plan...</p>
+      <div className="min-h-screen bg-canvas flex items-center justify-center p-8 font-sans">
+        <p className="text-sm font-medium text-charcoal">Loading Printable Plan…</p>
       </div>
     );
   }
 
   const { caseData, seniorProfile, members, tasks, costSummary } = overview;
 
+  const primaryLead = members.find((m) => m.role === 'OWNER') || members[0];
+  const localSupport = members.find((m) => m.isLocal && m.id !== primaryLead?.id) || members.find((m) => m.isLocal);
+
   return (
-    <div className="min-h-screen bg-white text-stone-900 font-sans p-6 sm:p-12 max-w-4xl mx-auto space-y-8">
+    <div className="min-h-screen bg-white text-charcoal font-sans p-6 sm:p-12 max-w-4xl mx-auto space-y-8">
       {/* Print Action Bar (Hidden on print) */}
-      <div className="print:hidden flex items-center justify-between pb-6 border-b border-stone-200">
+      <div className="print:hidden flex items-center justify-between pb-6 border-b border-stone-line">
         <div>
-          <h1 className="text-xl font-bold text-stone-900">Printable Transition Plan</h1>
-          <p className="text-xs text-stone-500">Share with family, medical staff, or move coordinators</p>
+          <h1 className="text-xl font-serif font-bold text-charcoal">Printable Transition Plan</h1>
+          <p className="text-xs text-muted">Share with family, hospital discharge coordinators, or move managers</p>
         </div>
-        <button
+        <Button
           onClick={() => window.print()}
-          className="bg-emerald-900 hover:bg-emerald-800 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-sm flex items-center space-x-2 transition"
+          className="gap-2"
         >
           <Printer className="w-4 h-4" />
           <span>Print / Save to PDF</span>
-        </button>
+        </Button>
       </div>
 
       {/* Printable Header */}
-      <div className="border-b-2 border-stone-900 pb-6 flex items-start justify-between">
+      <div className="border-b-2 border-forest pb-6 flex items-start justify-between gap-6">
         <div>
-          <div className="flex items-center space-x-2 mb-1">
-            <span className="font-serif font-bold text-2xl text-emerald-950">MoveWell</span>
-            <span className="text-xs text-stone-400 uppercase tracking-widest font-bold">Transition Summary</span>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-serif font-bold text-2xl text-forest">MoveWell</span>
+            <span className="text-[11px] text-muted uppercase tracking-widest font-semibold">· Transition Plan</span>
           </div>
-          <h2 className="text-3xl font-serif font-bold text-stone-900">{seniorProfile.name}&apos;s Housing Transition Plan</h2>
-          <p className="text-xs text-stone-600 mt-1">
-            Post-Hospital Transition &bull; Houston, TX ({caseData.zipCode}) &bull; Target Move: Nov 7, 2026
+          <h2 className="text-2xl sm:text-3xl font-serif font-bold text-charcoal">
+            {seniorProfile.name}&apos;s Transition Plan
+          </h2>
+          <p className="text-xs text-muted mt-1.5">
+            Post-Hospital Transition &bull; Area ZIP: {caseData.zipCode} &bull; Target Move: {caseData.targetDate || 'Pending target'}
           </p>
         </div>
 
-        <div className="text-right space-y-1">
-          <span className="inline-block px-3 py-1 bg-rose-100 text-rose-800 font-bold text-xs rounded-full border border-rose-300">
-            {caseData.urgency}
+        <div className="text-right space-y-1 shrink-0">
+          <span className="inline-block px-3 py-1 bg-stone-subtle text-forest font-semibold text-xs rounded-full border border-stone-border">
+            {caseData.urgency.replace('_', ' ')}
           </span>
-          <p className="text-xs text-stone-500 font-medium">Discharge: Nov 1, 2026</p>
+          {caseData.dischargeDate && (
+            <p className="text-xs text-muted font-medium">
+              Discharge: {caseData.dischargeDate}
+            </p>
+          )}
         </div>
       </div>
 
-      {/* Summary Box */}
-      <div className="grid grid-cols-3 gap-4 p-4 rounded-xl border border-stone-300 bg-stone-50">
+      {/* Key Details Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-xl border border-stone-line bg-canvas">
         <div>
-          <p className="text-[10px] font-bold text-stone-500 uppercase">Primary Coordinator</p>
-          <p className="text-sm font-bold text-stone-900">Sarah (Daughter)</p>
-          <p className="text-xs text-stone-600">Chicago, IL (Remote)</p>
+          <p className="text-[10px] font-semibold text-muted uppercase tracking-wider">Primary Coordinator</p>
+          {primaryLead ? (
+            <>
+              <p className="text-sm font-semibold text-charcoal">{primaryLead.name} {primaryLead.relationship ? `(${primaryLead.relationship})` : ''}</p>
+              <p className="text-xs text-muted">{primaryLead.city || 'Location unlisted'} ({primaryLead.isLocal ? 'Local' : 'Remote'})</p>
+            </>
+          ) : (
+            <p className="text-xs text-muted italic">Not designated</p>
+          )}
         </div>
+
         <div>
-          <p className="text-[10px] font-bold text-stone-500 uppercase">Local Support</p>
-          <p className="text-sm font-bold text-stone-900">Jennifer (Sister)</p>
-          <p className="text-xs text-stone-600">Houston, TX (Local)</p>
+          <p className="text-[10px] font-semibold text-muted uppercase tracking-wider">Local Support</p>
+          {localSupport ? (
+            <>
+              <p className="text-sm font-semibold text-charcoal">{localSupport.name} {localSupport.relationship ? `(${localSupport.relationship})` : ''}</p>
+              <p className="text-xs text-muted">{localSupport.city || 'Local Area'} (In-Person)</p>
+            </>
+          ) : (
+            <p className="text-xs text-muted italic">No local members designated</p>
+          )}
         </div>
+
         <div>
-          <p className="text-[10px] font-bold text-stone-500 uppercase">Estimated Budget Range</p>
-          <p className="text-sm font-bold text-emerald-900">
+          <p className="text-[10px] font-semibold text-muted uppercase tracking-wider">Estimated Budget</p>
+          <p className="text-sm font-bold text-forest">
             ${costSummary.minTotal.toLocaleString()} &ndash; ${costSummary.maxTotal.toLocaleString()}
           </p>
-          <p className="text-[10px] text-stone-500 italic">User budget: ${costSummary.userBudget.toLocaleString()}</p>
+          <p className="text-[11px] text-muted">Stated budget: ${costSummary.userBudget.toLocaleString()}</p>
         </div>
       </div>
 
       {/* Task Checklist */}
-      <div className="space-y-6">
-        <h3 className="text-lg font-serif font-bold text-stone-900 border-b border-stone-200 pb-2">
-          Transition Action Plan
+      <div className="space-y-4">
+        <h3 className="text-lg font-serif font-bold text-charcoal border-b border-stone-line pb-2">
+          Transition Action Items ({tasks.length})
         </h3>
 
-        <div className="space-y-4">
-          {tasks.map((task) => (
-            <div key={task.id} className="p-3.5 rounded-lg border border-stone-200 space-y-1 text-xs">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <span className={`w-3 h-3 rounded-full border border-stone-400 ${task.status === 'COMPLETED' ? 'bg-emerald-700 border-emerald-800' : 'bg-white'}`}></span>
-                  <span className={`font-bold text-sm ${task.status === 'COMPLETED' ? 'line-through text-stone-400' : 'text-stone-900'}`}>
-                    {task.title}
+        <div className="space-y-3">
+          {tasks.map((task) => {
+            const isDone = task.status === 'COMPLETED';
+            return (
+              <div key={task.id} className="p-3.5 rounded-lg border border-stone-line space-y-1.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-3.5 h-3.5 rounded-full border ${isDone ? 'bg-forest border-forest' : 'border-stone-text bg-white'}`} />
+                    <span className={`font-semibold text-sm ${isDone ? 'line-through text-muted' : 'text-charcoal'}`}>
+                      {task.title}
+                    </span>
+                  </div>
+                  <span className="font-semibold text-muted bg-stone-subtle px-2 py-0.5 rounded text-[10px] uppercase">
+                    {task.status}
                   </span>
                 </div>
-                <span className="font-semibold text-stone-600 bg-stone-100 px-2 py-0.5 rounded text-[10px]">
-                  {task.status}
-                </span>
-              </div>
 
-              {task.whyItMatters && (
-                <p className="text-stone-600 pl-5 text-[11px] leading-relaxed">
-                  <strong>Why:</strong> {task.whyItMatters}
-                </p>
-              )}
-
-              <div className="flex items-center space-x-4 pl-5 text-[10px] text-stone-500">
-                {task.dueDate && <span>Due: {task.dueDate}</span>}
-                {task.assignee && <span>Assigned to: {task.assignee.name}</span>}
-                {(task.minEstimatedCost > 0 || task.maxEstimatedCost > 0) && (
-                  <span>Cost: ${task.minEstimatedCost} - ${task.maxEstimatedCost}</span>
+                {task.whyItMatters && (
+                  <p className="text-muted pl-5 text-[11px] leading-relaxed">
+                    <strong className="text-charcoal">Why:</strong> {task.whyItMatters}
+                  </p>
                 )}
+
+                <div className="flex items-center gap-4 pl-5 text-[11px] text-muted flex-wrap">
+                  {task.dueDate && <span>Due: {task.dueDate}</span>}
+                  {task.assignee && <span>Assigned: {task.assignee.name}</span>}
+                  {(task.minEstimatedCost > 0 || task.maxEstimatedCost > 0) && (
+                    <span>Est: ${task.minEstimatedCost.toLocaleString()} &ndash; ${task.maxEstimatedCost.toLocaleString()}</span>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
       {/* Disclaimer Footer */}
-      <div className="pt-6 border-t border-stone-300 text-center text-xs text-stone-500 italic">
+      <div className="pt-6 border-t border-stone-line text-center text-xs text-muted italic">
         &ldquo;{costSummary.disclaimer}&rdquo; &bull; Generated by MoveWell Transition Platform &bull; {new Date().toLocaleDateString()}
       </div>
     </div>
