@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { planningEngine } from '@/services/planning-engine';
-import { TransitionCase, SeniorProfile, CaseMember, formatLocalDateYYYYMMDD } from '@/types';
+import { TransitionCase, SeniorProfile, CaseMember, formatLocalDateYYYYMMDD, CasePreset } from '@/types';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
     // Check if loading Maria's Golden Scenario preset
-    if (body.preset === 'MARIA_GOLDEN_SCENARIO') {
+    if (body.preset === ('MARIA_GOLDEN_SCENARIO' as CasePreset)) {
       const randomSuffix = Math.random().toString(36).substring(2, 9);
       const caseId = `case-maria-${randomSuffix}`;
       const seniorProfileId = `profile-maria-${randomSuffix}`;

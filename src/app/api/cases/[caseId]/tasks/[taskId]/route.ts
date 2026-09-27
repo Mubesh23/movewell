@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { taskService } from '@/services/task-service';
+import { TaskAction } from '@/types';
 
 export async function PATCH(
   req: NextRequest,
@@ -7,7 +8,8 @@ export async function PATCH(
 ) {
   try {
     const body = await req.json();
-    const { action, assigneeId, assigneeName, actorName, note, completionNotes } = body;
+    const action = body.action as TaskAction;
+    const { assigneeId, assigneeName, actorName, note, completionNotes } = body;
 
     if (action === 'COMPLETE') {
       const noteToSave = note || completionNotes;

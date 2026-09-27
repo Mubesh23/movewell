@@ -22,6 +22,8 @@ export type TaskStatus =
   | 'COMPLETED'
   | 'SKIPPED';
 
+export type TaskAction = 'COMPLETE' | 'REOPEN' | 'ASSIGN' | 'SKIP';
+
 export type TaskPhase =
   | 'RIGHT_NOW'
   | 'THIS_WEEK'
@@ -29,20 +31,117 @@ export type TaskPhase =
   | 'MOVE_WEEK'
   | 'AFTER_MOVE';
 
+export type TaskTemplateId =
+  | 'confirm-discharge-destination'
+  | 'assess-home-accessibility'
+  | 'decide-housing-duration'
+  | 'inventory-belongings'
+  | 'evaluate-rehab-facilities'
+  | 'schedule-senior-mover'
+  | 'arrange-transportation'
+  | 'schedule-donation-pickup';
+
 export type CaseMemberRole =
   | 'OWNER'
   | 'FAMILY'
   | 'HELPER'
   | 'PROFESSIONAL';
 
+export type MemberRelationship =
+  | 'Daughter'
+  | 'Son'
+  | 'Sister'
+  | 'Brother'
+  | 'Spouse'
+  | 'Sister / Local Support'
+  | 'Helper / Collaborator'
+  | 'Professional Coordinator'
+  | string;
+
+export type MemberAvailability =
+  | 'FULL_TIME_REMOTE'
+  | 'LOCAL_EVENINGS_WEEKENDS'
+  | 'FULL_TIME_LOCAL'
+  | 'AS_NEEDED'
+  | string;
+
 export type HousingStatus = 'OWN' | 'RENT' | 'UNDECIDED';
 export type DestinationStatus = 'KNOWN' | 'UNKNOWN' | 'REHAB_FIRST' | 'RETURN_HOME' | 'UNDECIDED';
+
 export type HomeType =
   | 'TWO_STORY'
   | 'SINGLE_STORY'
   | 'APARTMENT_CONDO'
   | 'ASSISTED_LIVING'
   | 'OTHER';
+
+export type ResourceCategory =
+  | 'moving'
+  | 'senior_move_management'
+  | 'donation'
+  | 'junk_removal'
+  | 'home_modification'
+  | 'storage'
+  | 'transportation';
+
+export type ResourceCostType =
+  | 'free_public_service'
+  | 'donation_pickup'
+  | 'grant_funded_or_sliding_scale'
+  | 'sliding_scale'
+  | 'hourly_or_quote'
+  | 'public_transit_fare'
+  | 'custom_quote'
+  | 'free_legal_aid';
+
+export type CasePreset = 'MARIA_GOLDEN_SCENARIO';
+
+export type AIToolName =
+  | 'get_plan'
+  | 'update_case_context'
+  | 'assign_task'
+  | 'complete_task'
+  | 'find_resources';
+
+export type DocumentType =
+  | 'MOVING_QUOTE'
+  | 'CONTRACTOR_ESTIMATE'
+  | 'REHAB_PAPERWORK'
+  | 'SENIOR_LIVING_BROCHURE'
+  | 'LEASE'
+  | 'DISCHARGE_PAPERWORK'
+  | 'RECEIPT'
+  | 'OTHER';
+
+export type CostItemSource =
+  | 'ESTIMATE'
+  | 'QUOTE'
+  | 'SELECTED_VENDOR'
+  | 'ACTUAL';
+
+export type TransportationNeed =
+  | 'STANDARD'
+  | 'ASSISTED'
+  | 'WHEELCHAIR'
+  | 'MEDICAL_TRANSPORT'
+  | 'UNKNOWN';
+
+export type CaseLocationType =
+  | 'HOME'
+  | 'HOSPITAL'
+  | 'REHAB'
+  | 'DESTINATION'
+  | 'STORAGE'
+  | 'OTHER';
+
+export type CostCategory =
+  | 'moving'
+  | 'packing'
+  | 'home_modification'
+  | 'storage'
+  | 'legal_admin';
+
+export type CostUnit = 'flat' | 'hourly' | 'monthly' | 'per_day';
 
 export interface TransitionCase {
   id: string;
@@ -68,7 +167,7 @@ export interface SeniorProfile {
   mobilityConstraint: boolean;
   stairsConstraint: boolean;
   immediateSafetyConcern: boolean;
-  homeType?: string;
+  homeType?: HomeType | string;
   ownsHome: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -78,10 +177,10 @@ export interface CaseMember {
   id: string;
   caseId: string;
   name: string;
-  relationship?: string;
+  relationship?: MemberRelationship;
   city?: string;
   isLocal: boolean;
-  availability?: string;
+  availability?: MemberAvailability;
   role: CaseMemberRole;
   createdAt?: string;
   updatedAt?: string;
@@ -90,7 +189,7 @@ export interface CaseMember {
 export interface TransitionTask {
   id: string;
   caseId: string;
-  templateId?: string;
+  templateId?: TaskTemplateId | string;
   title: string;
   description?: string;
   whyItMatters?: string;
@@ -123,7 +222,10 @@ export type CaseEventType =
   | 'TARGET_DATE_CHANGED'
   | 'PLAN_REGENERATED'
   | 'CASE_MEMBER_ADDED'
-  | 'CASE_MEMBER_REMOVED';
+  | 'CASE_MEMBER_REMOVED'
+  | 'DESTINATION_CONFIRMED'
+  | 'QUOTE_EXTRACTED'
+  | 'QUOTE_APPLIED';
 
 export interface CaseEvent {
   id: string;
@@ -137,11 +239,11 @@ export interface CaseEvent {
 
 export interface CostModel {
   id: string;
-  category: string;
+  category: CostCategory | string;
   name: string;
   minCost: number;
   maxCost: number;
-  unit: string;
+  unit: CostUnit | string;
   conditions?: Record<string, any>;
 }
 
@@ -156,9 +258,9 @@ export interface ServiceResource {
   id: string;
   organizationId: string;
   name: string;
-  category: string; // moving, senior_move_management, donation, junk_removal, home_modification, storage
+  category: ResourceCategory | string;
   description: string;
-  costType: string;
+  costType: ResourceCostType | string;
   organizationName?: string;
   location?: Location;
   verification?: ResourceVerification;
@@ -177,7 +279,7 @@ export interface Location {
 export interface ResourceVerification {
   id: string;
   serviceId: string;
-  verificationStatus: string; // e.g. "Verified listing"
+  verificationStatus: string;
   verificationSource: string;
   lastVerifiedAt: string;
 }
@@ -192,7 +294,7 @@ export interface CaseOverview {
     minTotal: number;
     maxTotal: number;
     userBudget: number;
-    budgetGap: number; // positive means over budget, negative or zero means under/within
+    budgetGap: number;
     disclaimer: string;
   };
   progressPercent: number;

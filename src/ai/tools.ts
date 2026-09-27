@@ -3,9 +3,10 @@ import { taskService } from '../services/task-service';
 import { resourceService } from '../services/resource-service';
 import { repository } from '../db/repository';
 import { eventService } from '../services/event-service';
+import { AIToolName } from '../types';
 
 export interface ToolExecutionResult {
-  toolName: string;
+  toolName: AIToolName | string;
   success: boolean;
   message: string;
   data?: any;
