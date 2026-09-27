@@ -1,6 +1,6 @@
 import assert from 'assert';
 
-const BASE_URL = 'http://localhost:3001';
+const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:3000';
 
 async function runLiveVerification() {
   console.log('🚀 Starting Bridgewell Live Hardening & Golden Demo Verification...\n');
