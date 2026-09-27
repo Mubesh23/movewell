@@ -12,15 +12,13 @@ describe('Vendor Quote Persistence & Budget Integrity', () => {
     memoryStore.clear();
     const mockCase: TransitionCase = {
       id: caseId,
-      seniorId: 'senior-quote',
-      status: 'PLANNING',
+      seniorProfileId: 'senior-quote',
       urgency: 'URGENT',
       targetDate: '2026-10-15',
       dischargeDate: '2026-10-02',
       destinationStatus: 'UNDECIDED',
       budget: 8000,
       zipCode: '77004',
-      originAddress: '123 Main St',
       transitionType: 'POST_HOSPITAL',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -31,9 +29,12 @@ describe('Vendor Quote Persistence & Budget Integrity', () => {
       id: 'senior-quote',
       caseId,
       name: 'Maria Thompson',
-      age: 78,
-      hospitalized: true,
-      mobilityNotes: 'Needs walker',
+      ageRange: '75-84',
+      livesAlone: true,
+      mobilityConstraint: true,
+      stairsConstraint: true,
+      immediateSafetyConcern: true,
+      ownsHome: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -79,13 +80,14 @@ describe('Vendor Quote Persistence & Budget Integrity', () => {
 
     // Case overview check: caseData.budget remains $8,000!
     const overview = await caseService.getCaseOverview(caseId);
-    expect(overview.caseData.budget).toBe(8000);
-    expect(overview.costSummary.userBudget).toBe(8000);
-    expect(overview.costSummary.confirmedQuotesTotal).toBe(2150);
+    expect(overview).not.toBeNull();
+    expect(overview!.caseData.budget).toBe(8000);
+    expect(overview!.costSummary.userBudget).toBe(8000);
+    expect(overview!.costSummary.confirmedQuotesTotal).toBe(2150);
 
     // The moving range (1200-2400) was replaced by 2150 in the cost calculations
-    expect(overview.costSummary.minTotal).toBe(2150);
-    expect(overview.costSummary.maxTotal).toBe(2150);
-    expect(overview.costSummary.budgetGap).toBe(2150 - 8000); // -5850 (under budget)
+    expect(overview!.costSummary.minTotal).toBe(2150);
+    expect(overview!.costSummary.maxTotal).toBe(2150);
+    expect(overview!.costSummary.budgetGap).toBe(2150 - 8000); // -5850 (under budget)
   });
 });
