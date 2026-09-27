@@ -42,7 +42,7 @@ describe('Draft Proposal, Idempotent Activation & Auth Boundaries', () => {
       const res = await draftsPost(req);
       const json = await res.json();
 
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(201);
       expect(json.success).toBe(true);
       expect(json.draftId).toBeDefined();
       expect(json.draft.status).toBe('DRAFT');

@@ -22,7 +22,7 @@ export type TaskStatus =
   | 'COMPLETED'
   | 'SKIPPED';
 
-export type TaskAction = 'COMPLETE' | 'REOPEN' | 'ASSIGN' | 'SKIP';
+export type TaskAction = 'COMPLETE' | 'REOPEN' | 'ASSIGN' | 'SKIP' | 'SET_DUE_DATE';
 
 export type TaskPhase =
   | 'RIGHT_NOW'

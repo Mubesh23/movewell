@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
       success: true,
       draftId: draft.id,
       draft,
-    });
+    }, { status: 201 });
 
     // Set cookie if not already present
     if (!req.cookies.get('movewell_user_id')) {

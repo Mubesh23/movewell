@@ -7,8 +7,9 @@ import { WorkspaceShell } from '@/components/layout/WorkspaceShell';
 import { MilestoneTimelineStrip } from '@/components/movewell/MilestoneTimelineStrip';
 import { WhatChanged } from '@/components/movewell/WhatChanged';
 import { TaskRow } from '@/components/movewell/TaskRow';
+import { ActivityTimeline } from '@/components/movewell/ActivityTimeline';
 import { openNoraWithPrompt } from '@/components/assistant/AIAssistant';
-import { CaseOverview, TransitionTask } from '@/types';
+import { CaseEvent, CaseOverview, TransitionTask } from '@/types';
 import {
   AlertCircle,
   ArrowUpRight,
@@ -30,6 +31,7 @@ export default function DashboardPage() {
   const caseId = params.caseId as string;
 
   const [overview, setOverview] = useState<CaseOverview | null>(null);
+  const [events, setEvents] = useState<CaseEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
@@ -37,12 +39,19 @@ export default function DashboardPage() {
 
   const fetchOverview = React.useCallback(async () => {
     try {
-      const res = await fetch(`/api/cases/${caseId}`, { cache: 'no-store' });
-      const data = await res.json();
-      if (data.success) {
-        setOverview(data.data);
+      const [caseRes, eventsRes] = await Promise.all([
+        fetch(`/api/cases/${caseId}`, { cache: 'no-store' }),
+        fetch(`/api/cases/${caseId}/events`, { cache: 'no-store' }),
+      ]);
+      const caseData = await caseRes.json();
+      const eventsData = await eventsRes.json().catch(() => ({ events: [] }));
+      if (caseData.success) {
+        setOverview(caseData.data);
       } else {
-        setError(data.error);
+        setError(caseData.error);
+      }
+      if (eventsData.success) {
+        setEvents(eventsData.events || []);
       }
     } catch (err: any) {
       setError(err.message);
@@ -432,6 +441,18 @@ export default function DashboardPage() {
                 ))}
               </div>
             </section>
+
+            {/* Activity Log */}
+            {events.length > 0 && (
+              <section className="rounded-2xl border border-[#e0e9e2] bg-white p-5 shadow-2xs">
+                <h2 className="font-semibold text-sm text-[#183331] pb-3 border-b border-[#edf2ee]">
+                  Recent activity
+                </h2>
+                <div className="mt-4">
+                  <ActivityTimeline events={events} limit={5} />
+                </div>
+              </section>
+            )}
           </div>
         </div>
 

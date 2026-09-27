@@ -213,6 +213,9 @@ export class Repository {
         is_local: member.isLocal,
         availability: member.availability || null,
         role: member.role,
+        email: member.email || null,
+        invitation_status: member.invitationStatus || 'NONE',
+        invitation_channel: member.invitationChannel || null,
         updated_at: new Date().toISOString(),
       };
       if (member.userId) {
@@ -226,7 +229,15 @@ export class Repository {
         const retry = await supabase.from('case_members').upsert(payload);
         error = retry.error;
       }
-
+      // If email/invitation columns don't exist yet, retry without them (migration may not have run)
+      if (error && (error.message?.includes('email') || error.message?.includes('invitation'))) {
+        console.warn('Supabase case_members missing email/invitation columns. Retrying without them (run migration 20260927000001_member_invitations.sql).');
+        delete payload.email;
+        delete payload.invitation_status;
+        delete payload.invitation_channel;
+        const retry2 = await supabase.from('case_members').upsert(payload);
+        error = retry2.error;
+      }
       if (error) {
         console.error('Supabase saveCaseMember error:', error);
         throw new Error(`Database saveCaseMember failed: ${error.message}`);
@@ -271,19 +282,27 @@ export class Repository {
       }
 
       if (data) {
-        const list: CaseMember[] = data.map((m) => ({
-          id: m.id,
-          caseId: m.case_id,
-          userId: m.user_id || undefined,
-          name: m.name,
-          relationship: m.relationship || undefined,
-          city: m.city || undefined,
-          isLocal: m.is_local,
-          availability: m.availability || undefined,
-          role: m.role,
-          createdAt: m.created_at,
-          updatedAt: m.updated_at,
-        }));
+        const list: CaseMember[] = data.map((m) => {
+          // Merge with memory store to preserve fields not yet in Supabase schema (email, invitation*)
+          const memMember = memoryStore.caseMembers.get(m.id);
+          return {
+            id: m.id,
+            caseId: m.case_id,
+            userId: m.user_id || undefined,
+            name: m.name,
+            relationship: m.relationship || undefined,
+            city: m.city || undefined,
+            isLocal: m.is_local,
+            availability: m.availability || undefined,
+            role: m.role,
+            // Prefer Supabase if column exists and has value, else fall back to memory
+            email: m.email || memMember?.email || undefined,
+            invitationStatus: m.invitation_status || memMember?.invitationStatus || 'NONE',
+            invitationChannel: m.invitation_channel || memMember?.invitationChannel || undefined,
+            createdAt: m.created_at,
+            updatedAt: m.updated_at,
+          };
+        });
         list.forEach((m) => memoryStore.caseMembers.set(m.id, m));
         return list;
       }

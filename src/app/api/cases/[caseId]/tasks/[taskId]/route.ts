@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { taskService } from '@/services/task-service';
+import { caseService } from '@/services/case-service';
 import { TaskAction } from '@/types';
 
 export async function PATCH(
@@ -9,31 +10,36 @@ export async function PATCH(
   try {
     const body = await req.json();
     const action = body.action as TaskAction;
-    const { assigneeId, assigneeName, actorName, note, completionNotes } = body;
+    const { assigneeId, memberId, assigneeName, actorName, note, completionNotes, dueDate } = body;
 
     if (action === 'COMPLETE') {
       const noteToSave = note || completionNotes;
-      const updated = await taskService.completeTask(params.taskId, actorName || 'Sarah', params.caseId, noteToSave);
+      const updated = await taskService.completeTask(params.taskId, actorName || 'Family Coordinator', params.caseId, noteToSave);
       return NextResponse.json({ success: true, data: updated });
     }
 
     if (action === 'REOPEN') {
-      const updated = await taskService.reopenTask(params.taskId, actorName || 'Sarah', params.caseId);
+      const updated = await taskService.reopenTask(params.taskId, actorName || 'Family Coordinator', params.caseId);
       return NextResponse.json({ success: true, data: updated });
     }
 
     if (action === 'ASSIGN') {
-      if (!assigneeId || !assigneeName) {
+      const resolvedAssigneeId = assigneeId || memberId;
+      if (!resolvedAssigneeId) {
         return NextResponse.json(
-          { success: false, error: 'assigneeId and assigneeName required' },
+          { success: false, error: 'assigneeId (or memberId) required' },
           { status: 400 }
         );
       }
-      const updated = await taskService.assignTask(params.taskId, assigneeId, assigneeName, params.caseId);
+      // Look up member name server-side so callers don't need to send it
+      const overview = await caseService.getCaseOverview(params.caseId);
+      const member = overview?.members?.find((m) => m.id === resolvedAssigneeId);
+      const resolvedAssigneeName = assigneeName || member?.name || resolvedAssigneeId;
+      const updated = await taskService.assignTask(params.taskId, resolvedAssigneeId, resolvedAssigneeName, params.caseId);
       return NextResponse.json({ success: true, data: updated });
     }
 
-    if (action === ('SET_DUE_DATE' as any) || body.dueDate !== undefined) {
+    if (action === 'SET_DUE_DATE' || dueDate !== undefined) {
       const updated = await taskService.updateDueDate(
         params.taskId,
         body.dueDate,
