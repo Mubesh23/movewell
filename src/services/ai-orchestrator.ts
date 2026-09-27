@@ -122,7 +122,7 @@ ${
         }));
 
         const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
+          model: 'gemini-flash-latest',
           contents: geminiContents.length > 0 ? geminiContents : [{ role: 'user', parts: [{ text: promptText }] }],
           config: {
             systemInstruction,
@@ -242,7 +242,7 @@ ${
         if (toolResults.length > 0) {
           try {
             const secondPassResponse = await ai.models.generateContent({
-              model: 'gemini-2.5-flash',
+              model: 'gemini-flash-latest',
               contents: [
                 ...geminiContents,
                 {
