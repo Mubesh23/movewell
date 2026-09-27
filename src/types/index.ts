@@ -173,6 +173,29 @@ export interface TransitionCase {
   updatedAt: string;
 }
 
+export interface StagedInvitation {
+  channel: 'EMAIL' | 'SMS';
+  email?: string;
+  phone?: string;
+  status: 'DRAFT' | 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED';
+}
+
+export interface IntakeFamilyMember {
+  id: string;
+  name: string;
+  relationship?: string;
+  city?: string;
+  isLocal: boolean;
+  availability?: string;
+  role?: CaseMemberRole;
+  email?: string;
+  phone?: string;
+  invite?: {
+    channel: 'EMAIL' | 'SMS';
+    contact: string;
+  };
+}
+
 export interface IntakeDraft {
   seniorName?: string;
   ageRange?: string;
@@ -180,6 +203,10 @@ export interface IntakeDraft {
   dischargeDate?: string;
   dischargeDays?: number;
   dischargeTimelineDescription?: string;
+  dischargeTime?: string;
+  dischargePrecision?: 'EXACT' | 'DAY' | 'RANGE' | 'APPROXIMATE' | 'UNKNOWN';
+  timingClarificationNeeded?: boolean;
+  timePreferenceChecked?: boolean;
   livesAlone?: boolean;
   mobilityConstraint?: boolean;
   stairsConstraint?: boolean;
@@ -188,11 +215,14 @@ export interface IntakeDraft {
   zipCode?: string;
   userName?: string;
   userRelationship?: string;
+  coordinatorName?: string;
+  coordinatorRelationship?: string;
   userCity?: string;
   userIsRemote?: boolean;
   localHelperName?: string;
   localHelperCity?: string;
   hasLocalHelper?: boolean;
+  familyMembers?: IntakeFamilyMember[];
   budget?: number;
   budgetStatus?: 'SET' | 'UNSET';
   destinationStatus?: DestinationStatus;
@@ -200,9 +230,12 @@ export interface IntakeDraft {
 
 export type IntakeTargetField =
   | 'DISCHARGE_TIMING'
+  | 'TIMING_CLARIFICATION'
   | 'SAFETY_MOBILITY'
   | 'DESTINATION_HOUSING'
   | 'LOCAL_SUPPORT'
+  | 'COORDINATOR_NAME'
+  | 'COORDINATOR_RELATIONSHIP'
   | 'LOCATION'
   | 'BUDGET'
   | 'NONE';
@@ -239,6 +272,10 @@ export interface CaseMember {
   isLocal: boolean;
   availability?: MemberAvailability;
   role: CaseMemberRole;
+  email?: string;
+  phone?: string;
+  invitationStatus?: 'NONE' | 'DRAFT' | 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED';
+  invitationChannel?: 'EMAIL' | 'SMS';
   createdAt?: string;
   updatedAt?: string;
 }
@@ -443,6 +480,10 @@ export interface ProposedMember {
   city?: string;
   isLocal: boolean;
   role: CaseMemberRole;
+  availability?: string;
+  email?: string;
+  phone?: string;
+  invitation?: StagedInvitation;
 }
 
 export interface ProposedResourceNeed {

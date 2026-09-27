@@ -182,7 +182,23 @@ export function TaskRow({
             </div>
 
             <div className="flex items-center gap-2.5 text-xs text-muted mt-0.5 flex-wrap">
-              <span>{task.assignee ? task.assignee.name : 'Unassigned'}</span>
+              {onAssign && members.length > 0 ? (
+                <select
+                  value={task.assigneeId || ''}
+                  onChange={(e) => onAssign(task.id, e.target.value)}
+                  className="text-xs font-semibold text-charcoal bg-stone-100/80 hover:bg-stone-200/80 rounded-md px-2 py-0.5 border border-stone-line cursor-pointer focus:outline-none focus:ring-1 focus:ring-forest transition-colors"
+                  aria-label={`Assignee for ${task.title}`}
+                >
+                  <option value="">Unassigned</option>
+                  {members.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({m.relationship || m.role})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span>{task.assignee ? task.assignee.name : 'Unassigned'}</span>
+              )}
               {task.dueDate && (
                 <>
                   <span className="text-stone-line" aria-hidden="true">&bull;</span>

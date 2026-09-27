@@ -86,6 +86,8 @@ function GetStartedContent() {
             content: m.content,
           })),
           currentDraft: draft,
+          clientNow: new Date().toISOString(),
+          clientTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         }),
       });
 

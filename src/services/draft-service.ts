@@ -44,7 +44,8 @@ export class DraftService {
     targetDate.setDate(targetDate.getDate() + 12);
     const targetDateStr = formatLocalDateYYYYMMDD(targetDate);
 
-    const coordinatorName = intakeDraft.userName || 'You';
+    const coordinatorName = intakeDraft.coordinatorName || intakeDraft.userName || 'You';
+    const coordinatorRel = intakeDraft.coordinatorRelationship || intakeDraft.userRelationship || 'Primary Coordinator';
     const homeType = intakeDraft.homeType || (intakeDraft.stairsConstraint ? 'Two-story house' : 'Single-story house');
 
     // Build proposed members
@@ -52,14 +53,38 @@ export class DraftService {
       {
         id: 'pmem-coord-' + draftId,
         name: coordinatorName,
-        relationship: intakeDraft.userRelationship || 'Family Coordinator',
+        relationship: coordinatorRel,
         city: intakeDraft.userCity,
         isLocal: !intakeDraft.userIsRemote,
         role: 'OWNER',
       },
     ];
 
-    if (intakeDraft.localHelperName) {
+    if (intakeDraft.familyMembers && intakeDraft.familyMembers.length > 0) {
+      for (const fm of intakeDraft.familyMembers) {
+        if (fm.name.toLowerCase() !== coordinatorName.toLowerCase()) {
+          proposedMembers.push({
+            id: 'pmem-' + Math.random().toString(36).substring(2, 9),
+            name: fm.name,
+            relationship: fm.relationship || 'Local Support',
+            city: fm.city,
+            isLocal: fm.isLocal ?? true,
+            availability: fm.availability,
+            role: fm.role || 'FAMILY',
+            email: fm.email,
+            phone: fm.phone,
+            invitation: fm.invite
+              ? {
+                  channel: fm.invite.channel,
+                  email: fm.email,
+                  phone: fm.phone,
+                  status: 'DRAFT',
+                }
+              : undefined,
+          });
+        }
+      }
+    } else if (intakeDraft.localHelperName) {
       proposedMembers.push({
         id: 'pmem-helper-' + draftId,
         name: intakeDraft.localHelperName,
@@ -247,7 +272,12 @@ export class DraftService {
         relationship: pm.relationship,
         city: pm.city,
         isLocal: pm.isLocal,
+        availability: pm.availability,
         role: pm.role,
+        email: pm.email,
+        phone: pm.phone,
+        invitationStatus: pm.invitation ? 'PENDING' : 'NONE',
+        invitationChannel: pm.invitation?.channel,
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
       };

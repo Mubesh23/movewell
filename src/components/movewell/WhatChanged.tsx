@@ -75,28 +75,40 @@ export const WhatChanged: React.FC<WhatChangedProps> = ({ change, onDismiss }) =
       <Dialog
         open={modalOpen}
         onOpenChange={setModalOpen}
-        title="What changed in your transition plan"
-        description="MoveWell automatically adapts your milestones, task readiness, and dependencies when reality changes."
+        title=""
+        description=""
       >
-        <div className="py-2 space-y-4">
-          <div className="rounded-xl border border-line bg-white overflow-hidden shadow-2xs divide-y divide-line">
-            <div className="grid grid-cols-2 bg-sage/40 px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-muted-ink">
-              <div>Before</div>
-              <div>Now</div>
-            </div>
+        <div className="py-1 space-y-5">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-amber block mb-1">
+              PLAN UPDATE
+            </span>
+            <h3 className="text-2xl font-bold text-ink tracking-tight mb-2">
+              What changed
+            </h3>
+            <p className="text-xs text-muted-ink leading-relaxed">
+              {(change as any).causality || "Nora made these updates based on your conversation. You're always in control."}
+            </p>
+          </div>
 
+          <div className="space-y-4">
             {change.diffs && change.diffs.length > 0 ? (
               change.diffs.map((diff, i) => (
-                <div key={i} className="grid grid-cols-2 px-4 py-3 text-xs gap-3">
-                  <div className="text-muted-ink">
-                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-ink/70 mb-0.5">
-                      {diff.label}
-                    </span>
-                    <span className="line-through decoration-muted-ink/50">{diff.before}</span>
-                  </div>
-                  <div className="text-ink font-semibold flex items-start gap-1.5">
-                    <Check className="w-3.5 h-3.5 text-evergreen shrink-0 mt-0.5" />
-                    <span>{diff.after}</span>
+                <div key={i} className="space-y-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-ink block">
+                    {diff.label}
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 px-3.5 py-2.5 rounded-xl bg-stone-100 text-xs text-muted-ink font-medium">
+                      {diff.before}
+                    </div>
+                    <span className="text-amber font-bold text-sm shrink-0">→</span>
+                    <div className="flex-1 px-3.5 py-2.5 rounded-xl bg-[#FBF0E4] border border-[#F2DECA] text-xs text-ink font-semibold flex items-center gap-1.5">
+                      {diff.after.toLowerCase().includes('completed') && (
+                        <Check className="w-3.5 h-3.5 text-evergreen shrink-0" />
+                      )}
+                      <span>{diff.after}</span>
+                    </div>
                   </div>
                 </div>
               ))
@@ -105,19 +117,13 @@ export const WhatChanged: React.FC<WhatChangedProps> = ({ change, onDismiss }) =
             )}
           </div>
 
-          <div className="rounded-xl bg-sage/60 p-3 text-xs text-evergreen leading-relaxed">
-            <strong>Living Coordination Guarantee:</strong> Downstream dates and partner recommendations reflect this updated reality so nobody works off stale assumptions.
-          </div>
-
-          <div className="flex justify-end pt-2 border-t border-line">
-            <button
-              type="button"
-              onClick={() => setModalOpen(false)}
-              className="px-4 py-2 rounded-xl bg-evergreen text-white text-xs font-semibold hover:bg-evergreen-dark transition-colors"
-            >
-              Done reviewing
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setModalOpen(false)}
+            className="w-full py-3.5 px-4 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-bold text-sm transition-colors shadow-2xs mt-2"
+          >
+            Review updated plan
+          </button>
         </div>
       </Dialog>
     </>

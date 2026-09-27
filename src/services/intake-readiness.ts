@@ -14,6 +14,13 @@ export class IntakeReadinessService {
       (draft.dischargeDays !== undefined && draft.dischargeDays > 0) ||
       (draft.dischargeTimelineDescription && draft.dischargeTimelineDescription.trim().length > 0)
     );
+    const needsTimingClarification = Boolean(
+      draft.timingClarificationNeeded ||
+      (draft.dischargeTimelineDescription?.toLowerCase().includes('next week') &&
+        !draft.dischargeDate &&
+        draft.dischargeDays === undefined)
+    );
+
     const hasMobilityOrSafety =
       draft.mobilityConstraint !== undefined ||
       draft.stairsConstraint !== undefined;
@@ -24,8 +31,10 @@ export class IntakeReadinessService {
     );
 
     const hasCoordinator = Boolean(
+      draft.coordinatorName ||
       draft.userName ||
       draft.userIsRemote !== undefined ||
+      draft.coordinatorRelationship ||
       draft.userRelationship ||
       draft.hasLocalHelper !== undefined ||
       draft.localHelperName
@@ -35,32 +44,38 @@ export class IntakeReadinessService {
 
     if (!hasSenior) missingRequiredFields.push('senior reference or name');
     if (!hasDischarge) missingRequiredFields.push('discharge timing');
+    if (needsTimingClarification) missingRequiredFields.push('clarification on discharge timing');
     if (!hasMobilityOrSafety) missingRequiredFields.push('mobility and home safety situation');
     if (!hasLocation) missingRequiredFields.push('location or ZIP code');
     if (!hasCoordinator) missingRequiredFields.push('family coordinator role');
     if (!hasBudgetStatus) missingRequiredFields.push('budget preference');
 
     // Determine the single highest-value question to ask next in priority sequence:
-    // Timing → Mobility/Safety → Location → Coordinator/Local Support → Budget
+    // Timing → Timing Clarification → Mobility/Safety → Location → Coordinator/Local Support → Budget
     let nextTargetField: IntakeTargetField = 'NONE';
     if (!hasDischarge) {
       nextTargetField = 'DISCHARGE_TIMING';
+    } else if (needsTimingClarification) {
+      nextTargetField = 'TIMING_CLARIFICATION';
     } else if (!hasMobilityOrSafety) {
       nextTargetField = 'SAFETY_MOBILITY';
     } else if (!hasLocation) {
       nextTargetField = 'LOCATION';
     } else if (draft.hasLocalHelper === undefined && !draft.localHelperName) {
       nextTargetField = 'LOCAL_SUPPORT';
+    } else if (!draft.coordinatorName && !draft.userName && draft.userIsRemote === undefined) {
+      nextTargetField = 'COORDINATOR_NAME';
     } else if (!hasBudgetStatus) {
       nextTargetField = 'BUDGET';
     } else {
       nextTargetField = 'NONE';
     }
 
-    // Minimum viable threshold: senior, discharge, mobility, location, coordinator, and budget (set or unset)
+    // Minimum viable threshold: senior, discharge (not needing clarification), mobility, location, coordinator, and budget
     const isReady =
       hasSenior &&
       hasDischarge &&
+      !needsTimingClarification &&
       hasMobilityOrSafety &&
       hasLocation &&
       hasCoordinator &&
@@ -81,7 +96,9 @@ export class IntakeReadinessService {
     );
 
     if (draft.dischargeTimelineDescription) {
-      summaryBulletPoints.push(`Discharge ${draft.dischargeTimelineDescription}`);
+      summaryBulletPoints.push(
+        `Discharge ${draft.dischargeTimelineDescription}${draft.dischargeTime ? ` at ${draft.dischargeTime}` : ''}`
+      );
     } else if (draft.dischargeDays) {
       summaryBulletPoints.push(`Discharge in ~${draft.dischargeDays} days`);
     } else if (draft.dischargeDate) {
@@ -102,13 +119,24 @@ export class IntakeReadinessService {
     } else if (draft.hasLocalHelper === false) {
       coordNotes.push('No local helper known');
     }
-    if (draft.userIsRemote) {
+    const coordinatorDisplay = draft.coordinatorName || draft.userName;
+    const relDisplay = draft.coordinatorRelationship || draft.userRelationship;
+    if (coordinatorDisplay) {
+      coordNotes.push(`${coordinatorDisplay}${relDisplay ? ` (${relDisplay})` : ''} coordinating`);
+    } else if (draft.userIsRemote) {
       coordNotes.push('You coordinating remotely');
-    } else if (draft.userName) {
-      coordNotes.push(`${draft.userName} coordinating`);
     }
     if (coordNotes.length > 0) {
       summaryBulletPoints.push(coordNotes.join(' · '));
+    }
+
+    if (draft.familyMembers && draft.familyMembers.length > 0) {
+      const inviteStaged = draft.familyMembers.filter((m) => m.invite);
+      if (inviteStaged.length > 0) {
+        summaryBulletPoints.push(
+          `Invitations staged for ${inviteStaged.map((m) => m.name).join(', ')}`
+        );
+      }
     }
 
     if (draft.budget && draft.budget > 0) {
@@ -137,12 +165,18 @@ export class IntakeReadinessService {
     switch (targetField) {
       case 'DISCHARGE_TIMING':
         return `About when do they expect ${sName} to leave the hospital?`;
+      case 'TIMING_CLARIFICATION':
+        return `Is there a particular day next week you're expecting, or is the timing still flexible?`;
       case 'SAFETY_MOBILITY':
         return `Does ${sName} have any mobility limitations right now — for example stairs, a walker, or needing help getting around?`;
       case 'DESTINATION_HOUSING':
         return `Is the immediate plan for ${sName} to return home, or is temporary rehab or another care setting being considered?`;
       case 'LOCAL_SUPPORT':
         return `Is there anyone nearby who can help ${sName} in person, or are you coordinating mostly from a distance?`;
+      case 'COORDINATOR_NAME':
+        return `And before we build the plan, what should I call you, and what is your relationship to ${sName}?`;
+      case 'COORDINATOR_RELATIONSHIP':
+        return `What is your relationship to ${sName}?`;
       case 'LOCATION':
         return `What address or ZIP code should I use when looking for nearby help? You can give me just the ZIP if you'd rather not share the exact address yet.`;
       case 'BUDGET':

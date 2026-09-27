@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Navbar } from '@/components/layout/Navbar';
 import { AuthModal } from '@/components/auth/AuthModal';
+import { WhatChanged } from '@/components/movewell/WhatChanged';
 import {
   ArrowRight,
   CheckCircle2,
@@ -17,10 +18,15 @@ import {
   Edit2,
   Sparkles,
   Check,
-  ChevronRight,
   ChevronDown,
   AlertCircle,
   ExternalLink,
+  MessageSquare,
+  Send,
+  X,
+  Plus,
+  Mail,
+  Phone,
 } from 'lucide-react';
 import {
   PlanDraft,
@@ -28,6 +34,8 @@ import {
   ProposedMember,
   CaseLocation,
   ResourceCandidate,
+  CaseMemberRole,
+  PlanChangeRecord,
 } from '@/types';
 
 export default function DraftReviewPage() {
@@ -41,7 +49,7 @@ export default function DraftReviewPage() {
 
   // Edit Modals / States
   const [editingSection, setEditingSection] = useState<
-    'senior' | 'discharge' | 'location' | 'safety' | 'family' | 'budget' | null
+    'senior' | 'discharge' | 'location' | 'safety' | 'budget' | null
   >(null);
 
   // Edit Form Fields
@@ -51,10 +59,32 @@ export default function DraftReviewPage() {
   const [locationZip, setLocationZip] = useState('');
   const [mobilityConstraint, setMobilityConstraint] = useState(false);
   const [stairsConstraint, setStairsConstraint] = useState(false);
-  const [coordinatorName, setCoordinatorName] = useState('');
-  const [helperName, setHelperName] = useState('');
   const [budgetAmount, setBudgetAmount] = useState<number | ''>('');
   const [budgetStatus, setBudgetStatus] = useState<'SET' | 'UNSET'>('UNSET');
+
+  // Assignee dropdown state
+  const [assigneeDropdownTaskId, setAssigneeDropdownTaskId] = useState<string | null>(null);
+
+  // Add Member Modal State
+  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
+  const [newMemberName, setNewMemberName] = useState('');
+  const [newMemberRelationship, setNewMemberRelationship] = useState('Daughter');
+  const [newMemberCity, setNewMemberCity] = useState('');
+  const [newMemberIsLocal, setNewMemberIsLocal] = useState(true);
+  const [newMemberRole, setNewMemberRole] = useState<CaseMemberRole>('FAMILY');
+  const [newMemberShouldInvite, setNewMemberShouldInvite] = useState(false);
+  const [newMemberChannel, setNewMemberChannel] = useState<'EMAIL' | 'SMS'>('EMAIL');
+  const [newMemberContact, setNewMemberContact] = useState('');
+
+  // Nora Draft Chat state
+  const [noraInput, setNoraInput] = useState('');
+  const [noraSubmitting, setNoraSubmitting] = useState(false);
+  const [noraPendingConfirmation, setNoraPendingConfirmation] = useState<{
+    assistantMessage: string;
+    previewTitle: string;
+    pendingChanges: any[];
+  } | null>(null);
+  const [whatChangedModalData, setWhatChangedModalData] = useState<PlanChangeRecord | null>(null);
 
   // Resource viewer modal state
   const [viewingCategory, setViewingCategory] = useState<string | null>(null);
@@ -74,7 +104,6 @@ export default function DraftReviewPage() {
         const data = await res.json();
         if (data.success && data.draft) {
           setDraft(data.draft);
-          // Pre-populate edit states
           setSeniorName(data.draft.seniorProfile.name);
           setDischargeDate(data.draft.dischargeTiming?.date || '');
           const loc = data.draft.proposedLocations[0];
@@ -82,10 +111,6 @@ export default function DraftReviewPage() {
           setLocationZip(loc?.zipCode || '');
           setMobilityConstraint(data.draft.seniorProfile.mobilityConstraint);
           setStairsConstraint(data.draft.seniorProfile.stairsConstraint);
-          const owner = data.draft.proposedMembers.find((m: ProposedMember) => m.role === 'OWNER');
-          setCoordinatorName(owner?.name || 'You');
-          const helper = data.draft.proposedMembers.find((m: ProposedMember) => m.role === 'FAMILY');
-          setHelperName(helper?.name || '');
           setBudgetAmount(data.draft.proposedBudget || '');
           setBudgetStatus(data.draft.budgetStatus);
         } else {
@@ -135,28 +160,6 @@ export default function DraftReviewPage() {
       updates.proposedLocations = [updatedLoc];
     }
 
-    if (editingSection === 'family') {
-      const updatedMembers: ProposedMember[] = [
-        {
-          id: 'mem-coord',
-          name: coordinatorName.trim() || 'You',
-          relationship: 'Primary Coordinator',
-          isLocal: true,
-          role: 'OWNER',
-        },
-      ];
-      if (helperName.trim()) {
-        updatedMembers.push({
-          id: 'mem-helper',
-          name: helperName.trim(),
-          relationship: 'Local Support',
-          isLocal: true,
-          role: 'FAMILY',
-        });
-      }
-      updates.proposedMembers = updatedMembers;
-    }
-
     if (editingSection === 'budget') {
       updates.budgetStatus = budgetStatus;
       updates.proposedBudget =
@@ -197,6 +200,144 @@ export default function DraftReviewPage() {
     });
   };
 
+  const handleAssignDraftTask = async (taskId: string, newAssignee: string) => {
+    if (!draft) return;
+    const updatedTasks = draft.proposedTasks.map((t) =>
+      t.id === taskId ? { ...t, assigneeName: newAssignee } : t
+    );
+    setDraft({ ...draft, proposedTasks: updatedTasks });
+    setAssigneeDropdownTaskId(null);
+
+    try {
+      await fetch(`/api/drafts/${draft.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proposedTasks: updatedTasks }),
+      });
+    } catch (e) {
+      console.error('Failed to update task assignee:', e);
+    }
+  };
+
+  const handleAddMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!draft || !newMemberName.trim()) return;
+
+    const newMember: ProposedMember = {
+      id: 'pmem-' + Math.random().toString(36).substring(2, 9),
+      name: newMemberName.trim(),
+      relationship: newMemberRelationship.trim() || 'Helper',
+      city: newMemberCity.trim() || undefined,
+      isLocal: newMemberIsLocal,
+      role: newMemberRole,
+      email: newMemberShouldInvite && newMemberChannel === 'EMAIL' ? newMemberContact.trim() : undefined,
+      phone: newMemberShouldInvite && newMemberChannel === 'SMS' ? newMemberContact.trim() : undefined,
+      invitation:
+        newMemberShouldInvite && newMemberContact.trim()
+          ? {
+              channel: newMemberChannel,
+              email: newMemberChannel === 'EMAIL' ? newMemberContact.trim() : undefined,
+              phone: newMemberChannel === 'SMS' ? newMemberContact.trim() : undefined,
+              status: 'DRAFT',
+            }
+          : undefined,
+    };
+
+    const updatedMembers = [...draft.proposedMembers, newMember];
+    setDraft({ ...draft, proposedMembers: updatedMembers });
+    setIsAddMemberOpen(false);
+    setNewMemberName('');
+    setNewMemberRelationship('Daughter');
+    setNewMemberCity('');
+    setNewMemberContact('');
+    setNewMemberShouldInvite(false);
+
+    try {
+      await fetch(`/api/drafts/${draft.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proposedMembers: updatedMembers }),
+      });
+    } catch (e) {
+      console.error('Failed to add member:', e);
+    }
+  };
+
+  const handleNoraChatSubmit = async (promptOverride?: string) => {
+    const query = (promptOverride || noraInput).trim();
+    if (!draft || !query || noraSubmitting) return;
+
+    setNoraSubmitting(true);
+    try {
+      const res = await fetch(`/api/drafts/${draft.id}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: query }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (data.requiresConfirmation) {
+          setNoraPendingConfirmation({
+            assistantMessage: data.assistantMessage,
+            previewTitle: data.previewTitle,
+            pendingChanges: data.pendingChanges,
+          });
+        } else if (data.draft) {
+          setDraft(data.draft);
+          if (data.whatChanged) {
+            setWhatChangedModalData({
+              id: 'change-' + Date.now(),
+              caseId: draft.id,
+              timestamp: new Date().toISOString(),
+              title: data.whatChanged.title || 'Draft updated',
+              summaryBullets: [data.whatChanged.causality || "You asked Nora to update the plan."],
+              diffs: data.whatChanged.diffs || [],
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Nora draft chat error:', e);
+    } finally {
+      setNoraSubmitting(false);
+      setNoraInput('');
+    }
+  };
+
+  const handleApplyNoraChanges = async () => {
+    if (!draft || !noraPendingConfirmation) return;
+    setNoraSubmitting(true);
+    try {
+      const res = await fetch(`/api/drafts/${draft.id}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'APPLY_CHANGES',
+          pendingChanges: noraPendingConfirmation.pendingChanges,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.draft) {
+        setDraft(data.draft);
+        setNoraPendingConfirmation(null);
+        if (data.whatChanged) {
+          setWhatChangedModalData({
+            id: 'change-' + Date.now(),
+            caseId: draft.id,
+            timestamp: new Date().toISOString(),
+            title: data.whatChanged.title || 'Draft updated',
+            summaryBullets: [data.whatChanged.causality || "You asked Nora to update the plan."],
+            diffs: data.whatChanged.diffs || [],
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Failed to apply Nora changes:', e);
+    } finally {
+      setNoraSubmitting(false);
+    }
+  };
+
   const handleViewResources = async (category: string) => {
     setViewingCategory(category);
     setLoadingResources(true);
@@ -232,7 +373,6 @@ export default function DraftReviewPage() {
   const handleActivatePlan = async (authenticatedUserId?: string) => {
     if (!draft) return;
 
-    // Check if user has an established non-anon auth or if we should show the auth modal
     const cookieUserId = document.cookie
       .split('; ')
       .find((row) => row.startsWith('movewell_user_id='))
@@ -295,17 +435,17 @@ export default function DraftReviewPage() {
 
   return (
     <div className="min-h-screen bg-cream text-ink flex flex-col">
-      <Navbar />
+      <Navbar draftId={draft.id} seniorName={draft.seniorProfile.name} />
 
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Top Header Banner */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-8 mb-8 border-b border-line">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 mb-8 border-b border-line">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-bg text-amber text-xs font-bold mb-2">
               <span className="w-2 h-2 rounded-full bg-amber-dot" />
               Proposed Plan · Review before starting
             </div>
-            <h1 className="text-3xl font-extrabold text-ink tracking-tight">
+            <h1 className="text-3xl font-extrabold text-ink tracking-tight font-serif">
               {draft.seniorProfile.name}&apos;s transition proposal
             </h1>
             <p className="text-sm text-muted-ink mt-1">
@@ -405,36 +545,6 @@ export default function DraftReviewPage() {
             </div>
           </div>
 
-          {/* Card: Family & Coordination */}
-          <div className="p-5 bg-white rounded-2xl border border-line shadow-2xs flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-ink flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5 text-evergreen" />
-                  Family Coordination
-                </span>
-                <button
-                  onClick={() => setEditingSection('family')}
-                  className="text-xs font-semibold text-evergreen hover:underline flex items-center gap-1"
-                >
-                  <Edit2 className="w-3 h-3" /> Edit
-                </button>
-              </div>
-              <strong className="text-lg font-bold text-ink block mb-1">
-                {draft.proposedMembers.length} family member
-                {draft.proposedMembers.length > 1 ? 's' : ''}
-              </strong>
-              <div className="text-xs text-muted-ink space-y-0.5">
-                {draft.proposedMembers.map((m) => (
-                  <div key={m.id} className="flex justify-between">
-                    <span className="font-semibold text-ink">{m.name}</span>
-                    <span>{m.relationship || m.role}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
           {/* Card: Budget Planning */}
           <div className="p-5 bg-white rounded-2xl border border-line shadow-2xs flex flex-col justify-between">
             <div>
@@ -463,7 +573,7 @@ export default function DraftReviewPage() {
             </div>
           </div>
 
-          {/* Card: Nearby Resources Preview */}
+          {/* Card: Targeted Local Help */}
           <div className="p-5 bg-sage/40 rounded-2xl border border-line shadow-2xs flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-3">
@@ -482,7 +592,168 @@ export default function DraftReviewPage() {
           </div>
         </div>
 
-        {/* Proposed Task Sequence */}
+        {/* Family & Care Circle Section */}
+        <section className="mb-12">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-muted-ink block mb-0.5">
+                Care Circle
+              </span>
+              <h2 className="text-xl font-bold text-ink">Family &amp; Helpers</h2>
+              <p className="text-xs text-muted-ink">
+                People coordinating or helping in person. You can stage invitations to MoveWell now.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsAddMemberOpen(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-line bg-white hover:bg-cream text-xs font-semibold text-ink transition-colors shadow-2xs self-start sm:self-auto"
+            >
+              <Plus className="w-3.5 h-3.5 text-evergreen" />
+              <span>Add someone who can help</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {draft.proposedMembers.map((m) => (
+              <div
+                key={m.id}
+                className="p-5 bg-white rounded-2xl border border-line shadow-2xs flex flex-col justify-between"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="w-10 h-10 rounded-full bg-evergreen/10 text-evergreen font-bold text-sm flex items-center justify-center">
+                        {m.name.slice(0, 2).toUpperCase()}
+                      </span>
+                      <div>
+                        <strong className="text-sm font-bold text-ink block">{m.name}</strong>
+                        <span className="text-xs text-muted-ink block">{m.relationship || m.role}</span>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full bg-sage/60 text-[10px] font-bold text-evergreen">
+                      {m.role === 'OWNER' ? 'Coordinator' : m.isLocal ? 'Local Support' : 'Remote'}
+                    </span>
+                  </div>
+
+                  <div className="text-xs text-muted-ink space-y-1">
+                    {m.city && <div>📍 {m.city}</div>}
+                    {m.invitation ? (
+                      <div className="p-2.5 rounded-xl bg-orange-50/80 border border-orange-200/60 text-[11px] text-amber-950 font-medium">
+                        ✉️ Invite staged: {m.invitation.email || m.invitation.phone || m.email || m.phone}
+                        <span className="block text-[10px] text-muted-ink mt-0.5">Sends when plan starts</span>
+                      </div>
+                    ) : m.role !== 'OWNER' ? (
+                      <div className="text-[11px] text-muted-ink italic">
+                        Collaborating without an app account
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Conversational Nora Draft Assistant Card */}
+        <section className="mb-12">
+          <div className="p-5 sm:p-6 rounded-3xl bg-white border border-line shadow-2xs">
+            <div className="flex items-center gap-2.5 mb-2">
+              <span className="w-8 h-8 rounded-full bg-evergreen text-white flex items-center justify-center text-xs font-bold">
+                ✦
+              </span>
+              <div>
+                <strong className="text-sm font-bold text-ink block leading-none">
+                  Adjust your plan with Nora
+                </strong>
+                <span className="text-xs text-muted-ink">
+                  Ask Nora to reassign tasks, change budget, or update destination in plain language.
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Chips */}
+            <div className="flex flex-wrap gap-2 my-3">
+              {[
+                draft.proposedMembers.length > 1
+                  ? `Have ${draft.proposedMembers[1].name} handle everything local`
+                  : 'Assign local tasks to helper',
+                'Move the mover calls to me',
+                'We actually have a $12,000 budget',
+              ].map((chip, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleNoraChatSubmit(chip)}
+                  disabled={noraSubmitting}
+                  className="px-3 py-1.5 rounded-xl bg-cream/70 hover:bg-sage border border-line text-xs font-medium text-ink transition-colors"
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
+
+            {/* Multi-Task Change Confirmation Box */}
+            {noraPendingConfirmation && (
+              <div className="my-4 p-4 rounded-2xl bg-amber-bg/60 border border-amber/30 space-y-3">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber" />
+                  <strong className="text-xs font-bold text-ink">
+                    {noraPendingConfirmation.previewTitle}
+                  </strong>
+                </div>
+                <div className="text-xs text-ink whitespace-pre-line leading-relaxed">
+                  {noraPendingConfirmation.assistantMessage}
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleApplyNoraChanges}
+                    disabled={noraSubmitting}
+                    className="px-4 py-2 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-semibold text-xs transition-colors"
+                  >
+                    Apply changes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNoraPendingConfirmation(null)}
+                    disabled={noraSubmitting}
+                    className="px-4 py-2 rounded-xl border border-line bg-white hover:bg-cream text-ink text-xs font-medium transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Input Form */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleNoraChatSubmit();
+              }}
+              className="relative mt-2"
+            >
+              <input
+                type="text"
+                value={noraInput}
+                onChange={(e) => setNoraInput(e.target.value)}
+                placeholder="e.g. Have Jennifer handle moving quotes, or set budget to $6,000..."
+                disabled={noraSubmitting}
+                className="w-full pl-4 pr-12 py-3 rounded-xl border border-line bg-cream/50 text-xs text-ink placeholder:text-muted-ink focus:outline-none focus:ring-2 focus:ring-evergreen/20 focus:border-evergreen"
+              />
+              <button
+                type="submit"
+                disabled={!noraInput.trim() || noraSubmitting}
+                className="absolute right-2 top-2 w-8 h-8 rounded-lg bg-evergreen hover:bg-evergreen-dark text-white flex items-center justify-center transition-colors disabled:opacity-40"
+              >
+                <Send className="w-3.5 h-3.5" />
+              </button>
+            </form>
+          </div>
+        </section>
+
+        {/* Proposed Task Sequence with Interactive Assignee Selector */}
         <section className="mb-12">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -492,11 +763,11 @@ export default function DraftReviewPage() {
               <h2 className="text-xl font-bold text-ink">What should happen first</h2>
             </div>
             <span className="text-xs text-muted-ink">
-              Check tasks to keep or skip before activation
+              Click assignee to reassign or check to keep/skip
             </span>
           </div>
 
-          <div className="bg-white rounded-2xl border border-line divide-y divide-line overflow-hidden shadow-2xs">
+          <div className="bg-white rounded-2xl border border-line divide-y divide-line overflow-visible shadow-2xs">
             {draft.proposedTasks.map((t, idx) => {
               const isApplicable = t.applicable !== false;
               return (
@@ -520,7 +791,7 @@ export default function DraftReviewPage() {
                   </button>
 
                   <div className="flex-1">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
                       <span className="text-xs font-bold text-muted-ink">{idx + 1}.</span>
                       <strong
                         className={`text-sm font-semibold ${
@@ -529,8 +800,62 @@ export default function DraftReviewPage() {
                       >
                         {t.title}
                       </strong>
-                      <span className="text-xs text-muted-ink">·</span>
-                      <span className="text-xs text-muted-ink">Assigned to {t.assigneeName}</span>
+
+                      {/* Interactive Assignee Picker */}
+                      <div className="relative inline-block ml-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setAssigneeDropdownTaskId(assigneeDropdownTaskId === t.id ? null : t.id);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-cream hover:bg-sage/40 border border-line text-xs font-medium text-ink transition-colors"
+                        >
+                          <span className="w-4 h-4 rounded-full bg-evergreen/10 text-evergreen font-bold text-[10px] flex items-center justify-center">
+                            {(t.assigneeName || 'U').charAt(0)}
+                          </span>
+                          <span>{t.assigneeName || 'Unassigned'}</span>
+                          <ChevronDown className="w-3 h-3 text-muted-ink" />
+                        </button>
+
+                        {assigneeDropdownTaskId === t.id && (
+                          <div
+                            className="absolute left-0 mt-1 w-56 bg-white rounded-xl border border-line shadow-lg py-1 z-30 divide-y divide-line/40"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-ink">
+                              Assign to
+                            </div>
+                            <div className="py-1">
+                              {draft.proposedMembers.map((member) => (
+                                <button
+                                  key={member.id}
+                                  type="button"
+                                  onClick={() => handleAssignDraftTask(t.id, member.name)}
+                                  className="w-full text-left px-3 py-1.5 text-xs text-ink hover:bg-sage/40 flex items-center justify-between transition-colors"
+                                >
+                                  <span className="font-medium">
+                                    {member.name} ({member.relationship || member.role})
+                                  </span>
+                                  {t.assigneeName === member.name && (
+                                    <Check className="w-3.5 h-3.5 text-evergreen" />
+                                  )}
+                                </button>
+                              ))}
+                              <button
+                                type="button"
+                                onClick={() => handleAssignDraftTask(t.id, 'Unassigned')}
+                                className="w-full text-left px-3 py-1.5 text-xs text-muted-ink hover:bg-cream flex items-center justify-between transition-colors"
+                              >
+                                <span>Unassigned</span>
+                                {(!t.assigneeName || t.assigneeName === 'Unassigned') && (
+                                  <Check className="w-3.5 h-3.5 text-evergreen" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {t.description && (
@@ -582,10 +907,9 @@ export default function DraftReviewPage() {
                   <button
                     type="button"
                     onClick={() => handleViewResources(need.category)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-line bg-cream hover:bg-white text-xs font-semibold text-evergreen transition-colors"
+                    className="px-3.5 py-1.5 rounded-xl border border-line bg-cream hover:bg-white text-xs font-semibold text-evergreen transition-colors"
                   >
-                    <span>View options</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
+                    View options
                   </button>
                 </div>
               ))}
@@ -593,62 +917,40 @@ export default function DraftReviewPage() {
           </section>
         )}
 
-        {/* Bottom Activation Bar */}
-        <div className="sticky bottom-4 p-5 bg-white/95 backdrop-blur-md rounded-2xl border border-line shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div>
-            <strong className="text-base font-bold text-ink block">
-              Ready to start coordinating?
-            </strong>
-            <span className="text-xs text-muted-ink">
-              Activating creates your workspace and unlocks task updates, family invites, and full Nora advice.
-            </span>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => handleActivatePlan()}
-            disabled={activating}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-bold text-sm transition-all shadow-sm"
-          >
-            <span>{activating ? 'Starting plan...' : 'Start this plan'}</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Edit Modal */}
+        {/* Edit Modals */}
         {editingSection && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/50 backdrop-blur-xs"
+            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-2xs flex items-center justify-center p-4"
             onClick={() => setEditingSection(null)}
           >
             <div
               className="w-full max-w-md bg-white rounded-2xl p-6 border border-line shadow-xl space-y-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg font-bold text-ink">
-                Edit {editingSection.charAt(0).toUpperCase() + editingSection.slice(1)} Details
-              </h3>
-
-              {editingSection === 'senior' && (
-                <div>
-                  <label className="block text-xs font-semibold text-ink mb-1">Senior Name</label>
-                  <input
-                    type="text"
-                    value={seniorName}
-                    onChange={(e) => setSeniorName(e.target.value)}
-                    className="w-full px-3 py-2 border border-line rounded-lg text-sm"
-                  />
-                </div>
-              )}
+              <div className="flex justify-between items-center pb-2 border-b border-line">
+                <h3 className="text-lg font-bold text-ink">
+                  {editingSection === 'senior' && 'Edit Senior Profile'}
+                  {editingSection === 'discharge' && 'Edit Discharge Timing'}
+                  {editingSection === 'location' && 'Edit Location'}
+                  {editingSection === 'safety' && 'Edit Safety & Mobility'}
+                  {editingSection === 'budget' && 'Edit Budget'}
+                </h3>
+                <button
+                  onClick={() => setEditingSection(null)}
+                  className="text-xs text-muted-ink hover:text-ink font-semibold"
+                >
+                  Cancel
+                </button>
+              </div>
 
               {editingSection === 'discharge' && (
-                <div>
-                  <label className="block text-xs font-semibold text-ink mb-1">Discharge Date</label>
+                <div className="space-y-3">
+                  <label className="block text-xs font-semibold text-muted-ink">Target Date</label>
                   <input
                     type="date"
                     value={dischargeDate}
                     onChange={(e) => setDischargeDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-line rounded-lg text-sm"
+                    className="w-full px-3 py-2 border border-line rounded-xl text-sm"
                   />
                 </div>
               )}
@@ -656,23 +958,23 @@ export default function DraftReviewPage() {
               {editingSection === 'location' && (
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs font-semibold text-ink mb-1">City &amp; State</label>
+                    <label className="block text-xs font-semibold text-muted-ink mb-1">City, State</label>
                     <input
                       type="text"
                       value={locationCity}
                       onChange={(e) => setLocationCity(e.target.value)}
                       placeholder="e.g. Houston, TX"
-                      className="w-full px-3 py-2 border border-line rounded-lg text-sm"
+                      className="w-full px-3 py-2 border border-line rounded-xl text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-ink mb-1">ZIP Code</label>
+                    <label className="block text-xs font-semibold text-muted-ink mb-1">ZIP Code</label>
                     <input
                       type="text"
                       value={locationZip}
                       onChange={(e) => setLocationZip(e.target.value)}
                       placeholder="e.g. 77004"
-                      className="w-full px-3 py-2 border border-line rounded-lg text-sm"
+                      className="w-full px-3 py-2 border border-line rounded-xl text-sm"
                     />
                   </div>
                 </div>
@@ -685,106 +987,61 @@ export default function DraftReviewPage() {
                       type="checkbox"
                       checked={mobilityConstraint}
                       onChange={(e) => setMobilityConstraint(e.target.checked)}
-                      className="rounded text-evergreen"
+                      className="rounded text-evergreen focus:ring-evergreen"
                     />
-                    <span>Requires walker or mobility assistance</span>
+                    <span>Requires walker, wheelchair, or assistance walking</span>
                   </label>
                   <label className="flex items-center gap-2 text-sm text-ink cursor-pointer">
                     <input
                       type="checkbox"
                       checked={stairsConstraint}
                       onChange={(e) => setStairsConstraint(e.target.checked)}
-                      className="rounded text-evergreen"
+                      className="rounded text-evergreen focus:ring-evergreen"
                     />
-                    <span>Stairs hazard (bedroom upstairs)</span>
+                    <span>Home has stairs / bedroom upstairs hazard</span>
                   </label>
-                </div>
-              )}
-
-              {editingSection === 'family' && (
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-ink mb-1">
-                      Primary Coordinator Name
-                    </label>
-                    <input
-                      type="text"
-                      value={coordinatorName}
-                      onChange={(e) => setCoordinatorName(e.target.value)}
-                      className="w-full px-3 py-2 border border-line rounded-lg text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-ink mb-1">
-                      Local In-Person Helper Name (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={helperName}
-                      onChange={(e) => setHelperName(e.target.value)}
-                      placeholder="e.g. Sister Jennifer"
-                      className="w-full px-3 py-2 border border-line rounded-lg text-sm"
-                    />
-                  </div>
                 </div>
               )}
 
               {editingSection === 'budget' && (
                 <div className="space-y-3">
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer">
+                  <div className="flex gap-4 mb-2">
+                    <label className="flex items-center gap-2 text-xs font-semibold text-ink cursor-pointer">
                       <input
                         type="radio"
                         checked={budgetStatus === 'SET'}
                         onChange={() => setBudgetStatus('SET')}
+                        className="text-evergreen"
                       />
                       <span>Set numeric budget</span>
                     </label>
-                    <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer">
+                    <label className="flex items-center gap-2 text-xs font-semibold text-ink cursor-pointer">
                       <input
                         type="radio"
                         checked={budgetStatus === 'UNSET'}
-                        onChange={() => {
-                          setBudgetStatus('UNSET');
-                          setBudgetAmount('');
-                        }}
+                        onChange={() => setBudgetStatus('UNSET')}
+                        className="text-evergreen"
                       />
                       <span>Leave open</span>
                     </label>
                   </div>
-
                   {budgetStatus === 'SET' && (
-                    <div>
-                      <label className="block text-xs font-semibold text-ink mb-1">
-                        Budget amount ($)
-                      </label>
-                      <input
-                        type="number"
-                        value={budgetAmount}
-                        onChange={(e) =>
-                          setBudgetAmount(e.target.value === '' ? '' : Number(e.target.value))
-                        }
-                        placeholder="e.g. 8000"
-                        className="w-full px-3 py-2 border border-line rounded-lg text-sm"
-                      />
-                    </div>
+                    <input
+                      type="number"
+                      value={budgetAmount}
+                      onChange={(e) => setBudgetAmount(e.target.value ? Number(e.target.value) : '')}
+                      placeholder="e.g. 5000"
+                      className="w-full px-3 py-2 border border-line rounded-xl text-sm"
+                    />
                   )}
                 </div>
               )}
 
-              <div className="flex justify-end gap-2 pt-4 border-t border-line">
+              <div className="flex justify-end gap-2 pt-2">
                 <button
-                  type="button"
-                  onClick={() => setEditingSection(null)}
-                  className="px-4 py-2 border border-line rounded-lg text-xs font-semibold text-muted-ink hover:text-ink"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
                   onClick={handleSaveSection}
                   disabled={savingEdit}
-                  className="px-4 py-2 bg-evergreen hover:bg-evergreen-dark text-white rounded-lg text-xs font-semibold"
+                  className="px-4 py-2 bg-evergreen text-white text-xs font-semibold rounded-xl hover:bg-evergreen-dark transition-colors"
                 >
                   {savingEdit ? 'Saving...' : 'Save changes'}
                 </button>
@@ -793,10 +1050,153 @@ export default function DraftReviewPage() {
           </div>
         )}
 
-        {/* Resources Modal */}
+        {/* Add Family Member Modal */}
+        {isAddMemberOpen && (
+          <div
+            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-2xs flex items-center justify-center p-4"
+            onClick={() => setIsAddMemberOpen(false)}
+          >
+            <div
+              className="w-full max-w-md bg-white rounded-2xl p-6 border border-line shadow-xl space-y-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center pb-2 border-b border-line">
+                <h3 className="text-lg font-bold text-ink">Add Someone Who Can Help</h3>
+                <button
+                  onClick={() => setIsAddMemberOpen(false)}
+                  className="text-xs text-muted-ink hover:text-ink font-semibold"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              <form onSubmit={handleAddMember} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-muted-ink mb-1">Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={newMemberName}
+                    onChange={(e) => setNewMemberName(e.target.value)}
+                    placeholder="e.g. Jennifer"
+                    className="w-full px-3 py-2 border border-line rounded-xl text-sm text-ink"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-muted-ink mb-1">
+                    Relationship to {draft.seniorProfile.name}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newMemberRelationship}
+                    onChange={(e) => setNewMemberRelationship(e.target.value)}
+                    placeholder="e.g. Daughter, Son, Neighbor, Friend"
+                    className="w-full px-3 py-2 border border-line rounded-xl text-sm text-ink"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-muted-ink mb-1">Where are they located?</label>
+                  <input
+                    type="text"
+                    value={newMemberCity}
+                    onChange={(e) => setNewMemberCity(e.target.value)}
+                    placeholder="e.g. Houston, TX (or leave blank)"
+                    className="w-full px-3 py-2 border border-line rounded-xl text-sm text-ink"
+                  />
+                </div>
+
+                <label className="flex items-center gap-2 text-xs text-ink cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newMemberIsLocal}
+                    onChange={(e) => setNewMemberIsLocal(e.target.checked)}
+                    className="rounded text-evergreen focus:ring-evergreen"
+                  />
+                  <span>Available in person (local support)</span>
+                </label>
+
+                {/* Conditional Invitation Section */}
+                <div className="pt-2 border-t border-line space-y-3">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-ink cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newMemberShouldInvite}
+                      onChange={(e) => setNewMemberShouldInvite(e.target.checked)}
+                      className="rounded text-evergreen focus:ring-evergreen"
+                    />
+                    <span>Invite them to collaborate in MoveWell</span>
+                  </label>
+
+                  {newMemberShouldInvite && (
+                    <div className="space-y-3 pl-6">
+                      <div className="flex gap-4">
+                        <label className="flex items-center gap-1.5 text-xs text-ink cursor-pointer">
+                          <input
+                            type="radio"
+                            checked={newMemberChannel === 'EMAIL'}
+                            onChange={() => setNewMemberChannel('EMAIL')}
+                            className="text-evergreen"
+                          />
+                          <span>Email</span>
+                        </label>
+                        <label className="flex items-center gap-1.5 text-xs text-ink cursor-pointer">
+                          <input
+                            type="radio"
+                            checked={newMemberChannel === 'SMS'}
+                            onChange={() => setNewMemberChannel('SMS')}
+                            className="text-evergreen"
+                          />
+                          <span>Text message (SMS)</span>
+                        </label>
+                      </div>
+
+                      <input
+                        type={newMemberChannel === 'EMAIL' ? 'email' : 'tel'}
+                        required={newMemberShouldInvite}
+                        value={newMemberContact}
+                        onChange={(e) => setNewMemberContact(e.target.value)}
+                        placeholder={
+                          newMemberChannel === 'EMAIL'
+                            ? 'jennifer@example.com'
+                            : '(555) 123-4567'
+                        }
+                        className="w-full px-3 py-2 border border-line rounded-xl text-sm text-ink"
+                      />
+                      <p className="text-[11px] text-muted-ink">
+                        Invitation will be staged and sent when you choose to start the plan.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-evergreen text-white text-xs font-semibold rounded-xl hover:bg-evergreen-dark transition-colors"
+                  >
+                    Add member
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* What Changed Modal */}
+        {whatChangedModalData && (
+          <WhatChanged
+            change={whatChangedModalData}
+            onDismiss={() => setWhatChangedModalData(null)}
+          />
+        )}
+
+        {/* Resource Viewer Modal */}
         {viewingCategory && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/50 backdrop-blur-xs"
+            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-2xs flex items-center justify-center p-4"
             onClick={() => setViewingCategory(null)}
           >
             <div

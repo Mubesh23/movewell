@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI, Type } from '@google/genai';
 import { IntakeDraft, IntakeTargetField } from '@/types';
 import { intakeReadinessService } from '@/services/intake-readiness';
+import { resolveTemporalExpression } from '@/lib/temporal';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -11,6 +12,8 @@ interface IntakeRequestBody {
   prompt?: string;
   history?: Array<{ role: 'user' | 'assistant'; content: string }>;
   currentDraft?: IntakeDraft;
+  clientNow?: string;
+  clientTimeZone?: string;
 }
 
 const NON_NAME_WORDS = new Set([
@@ -26,13 +29,18 @@ const NON_NAME_WORDS = new Set([
 ]);
 
 /**
- * Deterministic regex & keyword extractor used as fallback or baseline
+ * Deterministic regex, keyword & temporal extractor used as baseline
  */
-function deterministicExtract(text: string, currentDraft: IntakeDraft = {}): Partial<IntakeDraft> {
+function deterministicExtract(
+  text: string,
+  currentDraft: IntakeDraft = {},
+  referenceDate: Date = new Date(),
+  clientTimeZone?: string
+): Partial<IntakeDraft> {
   const updates: Partial<IntakeDraft> = {};
   const lower = text.toLowerCase();
 
-  // Senior name / reference
+  // 1. Senior name / reference
   if (!currentDraft.seniorName || NON_NAME_WORDS.has(currentDraft.seniorName.toLowerCase())) {
     const namedMatch = text.match(/\b(?:named|name is)\s+([A-Z][a-z]+)/i);
     const momNamedMatch = text.match(/\b(?:my mom|my mother)[,\s]+([A-Z][a-z]+)\b/i);
@@ -57,40 +65,48 @@ function deterministicExtract(text: string, currentDraft: IntakeDraft = {}): Par
     }
   }
 
-  // Age
+  // 2. Age
   const ageMatch = text.match(/\b(is\s+)?(\d{2})\s*(years old)?\b/);
   if (ageMatch && parseInt(ageMatch[2], 10) >= 50 && parseInt(ageMatch[2], 10) <= 105) {
     updates.ageRange = ageMatch[2];
   }
 
-  // Discharge timing
-  if (lower.includes('thursday')) {
-    updates.dischargeTimelineDescription = 'Thursday';
-    updates.dischargeDays = 4;
-  } else if (lower.includes('friday')) {
-    updates.dischargeTimelineDescription = 'Friday';
-    updates.dischargeDays = 5;
-  } else if (lower.includes('tomorrow')) {
-    updates.dischargeTimelineDescription = 'tomorrow';
-    updates.dischargeDays = 1;
-  } else if (lower.includes('this week')) {
-    updates.dischargeTimelineDescription = 'this week';
-    updates.dischargeDays = 5;
+  // 3. Discharge timing & temporal resolution (reference clock aware)
+  const temporal = resolveTemporalExpression(text, referenceDate, clientTimeZone);
+  if (temporal) {
+    updates.dischargeTimelineDescription = temporal.description;
+    if (temporal.date) {
+      updates.dischargeDate = temporal.date;
+    }
+    if (temporal.daysFromReference !== undefined) {
+      updates.dischargeDays = temporal.daysFromReference;
+    }
+    if (temporal.time) {
+      updates.dischargeTime = temporal.time;
+    }
+    if (temporal.precision) {
+      updates.dischargePrecision = temporal.precision;
+    }
+    if (temporal.needsClarification) {
+      updates.timingClarificationNeeded = true;
+    } else {
+      updates.timingClarificationNeeded = false;
+    }
   } else {
-    const daysMatch = text.match(/in\s+(\d+)\s+days/i);
-    if (daysMatch) {
-      const days = parseInt(daysMatch[1], 10);
-      updates.dischargeDays = days;
-      updates.dischargeTimelineDescription = `in ${days} days`;
+    // Check if user is clarifying a previous "next week"
+    if (currentDraft.timingClarificationNeeded) {
+      if (lower.includes('flexible') || lower.includes('not sure') || lower.includes('tbd')) {
+        updates.timingClarificationNeeded = false;
+      }
     }
   }
 
-  // Transition context
+  // 4. Transition context
   if (lower.includes('hospital') || lower.includes('rehab') || lower.includes('fall') || lower.includes('fell')) {
     updates.transitionType = 'POST_HOSPITAL';
   }
 
-  // Mobility & safety limitations
+  // 5. Mobility & safety limitations
   if (
     lower.includes('walker') ||
     lower.includes('wheelchair') ||
@@ -115,7 +131,25 @@ function deterministicExtract(text: string, currentDraft: IntakeDraft = {}): Par
     updates.livesAlone = true;
   }
 
-  // Local helper & remote coordinator
+  // 6. Coordinator identity & relationship
+  const myNameMatch = text.match(
+    /\b(?:my name is|call me|i'm|i am)(?:\s+(?:her|his|their)?\s*(?:son|daughter|child|spouse|husband|wife))?\s+([A-Z][a-z]+)\b/i
+  );
+  if (myNameMatch && !NON_NAME_WORDS.has(myNameMatch[1].toLowerCase())) {
+    updates.coordinatorName = myNameMatch[1];
+    updates.userName = myNameMatch[1];
+  }
+
+  const relMatch = text.match(
+    /\b(?:i'm|i am|as)?\s*(?:her|his|their)?\s*(son|daughter|child|spouse|husband|wife|sister|brother|niece|nephew)\b/i
+  );
+  if (relMatch) {
+    const capitalizedRel = relMatch[1].charAt(0).toUpperCase() + relMatch[1].slice(1).toLowerCase();
+    updates.coordinatorRelationship = capitalizedRel;
+    updates.userRelationship = capitalizedRel;
+  }
+
+  // 7. Local helper & remote coordinator
   if (lower.includes('sister jennifer')) {
     updates.localHelperName = 'Jennifer';
     updates.hasLocalHelper = true;
@@ -139,7 +173,42 @@ function deterministicExtract(text: string, currentDraft: IntakeDraft = {}): Par
     updates.userIsRemote = true;
   }
 
-  // Location / ZIP / City
+  // 8. Contact invitation parsing
+  const emailMatch = text.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/);
+  const phoneMatch = text.match(/\b(?:\+?1[-. ]?)?\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})\b/);
+  if (updates.localHelperName || currentDraft.localHelperName) {
+    const helperName = updates.localHelperName || currentDraft.localHelperName;
+    if (emailMatch || phoneMatch) {
+      const existingMembers = currentDraft.familyMembers || [];
+      const memberIndex = existingMembers.findIndex(
+        (m) => m.name.toLowerCase() === helperName?.toLowerCase()
+      );
+      const inviteData = {
+        channel: (emailMatch ? 'EMAIL' : 'SMS') as 'EMAIL' | 'SMS',
+        contact: emailMatch ? emailMatch[0] : (phoneMatch ? phoneMatch[0] : ''),
+      };
+      if (memberIndex >= 0) {
+        existingMembers[memberIndex].invite = inviteData;
+        updates.familyMembers = [...existingMembers];
+      } else {
+        updates.familyMembers = [
+          ...existingMembers,
+          {
+            id: 'mem-' + Date.now(),
+            name: helperName!,
+            relationship: 'Local Support',
+            isLocal: true,
+            role: 'FAMILY',
+            invite: inviteData,
+            email: emailMatch ? emailMatch[0] : undefined,
+            phone: phoneMatch ? phoneMatch[0] : undefined,
+          },
+        ];
+      }
+    }
+  }
+
+  // 9. Location / ZIP / City
   let extractedZip: string | undefined;
   const zipMatch = text.match(/\b(\d{5})\b/);
   if (zipMatch && !zipMatch[1].startsWith('000')) {
@@ -170,7 +239,7 @@ function deterministicExtract(text: string, currentDraft: IntakeDraft = {}): Par
     }
   }
 
-  // Budget
+  // 10. Budget
   if (
     lower.includes('leave it open') ||
     lower.includes('leave open') ||
@@ -182,7 +251,6 @@ function deterministicExtract(text: string, currentDraft: IntakeDraft = {}): Par
     updates.budgetStatus = 'UNSET';
     updates.budget = undefined;
   } else {
-    // Only extract budget if there is an explicit $ sign or the word 'budget'
     const dollarMatch = text.match(/\$(\d{1,3}(?:,\d{3})*|\d{3,6})\b/);
     const budgetWordMatch = text.match(/\bbudget\s*(?:of|is|around|about)?\s*:?\s*\$?(\d{1,3}(?:,\d{3})*|\d{3,6})\b/i);
 
@@ -213,6 +281,8 @@ export async function POST(req: NextRequest) {
 
     const currentDraft: IntakeDraft = body.currentDraft || {};
     const history = body.history || [];
+    const referenceDate = body.clientNow ? new Date(body.clientNow) : new Date();
+    const clientTimeZone = body.clientTimeZone || 'America/Chicago';
 
     // Evaluate current state before this turn to see what was expected
     const initialEvaluation = intakeReadinessService.evaluate(currentDraft);
@@ -231,6 +301,10 @@ Your job is to talk with the family naturally while quietly gathering minimum vi
 The user should NEVER feel like they are filling out a form one field at a time.
 Ask only ONE focused follow-up question per turn, focusing on the highest-priority missing fact.
 
+REFERENCE CLOCK & TIMEZONE:
+Current Date: ${referenceDate.toDateString()} (ISO: ${referenceDate.toISOString()})
+Timezone: ${clientTimeZone}
+
 CURRENT INTAKE DRAFT SO FAR:
 ${JSON.stringify(currentDraft, null, 2)}
 
@@ -243,23 +317,37 @@ ${history.map((h) => `${h.role === 'user' ? 'User' : 'Nora'}: ${h.content}`).joi
 LATEST USER MESSAGE:
 "${userMessage}"
 
-RULES FOR EXTRACTION:
+RULES FOR EXTRACTION & TEMPORAL REASONING:
 - Extract ONLY facts explicitly stated or strongly implied by the user.
 - seniorName: extract the senior's actual name (e.g. "Maria", "Robert"). If the user refers to them as "my mom" without an explicit personal name, output "Mom". NEVER output an event/action verb like "fell", "had", "broke", or "is" as a senior's name!
-- If the user says "leave it open", "not sure", or "no budget", set budgetStatus: "UNSET" and budget: null.
-- If the user provides a ZIP code or city/state, extract zipCode and/or city.
-- If the user says "no one nearby" or "I'm on my own", set hasLocalHelper: false.
-- If the user gives a day of the week (e.g. "Thursday"), set dischargeTimelineDescription: "Thursday" and estimate dischargeDays.
-- DO NOT invent fictional names, locations, or details.
-- DO NOT default missing values to Houston or $8,000. Leave missing fields null.
+- TEMPORAL AWARENESS:
+  - If user says "tomorrow", calculate reference date + 1 day.
+  - If user says a weekday name (e.g. "Thursday", "Friday"), resolve the upcoming day based on ${referenceDate.toDateString()}.
+  - If user says "next week", DO NOT invent or guess a date. Set timingClarificationNeeded: true, dischargeTimelineDescription: "next week", and ask if there is a particular day or if it's flexible.
+  - If user specifies an exact or approximate time (e.g. "around 2 PM", "morning"), extract dischargeTime.
+- COORDINATOR & RELATIONSHIP:
+  - Extract coordinatorName / userName: what to call the user.
+  - Extract coordinatorRelationship / userRelationship: user's relationship to the senior (e.g. "Son", "Daughter", "Spouse"). Do NOT assume son vs daughter unless explicitly stated.
+- HELP NETWORK & INVITATIONS:
+  - If user mentions someone helping (e.g. "my sister Jennifer"), capture localHelperName / familyMembers.
+  - If user provides an email or phone number to invite someone, capture their contact details.
+- BUDGET: If the user says "leave it open", "not sure", or "no budget", set budgetStatus: "UNSET" and budget: null.
+- LOCATION: If user provides a ZIP code or city/state, extract zipCode and/or city.
+- DO NOT invent fictional names, locations, or details. Leave missing fields null.
 
 RULES FOR CONVERSATIONAL REPLY:
-- If all required information is now known (senior name, discharge timeline, mobility/safety constraint, location, coordinator/support, and budget addressed):
-  Acknowledge warmly, provide a concise recap of what you've gathered, state the immediate first priority (e.g. confirming a safe discharge destination), and confirm you have enough to build their transition plan.
+- If all required information is now known:
+  Acknowledge warmly, provide a concise recap of what you've gathered, state the immediate first priority, and confirm you have enough to build their transition plan.
 - If more information is still needed:
-  Warmly acknowledge what the user just said in 1 brief sentence, then ask ONE natural, gentle follow-up question for the next highest-value needed fact (${initialEvaluation.nextTargetField}).
-  If asking for LOCATION: "What address or ZIP code should I use when looking for nearby help? You can give me just the ZIP if you'd rather not share the exact address yet."
-  If asking for BUDGET: "Do you already have a budget in mind, or should we leave that open for now?"
+  Warmly acknowledge what the user just said in 1 brief sentence, then ask ONE natural, gentle follow-up question for ${initialEvaluation.nextTargetField}.
+  - If TIMING_CLARIFICATION: "Is there a particular day next week you're expecting, or is the timing still flexible?"
+  - If DISCHARGE_TIMING and date is known but time is not: Ask if a specific time is known or just the day.
+  - If COORDINATOR_NAME: "And before we build the plan, what should I call you?"
+  - If COORDINATOR_RELATIONSHIP: "What is your relationship to ${currentDraft.seniorName || 'your family member'}?"
+  - If LOCAL_SUPPORT: "Is there anyone nearby who can help in person, or are you coordinating mostly from a distance?"
+  - If asking to invite helper: "Would you like to invite [Name] to collaborate in MoveWell? If so, I can take their email or phone number."
+  - If LOCATION: "What address or ZIP code should I use when looking for nearby help? You can give me just the ZIP if you'd rather not share the exact address yet."
+  - If BUDGET: "Do you already have a budget in mind, or should we leave that open for now?"
   NEVER ask multiple questions in the same turn.`;
 
         const response = await ai.models.generateContent({
@@ -284,6 +372,9 @@ RULES FOR CONVERSATIONAL REPLY:
                     dischargeDays: { type: Type.NUMBER },
                     dischargeTimelineDescription: { type: Type.STRING },
                     dischargeDate: { type: Type.STRING },
+                    dischargeTime: { type: Type.STRING },
+                    dischargePrecision: { type: Type.STRING },
+                    timingClarificationNeeded: { type: Type.BOOLEAN },
                     livesAlone: { type: Type.BOOLEAN },
                     mobilityConstraint: { type: Type.BOOLEAN },
                     stairsConstraint: { type: Type.BOOLEAN },
@@ -291,8 +382,10 @@ RULES FOR CONVERSATIONAL REPLY:
                     zipCode: { type: Type.STRING },
                     city: { type: Type.STRING },
                     userName: { type: Type.STRING },
-                    userCity: { type: Type.STRING },
+                    coordinatorName: { type: Type.STRING },
                     userRelationship: { type: Type.STRING },
+                    coordinatorRelationship: { type: Type.STRING },
+                    userCity: { type: Type.STRING },
                     userIsRemote: { type: Type.BOOLEAN },
                     localHelperName: { type: Type.STRING },
                     localHelperCity: { type: Type.STRING },
@@ -324,7 +417,7 @@ RULES FOR CONVERSATIONAL REPLY:
     }
 
     // Merge deterministic extraction to guarantee robustness
-    const fallbackExtracted = deterministicExtract(userMessage, currentDraft);
+    const fallbackExtracted = deterministicExtract(userMessage, currentDraft, referenceDate, clientTimeZone);
     const combinedExtracted: Partial<IntakeDraft> = {
       ...fallbackExtracted,
       ...extractedUpdates,
@@ -339,6 +432,19 @@ RULES FOR CONVERSATIONAL REPLY:
       if (v !== null && v !== undefined) {
         (updatedDraft as any)[k] = v;
       }
+    }
+
+    // Sync coordinatorName and userName
+    if (updatedDraft.coordinatorName && !updatedDraft.userName) {
+      updatedDraft.userName = updatedDraft.coordinatorName;
+    } else if (updatedDraft.userName && !updatedDraft.coordinatorName) {
+      updatedDraft.coordinatorName = updatedDraft.userName;
+    }
+    // Sync coordinatorRelationship and userRelationship
+    if (updatedDraft.coordinatorRelationship && !updatedDraft.userRelationship) {
+      updatedDraft.userRelationship = updatedDraft.coordinatorRelationship;
+    } else if (updatedDraft.userRelationship && !updatedDraft.coordinatorRelationship) {
+      updatedDraft.coordinatorRelationship = updatedDraft.userRelationship;
     }
 
     // Sanitize seniorName to never be a verb or invalid stopword
@@ -376,7 +482,6 @@ RULES FOR CONVERSATIONAL REPLY:
       nextTargetField: readiness.nextTargetField,
       summaryBulletPoints: readiness.summaryBulletPoints,
       nextAction: readiness.isReady ? 'CREATE_PLAN' : 'ASK_QUESTION',
-      // Backwards compatibility with previous response format
       data: {
         ...updatedDraft,
         summaryText: conversationalReply,
