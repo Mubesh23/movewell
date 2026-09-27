@@ -284,18 +284,35 @@ export interface ResourceVerification {
   lastVerifiedAt: string;
 }
 
+export interface CostItem {
+  id: string;
+  caseId: string;
+  category: CostCategory | string;
+  description: string;
+  source: CostItemSource;
+  amount?: number;
+  minAmount?: number;
+  maxAmount?: number;
+  providerName?: string;
+  documentName?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CaseOverview {
   caseData: TransitionCase;
   seniorProfile: SeniorProfile;
   members: CaseMember[];
   tasks: TransitionTask[];
   events: CaseEvent[];
+  costItems?: CostItem[];
   costSummary: {
     minTotal: number;
     maxTotal: number;
     userBudget: number;
     budgetGap: number;
     disclaimer: string;
+    confirmedQuotesTotal?: number;
   };
   progressPercent: number;
   daysUntilDischarge?: number;

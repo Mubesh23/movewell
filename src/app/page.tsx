@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Sparkles, CheckCircle2, Clock, ShieldCheck, HeartHandshake, DollarSign, FileText } from 'lucide-react';
+import { ArrowRight, Sparkles, CheckCircle2, Clock, ShieldCheck, DollarSign, AlertCircle } from 'lucide-react';
 
 export default function LandingPage() {
   const router = useRouter();
@@ -10,6 +10,7 @@ export default function LandingPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [loadingPreset, setLoadingPreset] = useState(false);
   const [candidatePlan, setCandidatePlan] = useState<any | null>(null);
+  const [intakeError, setIntakeError] = useState<string | null>(null);
   const [creatingPlan, setCreatingPlan] = useState(false);
 
   const handleAnalyzeSituation = async (customText?: string) => {
@@ -18,6 +19,7 @@ export default function LandingPage() {
 
     setAnalyzing(true);
     setCandidatePlan(null);
+    setIntakeError(null);
 
     try {
       const res = await fetch('/api/ai/intake', {
@@ -29,10 +31,10 @@ export default function LandingPage() {
       if (data.success && data.data) {
         setCandidatePlan(data.data);
       } else {
-        alert('Failed to analyze situation: ' + data.error);
+        setIntakeError(data.error || "I couldn't confidently extract the transition details.");
       }
     } catch (err: any) {
-      alert('Error analyzing situation: ' + err.message);
+      setIntakeError('Error analyzing situation: ' + err.message);
     } finally {
       setAnalyzing(false);
     }
@@ -47,15 +49,15 @@ export default function LandingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           transitionType: candidatePlan.transitionType || 'POST_HOSPITAL',
-          seniorName: candidatePlan.seniorName || 'Maria Thompson',
-          ageRange: candidatePlan.ageRange || '78',
+          seniorName: candidatePlan.seniorName,
+          ageRange: candidatePlan.ageRange || '75-80',
           budget: candidatePlan.budget || 8000,
           zipCode: candidatePlan.zipCode || '77004',
           livesAlone: candidatePlan.livesAlone !== false,
           mobilityConstraint: candidatePlan.mobilityConstraint !== false,
           stairsConstraint: candidatePlan.stairsConstraint !== false,
-          userName: candidatePlan.userName || 'Sarah',
-          localHelperName: candidatePlan.localHelperName || 'Jennifer',
+          userName: candidatePlan.userName || 'Family Coordinator',
+          localHelperName: candidatePlan.localHelperName || 'Local Helper',
         }),
       });
       const data = await res.json();
@@ -158,7 +160,7 @@ export default function LandingPage() {
               }}
               className="text-xs text-brand-800 hover:text-brand-900 font-semibold underline flex items-center space-x-1"
             >
-              <span>Paste Golden Demo Scenario (Maria, 78)</span>
+              <span>Paste Sample Scenario (Maria, 78)</span>
             </button>
 
             <button
@@ -169,16 +171,41 @@ export default function LandingPage() {
               {analyzing ? (
                 <>
                   <Sparkles className="w-4 h-4 animate-spin" />
-                  <span>Nora is Analyzing...</span>
+                  <span>Analyzing Situation...</span>
                 </>
               ) : (
                 <>
-                  <span>Make Maria&apos;s Plan</span>
+                  <span>Build My Plan</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
             </button>
           </div>
+
+          {/* Recoverable Intake Error */}
+          {intakeError && (
+            <div className="mt-4 p-4 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-800 space-y-2">
+              <div className="flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <p className="font-semibold">{intakeError}</p>
+              </div>
+              <div className="flex items-center space-x-3 text-[11px] pt-1 border-t border-rose-100">
+                <button
+                  onClick={() => handleAnalyzeSituation()}
+                  className="underline font-bold text-rose-900"
+                >
+                  Try again
+                </button>
+                <span>&bull;</span>
+                <button
+                  onClick={() => router.push('/start')}
+                  className="underline font-bold text-rose-900"
+                >
+                  Use guided form
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Candidate Plan Summary Card after Nora analysis */}
           {candidatePlan && (
@@ -197,7 +224,7 @@ export default function LandingPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px] font-medium text-stone-800">
                   <div className="bg-white px-2.5 py-1.5 rounded-lg border border-stone-200">
                     <span className="text-stone-400 block text-[10px]">Senior</span>
-                    <strong>{candidatePlan.seniorName} ({candidatePlan.ageRange})</strong>
+                    <strong>{candidatePlan.seniorName} {candidatePlan.ageRange ? `(${candidatePlan.ageRange})` : ''}</strong>
                   </div>
                   <div className="bg-white px-2.5 py-1.5 rounded-lg border border-stone-200">
                     <span className="text-stone-400 block text-[10px]">Discharge Timeline</span>
@@ -208,16 +235,16 @@ export default function LandingPage() {
                     <strong>${candidatePlan.budget?.toLocaleString()}</strong>
                   </div>
                   <div className="bg-white px-2.5 py-1.5 rounded-lg border border-stone-200">
-                    <span className="text-stone-400 block text-[10px]">Remote Coordinator</span>
-                    <strong>{candidatePlan.userName} ({candidatePlan.userCity})</strong>
+                    <span className="text-stone-400 block text-[10px]">Primary Coordinator</span>
+                    <strong>{candidatePlan.userName} {candidatePlan.userCity ? `(${candidatePlan.userCity})` : ''}</strong>
                   </div>
                   <div className="bg-white px-2.5 py-1.5 rounded-lg border border-stone-200">
                     <span className="text-stone-400 block text-[10px]">Local Helper</span>
-                    <strong>{candidatePlan.localHelperName} ({candidatePlan.localHelperCity})</strong>
+                    <strong>{candidatePlan.localHelperName || 'Family/Support'} {candidatePlan.localHelperCity ? `(${candidatePlan.localHelperCity})` : ''}</strong>
                   </div>
                   <div className="bg-white px-2.5 py-1.5 rounded-lg border border-stone-200">
                     <span className="text-stone-400 block text-[10px]">Primary Safety Risk</span>
-                    <strong>Stairs / Mobility</strong>
+                    <strong>{candidatePlan.stairsConstraint ? 'Stairs / Mobility' : 'Mobility Support'}</strong>
                   </div>
                 </div>
               </div>
@@ -232,7 +259,7 @@ export default function LandingPage() {
                     <span>Generating Plan...</span>
                   ) : (
                     <>
-                      <span>Create Maria&apos;s Transition Plan</span>
+                      <span>Create Transition Plan for {candidatePlan.seniorName}</span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
@@ -251,7 +278,7 @@ export default function LandingPage() {
 
         {/* Preset Button Bar */}
         <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4 mb-12">
-          <span className="text-xs text-stone-500 font-medium">Or skip intake & load preset:</span>
+          <span className="text-xs text-stone-500 font-medium">Or skip intake &amp; load preset:</span>
           <button
             onClick={handleLoadMariaScenario}
             disabled={loadingPreset}
@@ -282,7 +309,7 @@ export default function LandingPage() {
             <ShieldCheck className="w-7 h-7 text-brand-800 mb-3" />
             <h3 className="font-bold text-stone-900 text-base mb-1">Deterministic Dependencies</h3>
             <p className="text-xs text-stone-600 leading-relaxed">
-              Downstream tasks unlock automatically when discharge destination & accessibility decisions are confirmed.
+              Downstream tasks unlock automatically when discharge destination &amp; accessibility decisions are finalized.
             </p>
           </div>
 
@@ -290,7 +317,7 @@ export default function LandingPage() {
             <DollarSign className="w-7 h-7 text-brand-800 mb-3" />
             <h3 className="font-bold text-stone-900 text-base mb-1">Quote Intelligence</h3>
             <p className="text-xs text-stone-600 leading-relaxed">
-              Upload vendor moving quotes to compare actual prices against planning estimates and update family budgets.
+              Upload vendor moving quotes to compare actual prices against planning estimates without altering your budget.
             </p>
           </div>
         </div>

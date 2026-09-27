@@ -66,17 +66,30 @@ export const AI_TOOLS_REGISTRY = {
 
     await repository.saveCase(caseData);
 
-    await eventService.recordEvent(
-      args.caseId,
-      'BUDGET_UPDATED',
-      {
-        budget: caseData.budget,
-        targetDate: caseData.targetDate,
-        destinationStatus: caseData.destinationStatus,
-        updatedBy: 'AI Assistant',
-      },
-      'AI'
-    );
+    if (args.budget !== undefined) {
+      await eventService.recordEvent(
+        args.caseId,
+        'BUDGET_UPDATED',
+        { budget: caseData.budget, updatedBy: 'AI Assistant' },
+        'AI'
+      );
+    }
+    if (args.destinationStatus) {
+      await eventService.recordEvent(
+        args.caseId,
+        'DESTINATION_CONFIRMED',
+        { destinationStatus: caseData.destinationStatus, updatedBy: 'AI Assistant' },
+        'AI'
+      );
+    }
+    if (args.targetDate || args.dischargeDate) {
+      await eventService.recordEvent(
+        args.caseId,
+        'TARGET_DATE_CHANGED',
+        { targetDate: caseData.targetDate, dischargeDate: caseData.dischargeDate, updatedBy: 'AI Assistant' },
+        'AI'
+      );
+    }
 
     const updates: string[] = [];
     if (args.budget !== undefined) updates.push(`Updated case budget to $${caseData.budget.toLocaleString()}.`);

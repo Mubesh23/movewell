@@ -76,7 +76,7 @@ export default function BudgetPage() {
 
         {/* Budget Comparison Card */}
         <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-xs space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+          <div className={`grid grid-cols-1 ${costSummary.confirmedQuotesTotal ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-4 text-center`}>
             <div className="p-4 rounded-2xl bg-sand-50 border border-sand-300">
               <p className="text-xs text-stone-500 font-bold uppercase tracking-wider mb-1">User Budget</p>
               <p className="text-2xl font-bold text-stone-900">${costSummary.userBudget.toLocaleString()}</p>
@@ -89,6 +89,15 @@ export default function BudgetPage() {
               </p>
             </div>
 
+            {costSummary.confirmedQuotesTotal ? (
+              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200">
+                <p className="text-xs text-emerald-800 font-bold uppercase tracking-wider mb-1">Confirmed Quotes</p>
+                <p className="text-2xl font-bold text-emerald-950">
+                  ${costSummary.confirmedQuotesTotal.toLocaleString()}
+                </p>
+              </div>
+            ) : null}
+
             <div className="p-4 rounded-2xl bg-sand-50 border border-sand-300">
               <p className="text-xs text-stone-500 font-bold uppercase tracking-wider mb-1">Max Budget Status</p>
               <p className={`text-xl font-bold ${costSummary.budgetGap > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
@@ -99,6 +108,36 @@ export default function BudgetPage() {
             </div>
           </div>
         </div>
+
+        {/* Confirmed Quotes Breakdown */}
+        {overview.costItems && overview.costItems.length > 0 && (
+          <div className="bg-white rounded-3xl p-6 border border-emerald-200 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-serif font-bold text-brand-950 flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                Confirmed Vendor Quotes Applied
+              </h3>
+              <span className="text-xs font-semibold px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full">
+                Substituted for estimates
+              </span>
+            </div>
+            <div className="space-y-3">
+              {overview.costItems.map((item) => (
+                <div key={item.id} className="flex items-center justify-between p-4 rounded-2xl bg-emerald-50/50 border border-emerald-100">
+                  <div>
+                    <p className="font-bold text-sm text-stone-900">{item.providerName || item.description}</p>
+                    <p className="text-xs text-stone-500 capitalize">
+                      {item.category} quote {item.documentName ? `• ${item.documentName}` : ''}
+                    </p>
+                  </div>
+                  <p className="font-bold text-base text-emerald-800">
+                    ${item.amount?.toLocaleString()}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Breakdown Table */}
         <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-xs space-y-4">

@@ -26,7 +26,8 @@ export class CaseService {
     });
 
     const events = await repository.getCaseEvents(caseId);
-    const costSummary = costEngine.calculatePlanCosts(tasks, caseData.budget);
+    const costItems = await repository.getCostItemsByCaseId(caseId);
+    const costSummary = costEngine.calculatePlanCosts(tasks, caseData.budget, costItems);
 
     // Progress calculation
     const completedCount = tasks.filter(
@@ -55,6 +56,7 @@ export class CaseService {
       members,
       tasks,
       events,
+      costItems,
       costSummary,
       progressPercent,
       daysUntilDischarge,

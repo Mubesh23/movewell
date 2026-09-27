@@ -9,102 +9,148 @@ export async function POST(req: NextRequest) {
     const { prompt } = await req.json();
     if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
       return NextResponse.json(
-        { success: false, error: 'A situation prompt is required.' },
+        { success: false, error: 'A situation description is required.' },
         { status: 400 }
       );
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
-
-    let extracted = {
-      seniorName: 'Maria Thompson',
-      ageRange: '78',
-      transitionType: 'POST_HOSPITAL',
-      urgency: 'URGENT',
-      dischargeDays: 5,
-      zipCode: '77004',
-      livesAlone: true,
-      mobilityConstraint: true,
-      stairsConstraint: true,
-      ownsHome: true,
-      homeType: 'Two-story house',
-      budget: 8000,
-      userName: 'Sarah',
-      userCity: 'Chicago, IL',
-      localHelperName: 'Jennifer',
-      localHelperCity: 'Houston, TX',
-      summaryText:
-        "I've analyzed your situation. This looks like an urgent post-hospital transition with immediate safety concerns around stairs and discharge coordination. I can turn this into a structured transition plan for your family.",
-    };
-
-    if (apiKey) {
-      try {
-        const ai = new GoogleGenAI({ apiKey });
-        const response = await ai.models.generateContent({
-          model: 'gemini-flash-latest',
-          contents: [
-            {
-              role: 'user',
-              parts: [
-                {
-                  text: `You are Nora, MoveWell's empathetic transition assistant.
-Analyze the user's description of a senior housing/post-hospital transition and extract structured details.
-
-USER SITUATION DESCRIPTION:
-"${prompt}"
-
-Extract JSON with these exact fields:
-- seniorName: string (e.g. "Maria Thompson" or name mentioned)
-- ageRange: string (e.g. "78" or "75-80")
-- dischargeDays: number (days until hospital discharge, default 5)
-- zipCode: string (5-digit US ZIP, default "77004")
-- livesAlone: boolean (true if senior lives alone)
-- mobilityConstraint: boolean (true if fall, mobility limit, wheelchair, or walker)
-- stairsConstraint: boolean (true if two-story home, stairs issue, or fall on stairs)
-- budget: number (dollar amount, default 8000)
-- userName: string (primary remote coordinator name, default "Sarah")
-- userCity: string (primary coordinator city, default "Chicago, IL")
-- localHelperName: string (local family helper name, default "Jennifer")
-- localHelperCity: string (local helper city, default "Houston, TX")
-- summaryText: string (2-3 sentence warm, empathetic summary from Nora framing the top priority: discharge destination, accessibility, and family coordination)`,
-                },
-              ],
-            },
-          ],
-          config: {
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                seniorName: { type: Type.STRING },
-                ageRange: { type: Type.STRING },
-                dischargeDays: { type: Type.NUMBER },
-                zipCode: { type: Type.STRING },
-                livesAlone: { type: Type.BOOLEAN },
-                mobilityConstraint: { type: Type.BOOLEAN },
-                stairsConstraint: { type: Type.BOOLEAN },
-                budget: { type: Type.NUMBER },
-                userName: { type: Type.STRING },
-                userCity: { type: Type.STRING },
-                localHelperName: { type: Type.STRING },
-                localHelperCity: { type: Type.STRING },
-                summaryText: { type: Type.STRING },
-              },
-              required: ['seniorName', 'budget', 'summaryText'],
-            },
-          },
-        });
-
-        if (response.text) {
-          const parsed = JSON.parse(response.text);
-          extracted = { ...extracted, ...parsed };
-        }
-      } catch (aiErr) {
-        console.warn('[IntakeAPI] Gemini extraction failed, using safe intelligent default:', aiErr);
-      }
+    if (!apiKey) {
+      return NextResponse.json(
+        {
+          success: false,
+          recoverable: true,
+          error: "Intake analysis is temporarily unavailable. Please use our guided intake form.",
+          nextAction: 'GUIDED_INTAKE',
+        },
+        { status: 503 }
+      );
     }
 
-    return NextResponse.json({ success: true, data: extracted });
+    try {
+      const ai = new GoogleGenAI({ apiKey });
+      const response = await ai.models.generateContent({
+        model: 'gemini-flash-latest',
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              {
+                text: `You are Nora, MoveWell's empathetic transition coordinator.
+Analyze the user's description of a senior transition. Extract ONLY facts explicitly stated or strongly implied by the user.
+DO NOT invent fictional names, locations, or family members. If a field is not mentioned, leave it undefined/empty or null.
+
+USER DESCRIPTION:
+"${prompt}"
+
+Extract JSON:
+- seniorName: string (Exact name of the senior mentioned, e.g. "Robert", "Maria Thompson", or "Dad" if name omitted)
+- ageRange: string (Age or age range if mentioned, e.g. "82", "78", or null)
+- transitionType: string ("POST_HOSPITAL" if hospital or rehab or fall mentioned, otherwise "PLANNED_DOWNSIZE")
+- urgency: string ("URGENT" if discharge or fall or imminent timeline mentioned, otherwise "PLANNED")
+- dischargeDays: number (Days until discharge if mentioned, otherwise null)
+- zipCode: string (5-digit US ZIP code if mentioned, otherwise null)
+- city: string (City mentioned, e.g. "Dallas", "Houston", or null)
+- livesAlone: boolean (true if stated senior lives alone, otherwise null)
+- mobilityConstraint: boolean (true if mobility, wheelchair, walker, or fall mentioned)
+- stairsConstraint: boolean (true if stairs or two-story home mentioned)
+- homeType: string (Home type if mentioned, e.g. "Two-story house", "Single story", "Apartment", or null)
+- budget: number (Budget amount mentioned in dollars, e.g. 8000, or null)
+- userName: string (Name of primary coordinator / user if mentioned, e.g. "Sarah", "Michael", or "Family Coordinator")
+- userCity: string (City where primary coordinator lives, if mentioned)
+- localHelperName: string (Local helper or relative mentioned, or null)
+- localHelperCity: string (City of local helper, or null)
+- summaryText: string (2-3 sentence empathetic summary from Nora addressing the senior by their real name and highlighting the top transition priorities)`,
+              },
+            ],
+          },
+        ],
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              seniorName: { type: Type.STRING },
+              ageRange: { type: Type.STRING },
+              transitionType: { type: Type.STRING },
+              urgency: { type: Type.STRING },
+              dischargeDays: { type: Type.NUMBER },
+              zipCode: { type: Type.STRING },
+              city: { type: Type.STRING },
+              livesAlone: { type: Type.BOOLEAN },
+              mobilityConstraint: { type: Type.BOOLEAN },
+              stairsConstraint: { type: Type.BOOLEAN },
+              homeType: { type: Type.STRING },
+              budget: { type: Type.NUMBER },
+              userName: { type: Type.STRING },
+              userCity: { type: Type.STRING },
+              localHelperName: { type: Type.STRING },
+              localHelperCity: { type: Type.STRING },
+              summaryText: { type: Type.STRING },
+            },
+            required: ['seniorName', 'summaryText'],
+          },
+        },
+      });
+
+      if (!response.text) {
+        return NextResponse.json({
+          success: false,
+          recoverable: true,
+          error: "I couldn't reliably interpret that description. Please try including the senior's name and situation, or use our guided form.",
+          nextAction: 'GUIDED_INTAKE',
+        });
+      }
+
+      const extracted = JSON.parse(response.text);
+
+      // Verify that at least a senior reference or context was extracted
+      if (!extracted.seniorName || extracted.seniorName.trim() === '') {
+        return NextResponse.json({
+          success: false,
+          recoverable: true,
+          error: "I couldn't identify the senior or family situation from that text. Please tell us a bit more, or use our guided intake form.",
+          nextAction: 'GUIDED_INTAKE',
+        });
+      }
+
+      const missingFields: string[] = [];
+      if (!extracted.dischargeDays) missingFields.push('discharge timeline');
+      if (!extracted.budget) missingFields.push('budget');
+      if (!extracted.zipCode && !extracted.city) missingFields.push('location');
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          seniorName: extracted.seniorName,
+          ageRange: extracted.ageRange || undefined,
+          transitionType: extracted.transitionType || 'POST_HOSPITAL',
+          urgency: extracted.urgency || 'URGENT',
+          dischargeDays: extracted.dischargeDays || 5,
+          zipCode: extracted.zipCode || (extracted.city?.toLowerCase().includes('dallas') ? '75201' : '77004'),
+          city: extracted.city || undefined,
+          livesAlone: extracted.livesAlone ?? true,
+          mobilityConstraint: extracted.mobilityConstraint ?? true,
+          stairsConstraint: extracted.stairsConstraint ?? false,
+          homeType: extracted.homeType || 'Residential home',
+          budget: extracted.budget || 8000,
+          userName: extracted.userName || 'Family Coordinator',
+          userCity: extracted.userCity || undefined,
+          localHelperName: extracted.localHelperName || undefined,
+          localHelperCity: extracted.localHelperCity || undefined,
+          summaryText: extracted.summaryText,
+        },
+        missingFields,
+      });
+    } catch (aiErr: any) {
+      console.warn('[IntakeAPI] Gemini extraction failed:', aiErr);
+      return NextResponse.json({
+        success: false,
+        recoverable: true,
+        error: "I couldn't reliably interpret that description. Please try again with more details or use our guided form.",
+        nextAction: 'GUIDED_INTAKE',
+      });
+    }
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message },

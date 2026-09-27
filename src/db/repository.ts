@@ -7,6 +7,7 @@ import {
   CaseEvent,
   CostModel,
   ServiceResource,
+  CostItem,
 } from '../types';
 import { memoryStore } from './memory-store';
 import { supabase } from './client';
@@ -493,6 +494,72 @@ export class Repository {
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
+  }
+
+  // --- Cost Items ---
+  async saveCostItem(item: CostItem): Promise<CostItem> {
+    memoryStore.costItems.set(item.id, { ...item });
+
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('cost_items').upsert({
+          id: item.id,
+          case_id: item.caseId,
+          category: item.category,
+          description: item.description,
+          source: item.source,
+          amount: item.amount || null,
+          min_amount: item.minAmount || null,
+          max_amount: item.maxAmount || null,
+          provider_name: item.providerName || null,
+          document_name: item.documentName || null,
+          created_at: item.createdAt,
+          updated_at: item.updatedAt,
+        });
+        if (error) {
+          console.warn('Supabase saveCostItem warning (using memory):', error.message);
+        }
+      } catch (err) {
+        // Fallback to memoryStore
+      }
+    }
+
+    return item;
+  }
+
+  async getCostItemsByCaseId(caseId: string): Promise<CostItem[]> {
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('cost_items')
+          .select('*')
+          .eq('case_id', caseId)
+          .order('created_at', { ascending: true });
+
+        if (!error && data && data.length > 0) {
+          return data.map((d: any) => ({
+            id: d.id,
+            caseId: d.case_id,
+            category: d.category,
+            description: d.description,
+            source: d.source,
+            amount: d.amount ? Number(d.amount) : undefined,
+            minAmount: d.min_amount ? Number(d.min_amount) : undefined,
+            maxAmount: d.max_amount ? Number(d.max_amount) : undefined,
+            providerName: d.provider_name || undefined,
+            documentName: d.document_name || undefined,
+            createdAt: d.created_at,
+            updatedAt: d.updated_at,
+          }));
+        }
+      } catch (err) {
+        // Fallback to memoryStore
+      }
+    }
+
+    return Array.from(memoryStore.costItems.values()).filter(
+      (item) => item.caseId === caseId
+    );
   }
 
   // --- Cost Models ---

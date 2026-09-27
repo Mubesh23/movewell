@@ -54,6 +54,12 @@ export class AIOrchestrator {
             ? 'Confirmed Destination Known'
             : caseData?.destinationStatus || 'UNDECIDED';
 
+        const taskTitleById = new Map(tasks.map((t) => [t.id, t.title]));
+        const formatPrereqs = (prereqIds?: string[]) => {
+          if (!prereqIds || prereqIds.length === 0) return 'prior phase';
+          return prereqIds.map((id) => `"${taskTitleById.get(id) || id}"`).join(', ');
+        };
+
         const systemInstruction = `You are Nora, an empathetic senior transition coordinator for MoveWell.
 You are helping coordinate a post-hospital senior transition plan.
 
@@ -74,7 +80,7 @@ ${
   Phase: ${urgentTask.phase}
   Status: ${urgentTask.status}
   Assigned To: ${urgentTask.assignee ? urgentTask.assignee.name : 'Unassigned'}
-  Why It Matters: Critical path item for safe hospital discharge.`
+  Why It Matters: ${urgentTask.whyItMatters || urgentTask.description || 'Critical path item for safe hospital discharge.'}`
     : 'None'
 }
 
@@ -91,10 +97,23 @@ ${
     ? blockedTasks
         .map(
           (t) =>
-            `- "${t.title}" (Phase: ${t.phase.replace('_', ' ')}, Blocked by incomplete prerequisites: ${t.dependsOnTaskIds?.join(', ') || 'prior phase'})`
+            `- "${t.title}" (Phase: ${t.phase.replace('_', ' ')}, Blocked by incomplete prerequisites: ${formatPrereqs(t.dependsOnTaskIds)})`
         )
         .join('\n')
     : 'None'
+}
+
+=== COST & QUOTE INFORMATION ===
+- Family Available Budget: $${caseData?.budget ? caseData.budget.toLocaleString() : '8,000'}
+- Planning Estimate Range: $${overview?.costSummary?.minTotal.toLocaleString() || '0'} - $${overview?.costSummary?.maxTotal.toLocaleString() || '0'}
+- Confirmed Vendor Quotes Total: $${overview?.costSummary?.confirmedQuotesTotal ? overview.costSummary.confirmedQuotesTotal.toLocaleString() : '0 (None applied yet)'}
+${
+  overview?.costItems && overview.costItems.length > 0
+    ? 'Confirmed Quotes on File:\n' +
+      overview.costItems
+        .map((ci) => `  • ${ci.providerName || 'Vendor'}: $${ci.amount?.toLocaleString()} (${ci.category}${ci.documentName ? `, Doc: ${ci.documentName}` : ''})`)
+        .join('\n')
+    : 'No vendor quotes applied to plan yet.'
 }
 
 === FAMILY MEMBERS & COLLABORATORS ===
@@ -121,7 +140,8 @@ ${
    - Call get_plan when the user asks for a complete status summary or remaining task overview.
 
 3. CONVERSATIONAL GROUNDING & FACTUAL DISCIPLINE:
-   - Treat structured case context (Destination Status, Budget, Tasks) as authoritative product truth. When asked about case state (e.g. "Where is Maria going after discharge?"), answer based on structured Destination Status ("${destStatusLabel}").
+   - Treat structured case context (Destination Status, Budget, Tasks, Cost & Quotes) as authoritative product truth. When asked about case state (e.g. "Where is Maria going after discharge?"), answer based on structured Destination Status ("${destStatusLabel}").
+   - Distinguish between Family Available Budget and Vendor Quotes: A vendor quote (e.g. moving quote of $2,150) is an expense item for a service, NOT the family's total available transition budget ($${caseData?.budget ? caseData.budget.toLocaleString() : '8,000'}). Never overwrite or confuse total family budget with an individual vendor quote.
    - NEVER invent or fabricate verification, certification, NASMM membership, partnership, phone numbers, addresses, prices, or service offerings beyond what tool results or structured case state contain.
    - NEVER use terms like "partner", "MoveWell partner", "our providers", or "certified" unless explicitly present in tool verification data. Use neutral terms ("resource", "provider", "directory listing", "verified listing", "local service").
    - Frame operational advice (how to talk with hospital staff) as general guidance ("A common next step is...", "You may want to ask..."). Do not present general advice as hospital-specific facts unless specified in case state.`;

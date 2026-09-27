@@ -39,7 +39,7 @@ There is rarely a single place that answers:
   - **"Guided Calm" Focus Hero Card**: Highlights today's single most critical priority task (*Confirm safe discharge destination*) with direct action buttons.
   - **Family Team Summary**: Assigned task counts for remote coordinators and local helpers.
   - **Budget Overview Widget**: Cost range vs family budget with clear planning disclaimers.
-  - **Case Activity Audit Log**: Immutable record of all user and AI mutations.
+  - **Case Activity Log**: Chronological audit trail of user and AI actions.
 
 ### 3. Deterministic Task Dependency Engine
 - Workflow templates in code (`src/workflows/post-hospital.ts`) categorized into ordered phases:
@@ -50,23 +50,25 @@ There is rarely a single place that answers:
   - **After move**: Final cleanout & settling in.
 - **Real-Time Readiness Shifts**: Completing a blocking task automatically shifts downstream tasks from `BLOCKED` to `READY`.
 
-### 4. Deterministic Cost Engine
-- Aggregates min/max cost ranges for moving, packing, storage, cleaning, junk removal, and accessibility modifications.
-- Compares expected totals against user budget and displays the mandatory product disclaimer:
+### 4. Deterministic Cost Engine & Quote Intelligence
+- Calculates min/max planning cost ranges across transition phases.
+- **Moving Quote Intelligence**: Extracts vendor quotes from PDF/text documents via Gemini without altering the family's total available budget.
+- Confirmed vendor quotes (`CostItem`) cleanly substitute for estimated task ranges in cost calculations to avoid double-counting.
+- Mandatory product disclaimer:
   > *"Planning estimates, not vendor quotes."*
 
 ### 5. Open Referral / HSDS Resource Directory
 - Open Referral HSDS schema (`organizations`, `services`, `locations`, `resource_verifications`).
-- Seed data for verified Houston providers (senior move managers, movers, donation centers, junk removal, home accessibility modifications, climate storage).
+- Seed data for verified Houston providers (senior move managers, moving services, donation centers, junk removal, home accessibility modifications, climate storage).
 - Directory view (`/plan/[caseId]/resources`) with category filter pills and **Verified listing** trust badges.
 
-### 6. Conversational AI Assistant & Tool Orchestration
-- Floating AI Assistant widget (`AIAssistant.tsx`) supporting natural language commands:
-  - *"Jennifer will handle packing"*
-  - *"Set budget to $5,000"*
-  - *"Find local movers in Houston"*
-  - *"Complete safe discharge task"*
-- Multi-intent execution, dynamic helper registration, and **proactive next-step proposals** with quick action chips.
+### 6. Conversational AI Assistant (Nora)
+- Multi-turn transition companion powered by Gemini Flash:
+  - Grounded 2-pass architecture (Pass 1 tool calling -> Service execution -> Pass 2 synthesis).
+  - Explicit mutation policies (only mutates case state on explicit user command or confirmed real-world decision).
+  - Strict grounding discipline: Never fabricates partnerships, certifications, or unverified claims.
+  - Understands context, pronouns, and follow-ups.
+  - Proactive next-step proposals and action chips.
 
 ### 7. Printable Transition Plan
 - Clean `@media print` formatted view (`/plan/[caseId]/print`) for printing or PDF export.

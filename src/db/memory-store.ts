@@ -10,6 +10,7 @@ import {
   ServiceResource,
   Location,
   ResourceVerification,
+  CostItem,
 } from '../types';
 import { HOUSTON_RESOURCE_SEEDS } from './seeds/resources';
 
@@ -21,6 +22,7 @@ class MemoryStore {
   public taskDependencies: TaskDependency[] = [];
   public caseEvents: CaseEvent[] = [];
   public costModels: Map<string, CostModel> = new Map();
+  public costItems: Map<string, CostItem> = new Map();
 
   public organizations: Map<string, Organization> = new Map();
   public services: Map<string, ServiceResource> = new Map();
@@ -103,6 +105,7 @@ class MemoryStore {
     this.tasks.clear();
     this.taskDependencies = [];
     this.caseEvents = [];
+    this.costItems.clear();
   }
 }
 
