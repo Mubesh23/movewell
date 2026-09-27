@@ -20,7 +20,17 @@ export async function POST(req: NextRequest) {
       process.env.NEXT_PUBLIC_APP_URL ||
       process.env.APP_URL ||
       'http://localhost:3000';
-    const callbackUrl = redirectTo || `${appUrl}/auth/callback`;
+
+    let callbackUrl = `${appUrl}/auth/callback`;
+    if (redirectTo) {
+      try {
+        const u = new URL(redirectTo, appUrl);
+        const nextParam = `${u.pathname}${u.search}`;
+        callbackUrl = `${appUrl}/auth/callback?next=${encodeURIComponent(nextParam)}`;
+      } catch {
+        // Fallback to default
+      }
+    }
 
     if (supabase) {
       const { error } = await supabase.auth.signInWithOtp({
