@@ -117,8 +117,24 @@ export async function requireCaseAccess(
   options?: { requireOwner?: boolean }
 ): Promise<CaseAccessResult> {
   const session = await resolveSession(req);
+  const effectiveUserId = session.kind === 'AUTHENTICATED' ? session.userId : session.guestToken;
 
-  if (session.kind !== 'AUTHENTICATED') {
+  const caseData = await repository.getCaseById(caseId);
+  if (!caseData) {
+    return {
+      authorized: false,
+      canManage: false,
+      userId: effectiveUserId,
+      error: 'Case not found',
+      status: 404,
+    };
+  }
+
+  // Real production cases require permanent AUTHENTICATED user.
+  // Sample demo cases (e.g. Maria golden scenario) allow the session that created them.
+  const isDemoCase = caseId.startsWith('case-maria') || caseData.id.startsWith('case-maria');
+
+  if (session.kind !== 'AUTHENTICATED' && !isDemoCase) {
     return {
       authorized: false,
       canManage: false,
@@ -128,19 +144,7 @@ export async function requireCaseAccess(
     };
   }
 
-  const userId = session.userId;
-
-  const caseData = await repository.getCaseById(caseId);
-  if (!caseData) {
-    return {
-      authorized: false,
-      canManage: false,
-      userId,
-      error: 'Case not found',
-      status: 404,
-    };
-  }
-
+  const userId = effectiveUserId;
   const access = await canAccessCase(userId, caseId);
 
   if (!access.canAccess) {

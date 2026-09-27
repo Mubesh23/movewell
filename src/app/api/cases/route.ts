@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { planningEngine } from '@/services/planning-engine';
 import { TransitionCase, SeniorProfile, CaseMember, formatLocalDateYYYYMMDD, CasePreset } from '@/types';
 import { BRAND_NAME } from '@/lib/brand';
-import { resolveSession } from '@/lib/auth-helper';
+import { resolveSession, GUEST_COOKIE_NAME } from '@/lib/auth-helper';
 
 export async function POST(req: NextRequest) {
   try {
@@ -84,7 +84,17 @@ export async function POST(req: NextRequest) {
         members
       );
 
-      return NextResponse.json({ success: true, caseId: result.caseData.id });
+      const response = NextResponse.json({ success: true, caseId: result.caseData.id });
+      if (session.kind === 'GUEST') {
+        response.cookies.set(GUEST_COOKIE_NAME, session.guestToken, {
+          path: '/',
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 60 * 60 * 24 * 30, // 30 days
+        });
+      }
+      return response;
     }
 
     const transitionType = body.transitionType || 'POST_HOSPITAL';
@@ -183,7 +193,17 @@ export async function POST(req: NextRequest) {
       members
     );
 
-    return NextResponse.json({ success: true, caseId: result.caseData.id });
+    const response = NextResponse.json({ success: true, caseId: result.caseData.id });
+    if (session.kind === 'GUEST') {
+      response.cookies.set(GUEST_COOKIE_NAME, session.guestToken, {
+        path: '/',
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 30, // 30 days
+      });
+    }
+    return response;
   } catch (error: any) {
     console.error('Case POST error:', error);
     return NextResponse.json(
