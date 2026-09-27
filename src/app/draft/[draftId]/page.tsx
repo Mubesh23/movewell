@@ -832,7 +832,7 @@ export default function DraftReviewPage() {
                                   className="w-full text-left px-3 py-1.5 text-xs text-ink hover:bg-sage/40 flex items-center justify-between transition-colors"
                                 >
                                   <span className="font-medium">
-                                    {member.name} ({member.relationship || member.role})
+                                    {member.name}
                                   </span>
                                   {t.assigneeName === member.name && (
                                     <Check className="w-3.5 h-3.5 text-evergreen" />

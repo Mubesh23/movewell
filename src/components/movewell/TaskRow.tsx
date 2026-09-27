@@ -225,7 +225,7 @@ export function TaskRow({
                   <option value="">Unassigned</option>
                   {members.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.name} ({m.relationship || m.role})
+                      {m.name}
                     </option>
                   ))}
                 </select>
