@@ -34,7 +34,7 @@ export function PageHeader({
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-2xl sm:text-3xl font-serif font-bold text-charcoal tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-[#183331] tracking-[-0.04em]">
               {title}
             </h1>
             {badge ? (

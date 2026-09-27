@@ -18,7 +18,7 @@ export function BudgetSummary({ costSummary, costItems = [], className }: Budget
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 py-4 border-y border-stone-line">
         <div className="space-y-0.5">
           <p className="text-xs uppercase tracking-wider text-muted font-medium">Family Available Budget</p>
-          <p className="text-2xl font-serif font-bold text-charcoal">
+          <p className="text-2xl font-semibold tracking-[-0.03em] text-[#183331]">
             {hasBudget ? `$${costSummary.userBudget!.toLocaleString()}` : 'Open / Unset'}
           </p>
           <p className="text-xs text-muted">
@@ -28,7 +28,7 @@ export function BudgetSummary({ costSummary, costItems = [], className }: Budget
 
         <div className="space-y-0.5">
           <p className="text-xs uppercase tracking-wider text-muted font-medium">Expected Expenses</p>
-          <p className="text-2xl font-serif font-bold text-forest">
+          <p className="text-2xl font-semibold tracking-[-0.03em] text-[#1f4d45]">
             ${costSummary.minTotal.toLocaleString()} &ndash; ${costSummary.maxTotal.toLocaleString()}
           </p>
           <p className="text-xs text-muted">
@@ -40,12 +40,12 @@ export function BudgetSummary({ costSummary, costItems = [], className }: Budget
           <p className="text-xs uppercase tracking-wider text-muted font-medium">Budget Status</p>
           <p
             className={cn(
-              'text-2xl font-serif font-bold',
+              'text-2xl font-semibold tracking-[-0.03em]',
               !hasBudget
                 ? 'text-stone-text'
                 : isOver
-                ? 'text-status-warning'
-                : 'text-status-success'
+                ? 'text-[#b9382c]'
+                : 'text-[#356553]'
             )}
           >
             {!hasBudget

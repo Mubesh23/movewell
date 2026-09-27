@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { CaseOverview } from '@/types';
 import { Printer, CheckCircle2, Phone, Calendar, DollarSign, UserCheck, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { BRAND_NAME } from '@/lib/brand';
 
 export default function PrintPlanPage() {
   const params = useParams();
@@ -47,7 +48,7 @@ export default function PrintPlanPage() {
       {/* Print Action Bar (Hidden on print) */}
       <div className="print:hidden flex items-center justify-between pb-6 border-b border-stone-line">
         <div>
-          <h1 className="text-xl font-serif font-bold text-charcoal">Printable Transition Plan</h1>
+          <h1 className="text-xl font-semibold text-[#183331] tracking-[-0.03em]">Printable Transition Plan</h1>
           <p className="text-xs text-muted">
             Share with family members, hospital discharge coordinators, or senior move managers.
           </p>
@@ -62,12 +63,12 @@ export default function PrintPlanPage() {
       <div className="border-b-2 border-forest pb-6 flex items-start justify-between gap-6">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-serif font-bold text-2xl text-forest">MoveWell</span>
+            <span className="font-semibold text-2xl text-[#1f4d45] tracking-[-0.04em]">{BRAND_NAME}</span>
             <span className="text-[11px] text-muted uppercase tracking-widest font-semibold">
               · Living Transition Plan
             </span>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-serif font-bold text-charcoal">
+          <h2 className="text-2xl sm:text-3xl font-semibold text-[#183331] tracking-[-0.04em]">
             {seniorProfile.name}&apos;s Care &amp; Transition Plan
           </h2>
           <p className="text-xs text-muted mt-1.5 flex items-center gap-3">
@@ -145,7 +146,7 @@ export default function PrintPlanPage() {
       {/* 1. Next Important Actions (Priority Section) */}
       <div className="space-y-3">
         <div className="flex items-center justify-between border-b border-stone-line pb-2">
-          <h3 className="text-base font-serif font-bold text-charcoal">
+          <h3 className="text-base font-semibold text-[#183331] tracking-[-0.02em]">
             Immediate Next Actions ({nextActions.length})
           </h3>
           <span className="text-[11px] text-muted font-medium">Ready for immediate attention</span>
@@ -180,7 +181,7 @@ export default function PrintPlanPage() {
 
       {/* 2. All Downstream Tasks */}
       <div className="space-y-3">
-        <h3 className="text-base font-serif font-bold text-charcoal border-b border-stone-line pb-2">
+        <h3 className="text-base font-semibold text-[#183331] tracking-[-0.02em] border-b border-stone-line pb-2">
           Subsequent Plan Milestones ({otherTasks.length})
         </h3>
 

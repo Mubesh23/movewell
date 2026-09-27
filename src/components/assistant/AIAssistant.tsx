@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Send, X, Trash2, CheckCircle2, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import { BRAND_NAME } from '@/lib/brand';
 
 interface AIAssistantProps {
   caseId: string;
@@ -37,7 +38,7 @@ function renderFormattedText(text: string) {
       return (
         <div
           key={lineIdx}
-          className="font-serif font-bold text-charcoal mt-3 mb-1 text-sm tracking-tight"
+          className="font-semibold text-[#183331] mt-3 mb-1 text-sm tracking-[-0.02em]"
         >
           {renderInlineFormatting(headingText)}
         </div>
@@ -229,7 +230,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
         aria-label="Open Nora assistant"
         className="fixed bottom-18 md:bottom-6 right-5 z-40 flex items-center gap-2.5 px-4 py-3 rounded-full bg-forest text-surface shadow-lg hover:bg-forest-deep transition-all duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
       >
-        <span className="w-5 h-5 rounded-full bg-surface/20 text-surface font-serif text-xs font-bold flex items-center justify-center">
+        <span className="w-5 h-5 rounded-full bg-surface/20 text-surface text-xs font-bold flex items-center justify-center">
           N
         </span>
         <span className="text-sm font-medium pr-0.5">Ask Nora</span>
@@ -245,15 +246,15 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
       {/* Editorial Assistant Header */}
       <header className="px-5 py-4 border-b border-stone-line bg-surface/90 backdrop-blur-xs flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <span className="w-7 h-7 rounded-md bg-forest text-surface font-serif font-bold text-sm flex items-center justify-center tracking-tight">
+          <span className="w-7 h-7 rounded-xl bg-forest text-surface font-semibold text-sm flex items-center justify-center tracking-tight">
             N
           </span>
           <div>
-            <h3 className="font-serif font-bold text-sm text-charcoal leading-tight">
+            <h3 className="font-semibold text-sm text-[#183331] leading-tight">
               Nora
             </h3>
             <p className="text-[11px] text-muted">
-              MoveWell Transition Coordinator
+              {BRAND_NAME} Transition Coordinator
             </p>
           </div>
         </div>

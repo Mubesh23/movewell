@@ -445,7 +445,7 @@ export default function DraftReviewPage() {
               <span className="w-2 h-2 rounded-full bg-amber-dot" />
               Proposed Plan · Review before starting
             </div>
-            <h1 className="text-3xl font-extrabold text-ink tracking-tight font-serif">
+            <h1 className="text-3xl font-semibold text-ink tracking-[-0.04em]">
               {draft.seniorProfile.name}&apos;s transition proposal
             </h1>
             <p className="text-sm text-muted-ink mt-1">

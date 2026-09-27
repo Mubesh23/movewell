@@ -38,7 +38,7 @@ export function QuoteSummary({ quote, className }: QuoteSummaryProps) {
       </div>
 
       <div className="text-right shrink-0">
-        <p className="text-lg font-serif font-bold text-forest">
+        <p className="text-lg font-semibold tracking-[-0.03em] text-[#1f4d45]">
           ${quote.amount?.toLocaleString()}
         </p>
       </div>

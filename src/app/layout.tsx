@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, Newsreader } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import './globals.css';
+import { BRAND_NAME } from '@/lib/brand';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -8,28 +9,21 @@ const inter = Inter({
   display: 'swap',
 });
 
-const newsreader = Newsreader({
-  subsets: ['latin'],
-  variable: '--font-serif',
-  display: 'swap',
-  style: ['normal', 'italic'],
-});
-
 export const metadata: Metadata = {
-  title: 'MoveWell - Housing Transition for Aging Parents',
-  description: 'A calm, structured transition coordination service helping families navigate an aging parent’s housing change with confidence and clarity.',
+  title: `${BRAND_NAME} — A calmer way through what comes next`,
+  description: 'A warm, reassuring transition coordination platform for families supporting aging parents.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'MoveWell',
+    title: BRAND_NAME,
   },
 };
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#183C32',
+  themeColor: '#1F4D45',
 };
 
 export default function RootLayout({
@@ -38,8 +32,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`h-full ${inter.variable} ${newsreader.variable}`}>
-      <body className="min-h-full flex flex-col antialiased text-charcoal bg-canvas font-sans selection:bg-forest/10 selection:text-forest-deep pb-20 md:pb-0">
+    <html lang="en" className={`h-full ${inter.variable}`}>
+      <body className="min-h-full flex flex-col antialiased text-[#183331] bg-[#F7F8F5] font-sans selection:bg-[#E8F1EA] selection:text-[#1F4D45] pb-20 md:pb-0">
         <main className="flex-1">{children}</main>
       </body>
     </html>

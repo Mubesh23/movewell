@@ -82,9 +82,9 @@ export default function LandingPage() {
                   <span>SUPPORT FOR LIFE&apos;S TRANSITIONS</span>
                 </div>
 
-                <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-extrabold text-[#19322D] tracking-tight leading-[1.08] font-serif">
+                <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-semibold text-[#183331] tracking-[-0.05em] leading-[1.1]">
                   When life changes,{' '}
-                  <span className="text-[#C05621]">
+                  <span className="text-[#b96c2c]">
                     you don&apos;t have to figure it out alone.
                   </span>
                 </h1>

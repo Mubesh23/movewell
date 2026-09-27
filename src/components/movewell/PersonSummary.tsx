@@ -29,7 +29,7 @@ export function PersonSummary({
       )}
     >
       <div className="flex items-center gap-3 min-w-0">
-        <div className="w-8 h-8 rounded-full bg-forest/10 text-forest font-serif font-semibold text-xs flex items-center justify-center shrink-0">
+        <div className="w-8 h-8 rounded-full bg-forest/10 text-forest font-semibold text-xs flex items-center justify-center shrink-0">
           {member.name.charAt(0)}
         </div>
 

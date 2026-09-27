@@ -25,7 +25,7 @@ export function NoraTrigger({
           className
         )}
       >
-        <span className="w-4 h-4 rounded-full bg-forest text-surface font-serif text-[10px] font-bold flex items-center justify-center">
+        <span className="w-4 h-4 rounded-full bg-forest text-surface text-[10px] font-bold flex items-center justify-center">
           N
         </span>
         <span>Ask Nora</span>
@@ -45,7 +45,7 @@ export function NoraTrigger({
         className
       )}
     >
-      <span className="w-5 h-5 rounded-full bg-surface/20 text-surface font-serif text-xs font-bold flex items-center justify-center">
+      <span className="w-5 h-5 rounded-full bg-surface/20 text-surface text-xs font-bold flex items-center justify-center">
         N
       </span>
       <span className="text-sm font-medium pr-0.5">Ask Nora</span>

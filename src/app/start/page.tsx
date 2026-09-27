@@ -171,7 +171,7 @@ export default function IntakePage() {
           {step === 1 && (
             <div className="space-y-5">
               <div>
-                <h2 className="text-2xl font-serif font-bold text-charcoal tracking-tight">
+                <h2 className="text-2xl font-semibold text-[#183331] tracking-[-0.04em]">
                   Who are you helping transition?
                 </h2>
                 <p className="mt-1 text-sm text-muted">
@@ -254,7 +254,7 @@ export default function IntakePage() {
           {step === 2 && (
             <div className="space-y-5">
               <div>
-                <h2 className="text-2xl font-serif font-bold text-charcoal tracking-tight">
+                <h2 className="text-2xl font-semibold text-[#183331] tracking-[-0.04em]">
                   Safety &amp; Housing Situation
                 </h2>
                 <p className="mt-1 text-sm text-muted">
@@ -342,7 +342,7 @@ export default function IntakePage() {
           {step === 3 && (
             <div className="space-y-5">
               <div>
-                <h2 className="text-2xl font-serif font-bold text-charcoal tracking-tight">
+                <h2 className="text-2xl font-semibold text-[#183331] tracking-[-0.04em]">
                   Timeline &amp; Available Budget
                 </h2>
                 <p className="mt-1 text-sm text-muted">
@@ -384,7 +384,7 @@ export default function IntakePage() {
           {step === 4 && (
             <div className="space-y-5">
               <div>
-                <h2 className="text-2xl font-serif font-bold text-charcoal tracking-tight">
+                <h2 className="text-2xl font-semibold text-[#183331] tracking-[-0.04em]">
                   Family Team &amp; Roles
                 </h2>
                 <p className="mt-1 text-sm text-muted">

@@ -42,7 +42,7 @@ export function PriorityAction({
 
       {/* Main task title */}
       <h3 className={cn(
-        'text-xl sm:text-2xl font-serif font-bold text-charcoal tracking-tight',
+        'text-xl sm:text-2xl font-semibold text-[#183331] tracking-[-0.03em]',
         isCompleted && 'line-through text-muted'
       )}>
         {task.title}

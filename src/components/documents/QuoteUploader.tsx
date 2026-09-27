@@ -130,7 +130,7 @@ export function QuoteUploader({ caseId, currentBudget, onBudgetUpdated }: QuoteU
     <div className="rounded-xl border border-stone-line bg-surface p-6 shadow-2xs space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-stone-line/70 pb-3">
         <div>
-          <h3 className="font-serif font-semibold text-lg text-charcoal tracking-tight">
+          <h3 className="font-semibold text-lg text-[#183331] tracking-[-0.03em]">
             Vendor Quote Intelligence
           </h3>
           <p className="text-xs text-muted mt-0.5">
@@ -235,7 +235,7 @@ export function QuoteUploader({ caseId, currentBudget, onBudgetUpdated }: QuoteU
           <div className="flex items-center justify-between border-b border-stone-line pb-3">
             <div className="flex items-center gap-2">
               <FileCheck className="w-4 h-4 text-forest" />
-              <span className="font-serif font-bold text-charcoal text-base">
+              <span className="font-semibold text-[#183331] text-base tracking-[-0.02em]">
                 {quoteData.providerName}
               </span>
             </div>
@@ -258,7 +258,7 @@ export function QuoteUploader({ caseId, currentBudget, onBudgetUpdated }: QuoteU
             </div>
             <div className="p-2.5 rounded-md bg-forest/10 border border-forest/20">
               <span className="text-forest block text-[10px] uppercase tracking-wider font-semibold">Total Quote</span>
-              <strong className="text-forest text-sm font-serif font-bold">${quoteData.totalAmount?.toLocaleString()}</strong>
+              <strong className="text-forest text-sm font-semibold">${quoteData.totalAmount?.toLocaleString()}</strong>
             </div>
           </div>
 

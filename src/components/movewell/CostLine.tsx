@@ -80,7 +80,7 @@ export function CostLine({
         </div>
 
         <div className="text-right shrink-0">
-          <p className={cn('text-base font-semibold', isQuote ? 'text-forest font-serif font-bold text-lg' : 'text-charcoal')}>
+          <p className={cn('text-base font-semibold', isQuote ? 'text-[#1f4d45] font-semibold text-lg tracking-[-0.03em]' : 'text-[#183331]')}>
             {amount}
           </p>
           <div className="mt-1">

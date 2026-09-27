@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { Printer, Home, MessageSquare, ChevronDown, User } from 'lucide-react';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { openNoraWithPrompt } from '@/components/assistant/AIAssistant';
+import { BRAND_NAME } from '@/lib/brand';
 
 interface NavbarProps {
   caseId?: string;
@@ -45,8 +46,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span className="w-8 h-8 rounded-lg bg-evergreen text-white font-bold text-sm flex items-center justify-center tracking-tight shadow-xs group-hover:bg-evergreen-dark transition-colors">
                   <Home className="w-4 h-4" />
                 </span>
-                <span className="text-xl font-bold text-ink tracking-tight">
-                  MoveWell
+                <span className="text-xl font-semibold text-ink tracking-[-0.04em]">
+                  {BRAND_NAME}
                 </span>
               </Link>
 

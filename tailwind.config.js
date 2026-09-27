@@ -33,7 +33,7 @@ module.exports = {
         },
 
         // Main Warm Palette
-        canvas: '#FBFAF7', // Updated to match cream
+        canvas: '#F7F8F5', // Mockup soft sage-white canvas
         surface: '#FFFFFF', // Clean surface
         forest: {
           DEFAULT: '#1F4D45',
@@ -131,8 +131,8 @@ module.exports = {
         },
       },
       fontFamily: {
-        sans: ['var(--font-sans)', 'Inter', 'system-ui', 'sans-serif'],
-        serif: ['var(--font-serif)', 'Newsreader', 'Georgia', 'serif'],
+        sans: ['var(--font-sans)', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        serif: ['var(--font-sans)', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
       borderRadius: {
         DEFAULT: '0.5rem',  // 8px

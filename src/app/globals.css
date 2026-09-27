@@ -5,37 +5,80 @@
 @layer base {
   :root {
     --cream: #FBFAF7;
+    --canvas: #F7F8F5;
+    --surface: #FFFFFF;
     --ink: #183331;
-    --muted-ink: #667572;
-    --line: #E3E9E5;
+    --muted-ink: #71847D;
+    --faint-ink: #879890;
+    --line: #E0E9E2;
     --evergreen: #1F4D45;
-    --evergreen-dark: #163D37;
+    --evergreen-dark: #153C36;
     --evergreen-subtle: #285B50;
-    --sage: #E7F0E9;
+    --sage: #56816D;
+    --sage-bg: #EFF7F0;
+    --sage-border: #D8E6DB;
+    --sage-pill: #E8F1EA;
+    --sage-pill-text: #3F6C5C;
     --amber: #B96C2C;
-    --amber-bg: #FFF1E3;
+    --amber-bg: #FFF2DF;
+    --amber-text: #A15D28;
     --amber-dot: #E9A460;
-    --avatar-peach: #E5CDBD;
-    --avatar-sage: #D8E7DB;
+    --blue-bg: #EAF1F7;
+    --blue-text: #4D6E83;
+    --slate-bg: #F0F2F1;
+    --slate-text: #71847D;
+    --avatar-peach: #F1DDCD;
+    --avatar-peach-text: #9A5D38;
+    --avatar-sage: #D7E6D9;
+    --avatar-sage-text: #356553;
+    --avatar-blue: #D9E0ED;
+    --avatar-blue-text: #4D6180;
     --background: 40 45% 98%;
     --foreground: 75 5% 15%;
   }
 
   body {
-    background-color: #FBFAF7;
+    background-color: #F7F8F5;
     color: #183331;
-    font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Sans-first product headers with tight tracking */
-  h1, h2, h3, h4 {
-    letter-spacing: -0.025em;
+  /* Mockup Typography: Sans-first with signature tight tracking */
+  h1 {
+    letter-spacing: -0.055em;
+    font-weight: 600;
+  }
+
+  h2 {
+    letter-spacing: -0.04em;
+    font-weight: 600;
+  }
+
+  h3 {
+    letter-spacing: -0.03em;
+    font-weight: 600;
+  }
+
+  h4 {
+    letter-spacing: -0.02em;
+    font-weight: 600;
+  }
+
+  /* Overline / Eyebrows matching mockup */
+  .eyebrow, .overline {
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #8A9B94;
   }
 
   ::selection {
-    background-color: #E7F0E9;
-    color: #163D37;
+    background-color: #E8F1EA;
+    color: #1F4D45;
   }
 }
 
@@ -53,7 +96,7 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #E3E9E5;
+  background: #E0E9E2;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
@@ -100,8 +143,8 @@
 }
 
 .task-icon.urgent {
-  background: #FFF1E3;
-  color: #B96C2C;
+  background: #FFF2DF;
+  color: #A15D28;
 }
 
 .task-icon.warm {
@@ -110,8 +153,8 @@
 }
 
 .task-icon.sage {
-  background: #E7F0E9;
-  color: #1F4D45;
+  background: #E8F1EA;
+  color: #3F6C5C;
 }
 
 .ai-prompt-box {
@@ -120,10 +163,9 @@
   align-items: center;
   gap: 12px;
   text-align: left;
-  border: 1px solid #D7E5DB;
-  background: #EEF5EF;
+  border: 1px solid #D8E6DB;
+  background: #EFF7F0;
   color: #183331;
   border-radius: 10px;
   padding: 13px 14px;
 }
-
