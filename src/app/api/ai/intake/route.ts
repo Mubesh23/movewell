@@ -45,21 +45,38 @@ function deterministicExtract(
     const namedMatch = text.match(/\b(?:named|name is)\s+([A-Z][a-z]+)/i);
     const momNamedMatch = text.match(/\b(?:my mom|my mother)[,\s]+([A-Z][a-z]+)\b/i);
     const dadNamedMatch = text.match(/\b(?:my dad|my father)[,\s]+([A-Z][a-z]+)\b/i);
+    const parentNamedMatch = text.match(/\b(?:my parent)[,\s]+([A-Z][a-z]+)\b/i);
 
     if (namedMatch && !NON_NAME_WORDS.has(namedMatch[1].toLowerCase())) {
       updates.seniorName = namedMatch[1];
     } else if (momNamedMatch && !NON_NAME_WORDS.has(momNamedMatch[1].toLowerCase())) {
       updates.seniorName = momNamedMatch[1];
+      updates.seniorRelationship = 'Mother';
+      if (!currentDraft.coordinatorRelationship) updates.coordinatorRelationship = 'Child';
     } else if (dadNamedMatch && !NON_NAME_WORDS.has(dadNamedMatch[1].toLowerCase())) {
       updates.seniorName = dadNamedMatch[1];
+      updates.seniorRelationship = 'Father';
+      if (!currentDraft.coordinatorRelationship) updates.coordinatorRelationship = 'Child';
+    } else if (parentNamedMatch && !NON_NAME_WORDS.has(parentNamedMatch[1].toLowerCase())) {
+      updates.seniorName = parentNamedMatch[1];
+      updates.seniorRelationship = 'Parent';
+      if (!currentDraft.coordinatorRelationship) updates.coordinatorRelationship = 'Child';
     } else {
-      const parentMatch = text.match(/\b(my mom|my dad|my mother|my father|mom|dad)\b/i);
+      const parentMatch = text.match(/\b(my mom|my dad|my mother|my father|mom|dad|my parent|parent)\b/i);
       if (parentMatch) {
         const ref = parentMatch[1].toLowerCase();
         if (ref.includes('dad') || ref.includes('father')) {
           updates.seniorName = 'Dad';
-        } else {
+          updates.seniorRelationship = 'Father';
+          if (!currentDraft.coordinatorRelationship) updates.coordinatorRelationship = 'Child';
+        } else if (ref.includes('mom') || ref.includes('mother')) {
           updates.seniorName = 'Mom';
+          updates.seniorRelationship = 'Mother';
+          if (!currentDraft.coordinatorRelationship) updates.coordinatorRelationship = 'Child';
+        } else {
+          updates.seniorName = 'Parent';
+          updates.seniorRelationship = 'Parent';
+          if (!currentDraft.coordinatorRelationship) updates.coordinatorRelationship = 'Child';
         }
       }
     }
@@ -74,7 +91,13 @@ function deterministicExtract(
   // 3. Discharge timing & temporal resolution (reference clock aware)
   const temporal = resolveTemporalExpression(text, referenceDate, clientTimeZone);
   if (temporal) {
-    updates.dischargeTimelineDescription = temporal.description;
+    if (temporal.description) {
+      if (currentDraft.dischargeTimelineDescription && temporal.time && !temporal.date) {
+        updates.dischargeTimelineDescription = `${currentDraft.dischargeTimelineDescription} (${temporal.description})`;
+      } else {
+        updates.dischargeTimelineDescription = temporal.description;
+      }
+    }
     if (temporal.date) {
       updates.dischargeDate = temporal.date;
     }
@@ -102,30 +125,48 @@ function deterministicExtract(
   }
 
   // 4. Transition context
-  if (lower.includes('hospital') || lower.includes('rehab') || lower.includes('fall') || lower.includes('fell')) {
+  if (lower.includes('hospital') || lower.includes('rehab') || lower.includes('fall') || lower.includes('fell') || lower.includes('move')) {
     updates.transitionType = 'POST_HOSPITAL';
   }
 
   // 5. Mobility & safety limitations
-  if (
-    lower.includes('walker') ||
-    lower.includes('wheelchair') ||
-    lower.includes('cane') ||
-    lower.includes('trouble walking') ||
-    lower.includes('cannot walk') ||
-    lower.includes("can't walk") ||
-    lower.includes('mobility') ||
-    lower.includes('getting around')
-  ) {
-    updates.mobilityConstraint = true;
-  }
-  if (lower.includes('stair') || lower.includes('upstairs') || lower.includes('two-story') || lower.includes('second floor')) {
-    updates.stairsConstraint = true;
-    updates.homeType = 'Two-story house';
-  }
-  if (lower.includes('single-story') || lower.includes('single story') || lower.includes('ranch') || lower.includes('one level')) {
+  const lowerTrimmed = lower.trim();
+  const isNegativeMobility =
+    lowerTrimmed === 'no' ||
+    lowerTrimmed === 'none' ||
+    lowerTrimmed === 'neither' ||
+    lowerTrimmed === 'no limitations' ||
+    lowerTrimmed === 'no mobility issues' ||
+    lowerTrimmed === 'no stairs' ||
+    lowerTrimmed === 'independent' ||
+    lowerTrimmed === 'no problems' ||
+    lowerTrimmed === 'no issues' ||
+    /\b(no mobility (?:issues|limitations|problems)|no stairs|no problems|independent|fully mobile)\b/i.test(lower);
+
+  if (isNegativeMobility) {
+    updates.mobilityConstraint = false;
     updates.stairsConstraint = false;
-    updates.homeType = 'Single-story house';
+  } else {
+    if (
+      lower.includes('walker') ||
+      lower.includes('wheelchair') ||
+      lower.includes('cane') ||
+      lower.includes('trouble walking') ||
+      lower.includes('cannot walk') ||
+      lower.includes("can't walk") ||
+      lower.includes('mobility') ||
+      lower.includes('getting around')
+    ) {
+      updates.mobilityConstraint = true;
+    }
+    if (lower.includes('stair') || lower.includes('upstairs') || lower.includes('two-story') || lower.includes('second floor')) {
+      updates.stairsConstraint = true;
+      updates.homeType = 'Two-story house';
+    }
+    if (lower.includes('single-story') || lower.includes('single story') || lower.includes('ranch') || lower.includes('one level')) {
+      updates.stairsConstraint = false;
+      updates.homeType = 'Single-story house';
+    }
   }
   if (lower.includes('lives alone') || lower.includes('by herself') || lower.includes('by himself') || lower.includes('on her own')) {
     updates.livesAlone = true;
@@ -138,10 +179,21 @@ function deterministicExtract(
   if (myNameMatch && !NON_NAME_WORDS.has(myNameMatch[1].toLowerCase())) {
     updates.coordinatorName = myNameMatch[1];
     updates.userName = myNameMatch[1];
+  } else {
+    // Single word name response (e.g. "Yin")
+    const cleanWord = text.trim();
+    if (
+      /^[A-Z][a-zA-Z'-]{1,20}$/.test(cleanWord) &&
+      !NON_NAME_WORDS.has(cleanWord.toLowerCase()) &&
+      !currentDraft.coordinatorName
+    ) {
+      updates.coordinatorName = cleanWord;
+      updates.userName = cleanWord;
+    }
   }
 
   const relMatch = text.match(
-    /\b(?:i'm|i am|as)?\s*(?:her|his|their)?\s*(son|daughter|child|spouse|husband|wife|sister|brother|niece|nephew)\b/i
+    /\b(?:i'm|i am|as)\s+(?:her|his|their)?\s*(son|daughter|child|spouse|husband|wife|sister|brother|niece|nephew)\b/i
   );
   if (relMatch) {
     const capitalizedRel = relMatch[1].charAt(0).toUpperCase() + relMatch[1].slice(1).toLowerCase();
@@ -149,24 +201,66 @@ function deterministicExtract(
     updates.userRelationship = capitalizedRel;
   }
 
-  // 7. Local helper & remote coordinator
-  if (lower.includes('sister jennifer')) {
+  // 7. Care circle & helpers (e.g. "Yes, my brother Jim, my sister Kim, and my aunt Jin")
+  const extractedDraftMembers: Array<{
+    id: string;
+    name: string;
+    relationshipToSenior: string;
+    role: 'OWNER' | 'FAMILY' | 'HELPER' | 'PROFESSIONAL';
+    isLocal: boolean;
+  }> = [];
+
+  const activeCoordinatorLower = (updates.coordinatorName || currentDraft.coordinatorName || '').toLowerCase();
+
+  const helperPattern = /\b(?:my\s+)?(brother|sister|aunt|uncle|son|daughter|cousin|friend|neighbor)\s+([A-Z][a-z]+)\b/gi;
+  let helperMatch: RegExpExecArray | null;
+  while ((helperMatch = helperPattern.exec(text)) !== null) {
+    const rawRel = helperMatch[1].toLowerCase();
+    const helperName = helperMatch[2];
+    if (
+      !NON_NAME_WORDS.has(helperName.toLowerCase()) &&
+      helperName.toLowerCase() !== activeCoordinatorLower
+    ) {
+      let relationshipToSenior = 'Family Support';
+      if (rawRel === 'brother' || rawRel === 'sister') {
+        relationshipToSenior = rawRel === 'brother' ? 'Son' : 'Daughter';
+      } else if (rawRel === 'aunt' || rawRel === 'uncle') {
+        relationshipToSenior = rawRel === 'aunt' ? 'Sister' : 'Brother';
+      } else if (rawRel === 'friend' || rawRel === 'neighbor') {
+        relationshipToSenior = rawRel === 'friend' ? 'Family Friend' : 'Neighbor';
+      }
+      extractedDraftMembers.push({
+        id: 'dmem-' + helperName.toLowerCase(),
+        name: helperName,
+        relationshipToSenior,
+        role: 'FAMILY',
+        isLocal: true,
+      });
+    }
+  }
+
+  if (extractedDraftMembers.length > 0) {
+    const existing = currentDraft.draftMembers || [];
+    const newMembers = extractedDraftMembers.filter(
+      (em) =>
+        em.name.toLowerCase() !== activeCoordinatorLower &&
+        !existing.some((ex) => ex.name.toLowerCase() === em.name.toLowerCase())
+    );
+    updates.draftMembers = [...existing, ...newMembers];
+    updates.careCircleAddressed = true;
+    updates.hasLocalHelper = true;
+    if (!currentDraft.localHelperName && newMembers.length > 0) {
+      updates.localHelperName = newMembers[0].name;
+    }
+  } else if (lower.includes('sister jennifer')) {
     updates.localHelperName = 'Jennifer';
     updates.hasLocalHelper = true;
-  } else {
-    const sisterMatch = text.match(/sister\s+([A-Z][a-z]+)/i);
-    const brotherMatch = text.match(/brother\s+([A-Z][a-z]+)/i);
-    if (sisterMatch) {
-      updates.localHelperName = sisterMatch[1];
-      updates.hasLocalHelper = true;
-    } else if (brotherMatch) {
-      updates.localHelperName = brotherMatch[1];
-      updates.hasLocalHelper = true;
-    }
+    updates.careCircleAddressed = true;
   }
 
   if (lower.includes('no one') || lower.includes('on my own') || lower.includes('nobody nearby') || lower.includes('no family nearby')) {
     updates.hasLocalHelper = false;
+    updates.careCircleAddressed = true;
   }
 
   if (lower.includes('another state') || lower.includes('out of state') || lower.includes('remotely') || lower.includes('from chicago') || lower.includes('live in chicago')) {
@@ -243,10 +337,15 @@ function deterministicExtract(
   if (
     lower.includes('leave it open') ||
     lower.includes('leave open') ||
+    lower.includes('live it open') ||
+    lower.includes('live open') ||
+    lower.includes('keep open') ||
+    lower.includes('keep it open') ||
     lower.includes('not set') ||
     lower.includes('no budget') ||
     lower.includes('not sure') ||
-    lower.includes('open for now')
+    lower.includes('open for now') ||
+    lowerTrimmed === 'open'
   ) {
     updates.budgetStatus = 'UNSET';
     updates.budget = undefined;
@@ -295,7 +394,7 @@ export async function POST(req: NextRequest) {
     if (apiKey) {
       try {
         const ai = new GoogleGenAI({ apiKey });
-        const systemPrompt = `You are Nora, MoveWell's empathetic, calm transition coordinator.
+        const systemPrompt = `You are Nora, Bridgewell's empathetic, calm transition coordinator.
 You guide families caring for aging parents through hospital discharge and housing transitions.
 Your job is to talk with the family naturally while quietly gathering minimum viable planning facts.
 The user should NEVER feel like they are filling out a form one field at a time.
@@ -319,19 +418,27 @@ LATEST USER MESSAGE:
 
 RULES FOR EXTRACTION & TEMPORAL REASONING:
 - Extract ONLY facts explicitly stated or strongly implied by the user.
-- seniorName: extract the senior's actual name (e.g. "Maria", "Robert"). If the user refers to them as "my mom" without an explicit personal name, output "Mom". NEVER output an event/action verb like "fell", "had", "broke", or "is" as a senior's name!
+- seniorName: extract the senior's actual name (e.g. "Maria", "Robert").
+  - If the user refers to them as "my parent", output "Parent".
+  - If the user refers to them as "my mom", output "Mom".
+  - If the user refers to them as "my dad", output "Dad".
+  - If helpers or family members are mentioned (e.g. "my brother Jim, my sister Kim, and my aunt Jin"), Jim, Kim, and Jin are HELPERS, NOT the senior! NEVER output a helper's name as seniorName.
+  - NEVER output an event/action verb like "fell", "had", "broke", or "is" as a senior's name!
 - TEMPORAL AWARENESS:
-  - If user says "tomorrow", calculate reference date + 1 day.
+  - If user says "tomorrow" or "tmr", calculate reference date + 1 day.
+  - If user says "by eod", "eod", or "end of day", set dischargeTime: "17:00".
   - If user says a weekday name (e.g. "Thursday", "Friday"), resolve the upcoming day based on ${referenceDate.toDateString()}.
   - If user says "next week", DO NOT invent or guess a date. Set timingClarificationNeeded: true, dischargeTimelineDescription: "next week", and ask if there is a particular day or if it's flexible.
   - If user specifies an exact or approximate time (e.g. "around 2 PM", "morning"), extract dischargeTime.
+- MOBILITY & STAIRS:
+  - If user says "no", "none", "neither", "independent", or that there are no mobility issues or stairs, set mobilityConstraint: false and stairsConstraint: false.
 - COORDINATOR & RELATIONSHIP:
-  - Extract coordinatorName / userName: what to call the user.
-  - Extract coordinatorRelationship / userRelationship: user's relationship to the senior (e.g. "Son", "Daughter", "Spouse"). Do NOT assume son vs daughter unless explicitly stated.
+  - Extract coordinatorName / userName: what to call the user. If the user only gives a single name like "Yin", that is the coordinatorName.
+  - Extract coordinatorRelationship / userRelationship: user's relationship to the senior (e.g. "Son", "Daughter", "Child", "Spouse"). If user says "my parent", user is "Child". Do NOT assume son vs daughter unless explicitly stated.
 - HELP NETWORK & INVITATIONS:
-  - If user mentions someone helping (e.g. "my sister Jennifer"), capture localHelperName / familyMembers.
+  - If user mentions people helping (e.g. "my brother Jim, my sister Kim, and my aunt Jin"), capture them in draftMembers with their relationship to the senior.
   - If user provides an email or phone number to invite someone, capture their contact details.
-- BUDGET: If the user says "leave it open", "not sure", or "no budget", set budgetStatus: "UNSET" and budget: null.
+- BUDGET: If the user says "leave it open", "live it open" (typo), "not sure", or "no budget", set budgetStatus: "UNSET" and budget: null.
 - LOCATION: If user provides a ZIP code or city/state, extract zipCode and/or city.
 - DO NOT invent fictional names, locations, or details. Leave missing fields null.
 
@@ -342,10 +449,11 @@ RULES FOR CONVERSATIONAL REPLY:
   Warmly acknowledge what the user just said in 1 brief sentence, then ask ONE natural, gentle follow-up question for ${initialEvaluation.nextTargetField}.
   - If TIMING_CLARIFICATION: "Is there a particular day next week you're expecting, or is the timing still flexible?"
   - If DISCHARGE_TIMING and date is known but time is not: Ask if a specific time is known or just the day.
+  - If SAFETY_MOBILITY: "Does ${currentDraft.seniorName || 'your family member'} have any mobility limitations right now — for example stairs, a walker, or needing help getting around?"
   - If COORDINATOR_NAME: "And before we build the plan, what should I call you?"
   - If COORDINATOR_RELATIONSHIP: "What is your relationship to ${currentDraft.seniorName || 'your family member'}?"
   - If LOCAL_SUPPORT: "Is there anyone nearby who can help in person, or are you coordinating mostly from a distance?"
-  - If asking to invite helper: "Would you like to invite [Name] to collaborate in MoveWell? If so, I can take their email or phone number."
+  - If asking to invite helper: "Would you like to invite [Name] to collaborate? If so, I can take their email or phone number."
   - If LOCATION: "What address or ZIP code should I use when looking for nearby help? You can give me just the ZIP if you'd rather not share the exact address yet."
   - If BUDGET: "Do you already have a budget in mind, or should we leave that open for now?"
   NEVER ask multiple questions in the same turn.`;
@@ -367,6 +475,7 @@ RULES FOR CONVERSATIONAL REPLY:
                   type: Type.OBJECT,
                   properties: {
                     seniorName: { type: Type.STRING },
+                    seniorRelationship: { type: Type.STRING },
                     ageRange: { type: Type.STRING },
                     transitionType: { type: Type.STRING },
                     dischargeDays: { type: Type.NUMBER },
@@ -447,9 +556,28 @@ RULES FOR CONVERSATIONAL REPLY:
       updatedDraft.coordinatorRelationship = updatedDraft.userRelationship;
     }
 
+    // Prevent seniorName from being set to one of the helpers or coordinator
+    const knownHelperNames = new Set([
+      ...(updatedDraft.draftMembers || []).map((m) => m.name.toLowerCase()),
+      ...(updatedDraft.familyMembers || []).map((m) => m.name.toLowerCase()),
+      (updatedDraft.localHelperName || '').toLowerCase(),
+      (updatedDraft.coordinatorName || '').toLowerCase(),
+    ].filter(Boolean));
+
+    if (
+      updatedDraft.seniorName &&
+      knownHelperNames.has(updatedDraft.seniorName.toLowerCase())
+    ) {
+      if (currentDraft.seniorName && !knownHelperNames.has(currentDraft.seniorName.toLowerCase())) {
+        updatedDraft.seniorName = currentDraft.seniorName;
+      } else {
+        updatedDraft.seniorName = currentDraft.seniorRelationship || 'Parent';
+      }
+    }
+
     // Sanitize seniorName to never be a verb or invalid stopword
     if (updatedDraft.seniorName && NON_NAME_WORDS.has(updatedDraft.seniorName.trim().toLowerCase())) {
-      updatedDraft.seniorName = 'Mom';
+      updatedDraft.seniorName = currentDraft.seniorRelationship || 'Mom';
     }
 
     // Always preserve POST_HOSPITAL default transitionType unless specified

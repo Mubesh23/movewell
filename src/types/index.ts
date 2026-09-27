@@ -196,8 +196,47 @@ export interface IntakeFamilyMember {
   };
 }
 
+export interface DraftMember {
+  id: string;
+  name: string;
+  relationshipToSenior?: string;
+  role?: CaseMemberRole;
+  city?: string;
+  isLocal?: boolean;
+  availability?: string;
+  inviteRequested?: boolean;
+  inviteChannel?: 'EMAIL' | 'SMS';
+  email?: string;
+  phone?: string;
+}
+
+export interface PlanChangeItem {
+  id: string;
+  type:
+    | 'TASK_REASSIGNED'
+    | 'TASK_DUE_DATE'
+    | 'TASK_STATUS'
+    | 'MEMBER_ADDED'
+    | 'BUDGET_UPDATED'
+    | 'NOTE_ADDED'
+    | 'TASK_MODIFIED';
+  description: string;
+  targetId?: string;
+  oldValue?: string;
+  newValue?: string;
+}
+
+export interface PlanChangeSet {
+  id: string;
+  summary: string;
+  changes: PlanChangeItem[];
+  appliedAt: string;
+  appliedBy: string;
+}
+
 export interface IntakeDraft {
   seniorName?: string;
+  seniorRelationship?: string;
   ageRange?: string;
   transitionType?: TransitionType;
   dischargeDate?: string;
@@ -222,10 +261,13 @@ export interface IntakeDraft {
   localHelperName?: string;
   localHelperCity?: string;
   hasLocalHelper?: boolean;
+  careCircleAddressed?: boolean;
+  draftMembers?: DraftMember[];
   familyMembers?: IntakeFamilyMember[];
   budget?: number;
   budgetStatus?: 'SET' | 'UNSET';
   destinationStatus?: DestinationStatus;
+  temporalValue?: any;
 }
 
 export type IntakeTargetField =

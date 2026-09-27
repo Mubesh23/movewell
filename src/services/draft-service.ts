@@ -60,9 +60,39 @@ export class DraftService {
       },
     ];
 
+    const memberNameSet = new Set<string>([coordinatorName.toLowerCase()]);
+
+    if (intakeDraft.draftMembers && intakeDraft.draftMembers.length > 0) {
+      for (const dm of intakeDraft.draftMembers) {
+        if (!memberNameSet.has(dm.name.toLowerCase())) {
+          memberNameSet.add(dm.name.toLowerCase());
+          proposedMembers.push({
+            id: 'pmem-' + Math.random().toString(36).substring(2, 9),
+            name: dm.name,
+            relationship: dm.relationshipToSenior || 'Family Support',
+            city: dm.city,
+            isLocal: dm.isLocal ?? true,
+            availability: dm.availability,
+            role: dm.role || 'FAMILY',
+            email: dm.email,
+            phone: dm.phone,
+            invitation: dm.inviteRequested
+              ? {
+                  channel: dm.inviteChannel || 'SMS',
+                  email: dm.email,
+                  phone: dm.phone,
+                  status: 'DRAFT',
+                }
+              : undefined,
+          });
+        }
+      }
+    }
+
     if (intakeDraft.familyMembers && intakeDraft.familyMembers.length > 0) {
       for (const fm of intakeDraft.familyMembers) {
-        if (fm.name.toLowerCase() !== coordinatorName.toLowerCase()) {
+        if (!memberNameSet.has(fm.name.toLowerCase())) {
+          memberNameSet.add(fm.name.toLowerCase());
           proposedMembers.push({
             id: 'pmem-' + Math.random().toString(36).substring(2, 9),
             name: fm.name,
@@ -84,11 +114,11 @@ export class DraftService {
           });
         }
       }
-    } else if (intakeDraft.localHelperName) {
+    } else if (intakeDraft.localHelperName && !memberNameSet.has(intakeDraft.localHelperName.toLowerCase())) {
       proposedMembers.push({
         id: 'pmem-helper-' + draftId,
         name: intakeDraft.localHelperName,
-        relationship: 'Sister / Local Support',
+        relationship: 'Local Support',
         city: intakeDraft.localHelperCity,
         isLocal: true,
         role: 'FAMILY',

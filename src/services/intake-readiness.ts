@@ -33,9 +33,12 @@ export class IntakeReadinessService {
     const hasCoordinator = Boolean(
       draft.coordinatorName ||
       draft.userName ||
-      draft.userIsRemote !== undefined ||
-      draft.coordinatorRelationship ||
-      draft.userRelationship ||
+      draft.userIsRemote !== undefined
+    );
+
+    const hasCareCircle = Boolean(
+      draft.careCircleAddressed ||
+      (draft.draftMembers && draft.draftMembers.length > 0) ||
       draft.hasLocalHelper !== undefined ||
       draft.localHelperName
     );
@@ -47,11 +50,12 @@ export class IntakeReadinessService {
     if (needsTimingClarification) missingRequiredFields.push('clarification on discharge timing');
     if (!hasMobilityOrSafety) missingRequiredFields.push('mobility and home safety situation');
     if (!hasLocation) missingRequiredFields.push('location or ZIP code');
+    if (!hasCareCircle) missingRequiredFields.push('care circle or local support');
     if (!hasCoordinator) missingRequiredFields.push('family coordinator role');
     if (!hasBudgetStatus) missingRequiredFields.push('budget preference');
 
     // Determine the single highest-value question to ask next in priority sequence:
-    // Timing → Timing Clarification → Mobility/Safety → Location → Coordinator/Local Support → Budget
+    // Timing → Timing Clarification → Mobility/Safety → Location → Care Circle → Coordinator → Budget
     let nextTargetField: IntakeTargetField = 'NONE';
     if (!hasDischarge) {
       nextTargetField = 'DISCHARGE_TIMING';
@@ -61,9 +65,9 @@ export class IntakeReadinessService {
       nextTargetField = 'SAFETY_MOBILITY';
     } else if (!hasLocation) {
       nextTargetField = 'LOCATION';
-    } else if (draft.hasLocalHelper === undefined && !draft.localHelperName) {
+    } else if (!hasCareCircle) {
       nextTargetField = 'LOCAL_SUPPORT';
-    } else if (!draft.coordinatorName && !draft.userName && draft.userIsRemote === undefined) {
+    } else if (!hasCoordinator) {
       nextTargetField = 'COORDINATOR_NAME';
     } else if (!hasBudgetStatus) {
       nextTargetField = 'BUDGET';
@@ -71,7 +75,7 @@ export class IntakeReadinessService {
       nextTargetField = 'NONE';
     }
 
-    // Minimum viable threshold: senior, discharge (not needing clarification), mobility, location, coordinator, and budget
+    // Minimum viable threshold: senior, discharge (not needing clarification), mobility, location, care circle, coordinator, and budget
     const isReady =
       hasSenior &&
       hasDischarge &&
@@ -109,12 +113,20 @@ export class IntakeReadinessService {
     if (draft.livesAlone) mobilityNotes.push('Lives alone');
     if (draft.mobilityConstraint) mobilityNotes.push('Uses walker / mobility limitations');
     if (draft.stairsConstraint) mobilityNotes.push('Bedroom upstairs / stairs hazard');
+    if (draft.mobilityConstraint === false && draft.stairsConstraint === false) {
+      mobilityNotes.push('Independent mobility (no stairs hazard)');
+    }
     if (mobilityNotes.length > 0) {
       summaryBulletPoints.push(mobilityNotes.join(' · '));
     }
 
     const coordNotes: string[] = [];
-    if (draft.localHelperName) {
+    if (draft.draftMembers && draft.draftMembers.length > 0) {
+      const helperList = draft.draftMembers
+        .map((m) => `${m.name}${m.relationshipToSenior ? ` (${m.relationshipToSenior})` : ''}`)
+        .join(', ');
+      coordNotes.push(`Care circle: ${helperList}`);
+    } else if (draft.localHelperName) {
       coordNotes.push(`${draft.localHelperName} available locally`);
     } else if (draft.hasLocalHelper === false) {
       coordNotes.push('No local helper known');

@@ -100,7 +100,9 @@ function GetStartedContent() {
           id: 'nora-' + Date.now(),
           role: 'assistant',
           content: data.assistantMessage || data.message || "I've noted that.",
-          bulletPoints: data.isReady ? data.readiness?.summaryBulletPoints : undefined,
+          bulletPoints: data.isReady
+            ? data.summaryBulletPoints || data.readiness?.summaryBulletPoints
+            : undefined,
           isConfirmation: data.isReady,
         };
 
@@ -171,29 +173,34 @@ function GetStartedContent() {
     {
       label: 'Senior details',
       known: Boolean(draft.seniorName),
-      text: draft.seniorName ? `${draft.seniorName}${draft.ageRange ? ` (${draft.ageRange})` : ''}` : 'Pending details',
+      text: draft.seniorName ? `${draft.seniorName}${draft.ageRange ? ` (${draft.ageRange})` : ''}` : 'Pending senior details',
     },
     {
       label: 'Discharge timing',
-      known: Boolean(draft.dischargeDate || draft.dischargeDays !== undefined),
-      text: draft.dischargeDays !== undefined
-        ? `In ${draft.dischargeDays} days`
+      known: Boolean(
+        draft.dischargeDate ||
+        draft.dischargeDays !== undefined ||
+        draft.dischargeTimelineDescription
+      ),
+      text: draft.dischargeTime && draft.dischargeTimelineDescription
+        ? `${draft.dischargeTimelineDescription} (${draft.dischargeTime})`
+        : draft.dischargeTimelineDescription
+        ? draft.dischargeTimelineDescription
+        : draft.dischargeDays !== undefined
+        ? `In ~${draft.dischargeDays} days`
         : draft.dischargeDate
         ? draft.dischargeDate
         : 'Pending discharge timing',
     },
     {
-      label: 'Living setup',
-      known: draft.livesAlone !== undefined,
-      text: draft.livesAlone ? 'Lives alone' : draft.livesAlone === false ? 'Has household support' : 'Pending living situation',
-    },
-    {
-      label: 'Mobility & stairs',
-      known: Boolean(draft.mobilityConstraint || draft.stairsConstraint),
+      label: 'Mobility & safety',
+      known: draft.mobilityConstraint !== undefined || draft.stairsConstraint !== undefined,
       text: draft.stairsConstraint
         ? 'Stairs unsafe / mobility support needed'
         : draft.mobilityConstraint
         ? 'Mobility assistance needed'
+        : draft.mobilityConstraint === false && draft.stairsConstraint === false
+        ? 'Independent mobility (no stairs hazard)'
         : 'Pending mobility context',
     },
     {
@@ -206,6 +213,39 @@ function GetStartedContent() {
         : 'Pending nearby address or ZIP',
     },
     {
+      label: 'Care circle',
+      known: Boolean(
+        draft.careCircleAddressed ||
+        (draft.draftMembers && draft.draftMembers.length > 0) ||
+        draft.localHelperName ||
+        draft.hasLocalHelper !== undefined
+      ),
+      text: draft.draftMembers && draft.draftMembers.length > 0
+        ? `${draft.draftMembers.map((m) => m.name).join(', ')} (${draft.draftMembers.length} helper${draft.draftMembers.length > 1 ? 's' : ''})`
+        : draft.localHelperName
+        ? `${draft.localHelperName} (local support)`
+        : draft.hasLocalHelper === false
+        ? 'No local helpers available'
+        : 'Pending care circle & helpers',
+    },
+    {
+      label: 'Coordinator',
+      known: Boolean(
+        draft.coordinatorName ||
+        draft.userName ||
+        draft.coordinatorRelationship ||
+        draft.userRelationship ||
+        draft.userIsRemote !== undefined
+      ),
+      text: draft.coordinatorName || draft.userName
+        ? `${draft.coordinatorName || draft.userName}${draft.coordinatorRelationship || draft.userRelationship ? ` (${draft.coordinatorRelationship || draft.userRelationship})` : ''}`
+        : draft.coordinatorRelationship || draft.userRelationship
+        ? `Coordinating as ${draft.coordinatorRelationship || draft.userRelationship}`
+        : draft.userIsRemote
+        ? 'Coordinating remotely'
+        : 'Pending who is coordinating',
+    },
+    {
       label: 'Budget',
       known: Boolean(draft.budget || draft.budgetStatus === 'UNSET'),
       text: draft.budget
@@ -214,6 +254,15 @@ function GetStartedContent() {
         ? 'Left open (no set ceiling)'
         : 'Pending budget target or left open',
     },
+    ...(draft.livesAlone !== undefined
+      ? [
+          {
+            label: 'Living setup',
+            known: true,
+            text: draft.livesAlone ? 'Lives alone' : 'Household support present',
+          },
+        ]
+      : []),
   ];
 
   const knownCount = understoodItems.filter((i) => i.known).length;
@@ -315,6 +364,19 @@ function GetStartedContent() {
                             </li>
                           ))}
                         </ul>
+                      </div>
+                    )}
+
+                    {msg.isConfirmation && (
+                      <div className="mt-4 pt-3 border-t border-line/60">
+                        <button
+                          type="button"
+                          onClick={handleCreateDraft}
+                          disabled={creatingDraft}
+                          className="inline-flex items-center gap-2 py-2.5 px-4 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-semibold text-xs shadow-sm hover:shadow transition-all"
+                        >
+                          <span>{creatingDraft ? 'Generating proposal...' : 'Review proposed plan →'}</span>
+                        </button>
                       </div>
                     )}
                   </div>

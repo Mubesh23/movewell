@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { POST as intakePost } from '../app/api/ai/intake/route';
 import { POST as casesPost } from '../app/api/cases/route';
 import { intakeReadinessService } from '../services/intake-readiness';
+import { draftService } from '../services/draft-service';
 import { IntakeDraft } from '../types';
 
 describe('Conversational Intake State Machine & Deterministic Readiness', () => {
@@ -236,6 +237,165 @@ describe('Conversational Intake State Machine & Deterministic Readiness', () => 
       expect(res.status).toBe(200);
       expect(json.success).toBe(true);
       expect(json.caseId).toContain('case-maria');
+    });
+  });
+
+  describe('User Transcript Bugfix: Parent, tmr, by eod, no mobility, 77063, multi-helpers, Yin, live it open', () => {
+    it('accurately resolves full intake and unlocks draft plan proposal without losing context or looping', async () => {
+      // Turn 1: "My parent needs to move"
+      const t1Res = await intakePost(
+        new NextRequest('http://localhost:3000/api/ai/intake', {
+          method: 'POST',
+          body: JSON.stringify({
+            message: 'My parent needs to move',
+            currentDraft: {},
+          }),
+        })
+      );
+      const t1 = await t1Res.json();
+      expect(t1.success).toBe(true);
+      expect(t1.draft.seniorName).toBe('Parent');
+      expect(t1.draft.seniorRelationship).toBe('Parent');
+      expect(t1.draft.coordinatorRelationship).toBe('Child');
+      expect(t1.isReady).toBe(false);
+      expect(t1.nextTargetField).toBe('DISCHARGE_TIMING');
+
+      // Turn 2: "tmr"
+      const t2Res = await intakePost(
+        new NextRequest('http://localhost:3000/api/ai/intake', {
+          method: 'POST',
+          body: JSON.stringify({
+            message: 'tmr',
+            currentDraft: t1.draft,
+          }),
+        })
+      );
+      const t2 = await t2Res.json();
+      expect(t2.success).toBe(true);
+      expect(t2.draft.dischargeDays).toBe(1);
+      expect(t2.draft.dischargeTimelineDescription).toBe('Tomorrow');
+
+      // Turn 3: "by eod"
+      const t3Res = await intakePost(
+        new NextRequest('http://localhost:3000/api/ai/intake', {
+          method: 'POST',
+          body: JSON.stringify({
+            message: 'by eod',
+            currentDraft: t2.draft,
+          }),
+        })
+      );
+      const t3 = await t3Res.json();
+      expect(t3.success).toBe(true);
+      expect(t3.draft.dischargeTime).toBe('17:00');
+      expect(t3.draft.dischargePrecision).toBe('EXACT');
+      expect(t3.nextTargetField).toBe('SAFETY_MOBILITY');
+
+      // Turn 4: "no"
+      const t4Res = await intakePost(
+        new NextRequest('http://localhost:3000/api/ai/intake', {
+          method: 'POST',
+          body: JSON.stringify({
+            message: 'no',
+            currentDraft: t3.draft,
+          }),
+        })
+      );
+      const t4 = await t4Res.json();
+      expect(t4.success).toBe(true);
+      expect(t4.draft.mobilityConstraint).toBe(false);
+      expect(t4.draft.stairsConstraint).toBe(false);
+      expect(t4.nextTargetField).toBe('LOCATION');
+
+      // Turn 5: "77063"
+      const t5Res = await intakePost(
+        new NextRequest('http://localhost:3000/api/ai/intake', {
+          method: 'POST',
+          body: JSON.stringify({
+            message: '77063',
+            currentDraft: t4.draft,
+          }),
+        })
+      );
+      const t5 = await t5Res.json();
+      expect(t5.success).toBe(true);
+      expect(t5.draft.zipCode).toBe('77063');
+      expect(t5.nextTargetField).toBe('LOCAL_SUPPORT');
+
+      // Turn 6: "Yes, my brother Jim, my sister Kim, and my aunt Jin"
+      const t6Res = await intakePost(
+        new NextRequest('http://localhost:3000/api/ai/intake', {
+          method: 'POST',
+          body: JSON.stringify({
+            message: 'Yes, my brother Jim, my sister Kim, and my aunt Jin',
+            currentDraft: t5.draft,
+          }),
+        })
+      );
+      const t6 = await t6Res.json();
+      expect(t6.success).toBe(true);
+      // Senior name must NOT be overwritten by Jim or Kim
+      expect(t6.draft.seniorName).toBe('Parent');
+      expect(t6.draft.draftMembers).toBeDefined();
+      expect(t6.draft.draftMembers.length).toBe(3);
+      const memberNames = t6.draft.draftMembers.map((m: any) => m.name);
+      expect(memberNames).toContain('Jim');
+      expect(memberNames).toContain('Kim');
+      expect(memberNames).toContain('Jin');
+      expect(t6.nextTargetField).toBe('COORDINATOR_NAME');
+
+      // Turn 7: "Yin"
+      const t7Res = await intakePost(
+        new NextRequest('http://localhost:3000/api/ai/intake', {
+          method: 'POST',
+          body: JSON.stringify({
+            message: 'Yin',
+            currentDraft: t6.draft,
+          }),
+        })
+      );
+      const t7 = await t7Res.json();
+      expect(t7.success).toBe(true);
+      expect(t7.draft.coordinatorName).toBe('Yin');
+      expect(t7.draft.coordinatorRelationship).toBe('Child');
+      expect(t7.nextTargetField).toBe('BUDGET');
+
+      // Turn 8: "live it open" (typo for leave it open)
+      const t8Res = await intakePost(
+        new NextRequest('http://localhost:3000/api/ai/intake', {
+          method: 'POST',
+          body: JSON.stringify({
+            message: 'live it open',
+            currentDraft: t7.draft,
+          }),
+        })
+      );
+      const t8 = await t8Res.json();
+      expect(t8.success).toBe(true);
+      expect(t8.draft.budgetStatus).toBe('UNSET');
+      expect(t8.draft.budget).toBeUndefined();
+
+      // Everything required is now known!
+      expect(t8.isReady).toBe(true);
+      expect(t8.nextAction).toBe('CREATE_PLAN');
+      expect(t8.missingRequiredFields).toHaveLength(0);
+
+      // Verify draft plan generation produces valid proposed members
+      const planDraft = await draftService.createDraftFromIntake(t8.draft, 'user-test-yin');
+      expect(planDraft).toBeDefined();
+      expect(planDraft.seniorProfile.name).toBe('Parent');
+      expect(planDraft.budgetStatus).toBe('UNSET');
+      expect(planDraft.status).toBe('DRAFT');
+
+      const proposedMemberNames = planDraft.proposedMembers.map((m) => m.name);
+      expect(proposedMemberNames).toContain('Yin');
+      expect(proposedMemberNames).toContain('Jim');
+      expect(proposedMemberNames).toContain('Kim');
+      expect(proposedMemberNames).toContain('Jin');
+
+      const yinMember = planDraft.proposedMembers.find((m) => m.name === 'Yin');
+      expect(yinMember?.role).toBe('OWNER');
+      expect(yinMember?.relationship).toBe('Child');
     });
   });
 });

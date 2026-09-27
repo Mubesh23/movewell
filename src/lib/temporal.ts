@@ -81,6 +81,8 @@ export function resolveTemporalExpression(
     extractedTime = 'Afternoon (~2:00 PM)';
   } else if (lower.includes('evening')) {
     extractedTime = 'Evening (~6:00 PM)';
+  } else if (/\b(?:by\s+)?(?:eod|end of day)\b/i.test(lower)) {
+    extractedTime = '17:00';
   }
 
   // 2. "Now" / "Today"
@@ -98,8 +100,8 @@ export function resolveTemporalExpression(
     };
   }
 
-  // 3. "Tomorrow"
-  if (/\btomorrow\b/i.test(lower)) {
+  // 3. "Tomorrow" / "Tmr"
+  if (/\b(tomorrow|tmr|tmrw)\b/i.test(lower)) {
     const d = new Date(referenceDate);
     d.setDate(d.getDate() + 1);
     const dateStr = formatLocalDateYYYYMMDD(d);
@@ -223,6 +225,17 @@ export function resolveTemporalExpression(
       precision: 'UNKNOWN',
       needsClarification: false,
       description: 'Timeline flexible',
+    };
+  }
+
+  // 9. Standalone time without date (e.g. "by eod", "around 2pm", "morning")
+  if (extractedTime && !lower.includes('next week')) {
+    return {
+      rawText: text,
+      time: extractedTime,
+      precision: 'EXACT',
+      needsClarification: false,
+      description: extractedTime === '17:00' ? 'By end of day (5:00 PM)' : extractedTime,
     };
   }
 
