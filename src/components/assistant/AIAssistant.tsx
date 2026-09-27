@@ -18,29 +18,50 @@ interface ChatMessage {
 function renderFormattedText(text: string) {
   const lines = text.split('\n');
   return lines.map((line, lineIdx) => {
-    const parts = line.split(/(\*\*.*?\*\*|\*.*?\*)/g);
+    const trimmed = line.trim();
+
+    // Horizontal Rule
+    if (trimmed === '---' || trimmed === '***') {
+      return <hr key={lineIdx} className="my-2 border-stone-200" />;
+    }
+
+    // Markdown Headings: ### Heading, ## Heading, # Heading
+    if (trimmed.startsWith('#')) {
+      const headingText = trimmed.replace(/^#+\s*/, '');
+      return (
+        <div key={lineIdx} className="font-bold text-stone-900 mt-2.5 mb-1 text-[11px] uppercase tracking-wider text-brand-900">
+          {renderInlineFormatting(headingText)}
+        </div>
+      );
+    }
+
     return (
       <React.Fragment key={lineIdx}>
-        {parts.map((part, partIdx) => {
-          if (part.startsWith('**') && part.endsWith('**')) {
-            return (
-              <strong key={partIdx} className="font-bold text-stone-900">
-                {part.slice(2, -2)}
-              </strong>
-            );
-          }
-          if (part.startsWith('*') && part.endsWith('*')) {
-            return (
-              <span key={partIdx} className="font-semibold text-brand-900 bg-brand-50 px-1 py-0.5 rounded border border-brand-200/60 text-[11px]">
-                {part.slice(1, -1)}
-              </span>
-            );
-          }
-          return part;
-        })}
+        {renderInlineFormatting(line)}
         {lineIdx < lines.length - 1 && <br />}
       </React.Fragment>
     );
+  });
+}
+
+function renderInlineFormatting(text: string) {
+  const parts = text.split(/(\*\*.*?\*\*|\*.*?\*)/g);
+  return parts.map((part, partIdx) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return (
+        <strong key={partIdx} className="font-bold text-stone-900">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
+      return (
+        <span key={partIdx} className="font-semibold text-brand-900 bg-brand-50 px-1 py-0.5 rounded border border-brand-200/60 text-[11px]">
+          {part.slice(1, -1)}
+        </span>
+      );
+    }
+    return part;
   });
 }
 
