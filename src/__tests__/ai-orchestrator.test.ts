@@ -317,4 +317,49 @@ describe('AI Orchestrator Tool Calling', () => {
     expect(response.toolResults[0].success).toBe(true);
     expect(response.message).toContain('Verified Houston Care & Transition Resources');
   });
+
+  it('should explain and NOT mutate tasks when user questions suggestion ("why would you mark it as completed yet?")', async () => {
+    const caseData: TransitionCase = {
+      id: 'case-ai-question',
+      transitionType: 'POST_HOSPITAL',
+      urgency: 'URGENT',
+      zipCode: '77004',
+      budget: 8000,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const profile: SeniorProfile = {
+      id: 'prof-ai-q',
+      caseId: 'case-ai-question',
+      name: 'Maria Thompson',
+      livesAlone: true,
+      mobilityConstraint: false,
+      stairsConstraint: false,
+      immediateSafetyConcern: false,
+      ownsHome: true,
+    };
+
+    await planningEngine.generatePlan(caseData, profile, []);
+
+    const initialTasks = await repository.getTasksByCaseId('case-ai-question');
+    const initialCompletedCount = initialTasks.filter((t) => t.status === 'COMPLETED').length;
+
+    const response = await aiOrchestrator.processUserIntent(
+      'case-ai-question',
+      'why would you mark it as completed yet?'
+    );
+
+    // Should NOT trigger complete_task tool result
+    const completedToolCall = response.toolResults.find((tr) => tr.toolName === 'complete_task');
+    expect(completedToolCall).toBeUndefined();
+
+    // Message should be an explanatory response
+    expect(response.message).toContain("won't mark it completed yet");
+
+    // Task completion count must be 0
+    const finalTasks = await repository.getTasksByCaseId('case-ai-question');
+    const finalCompletedCount = finalTasks.filter((t) => t.status === 'COMPLETED').length;
+    expect(finalCompletedCount).toBe(initialCompletedCount);
+  });
 });

@@ -32,6 +32,23 @@ Current Urgency: ${overview?.caseData.urgency || 'URGENT'}
 Current Progress: ${overview?.progressPercent || 0}%
 Current Budget: $${overview?.caseData.budget || 8000}
 
+CRITICAL TOOL USAGE & INTENT RULES:
+1. MUTATION TOOLS (complete_task, assign_task, update_case_context):
+   - ONLY call mutation tools when the user explicitly instructs an action or confirms a completed reality (e.g. "Set budget to 5000", "Jennifer will handle packing", "Mark discharge complete", "I spoke with social worker so mark it complete").
+   - NEVER call mutation tools when the user is:
+     - Asking why an action should happen (e.g. "why would you mark it complete yet?")
+     - Asking what would happen or questioning suggestions ("should I mark it complete?", "why would you do that?")
+     - Saying not to do something ("don't mark it complete yet", "stop", "no")
+     - Discussing an action hypothetically or expressing uncertainty.
+   - When the user asks a question or questions a suggestion, answer directly in text with empathy and clarity—DO NOT invoke mutation tools.
+
+2. READ-ONLY & SEARCH TOOLS (find_resources, get_plan):
+   - Use find_resources when user asks for local support, care options, housing, moving companies, storage, or community help.
+   - Use get_plan when user asks for status, remaining tasks, or what's left to do.
+
+3. CONVERSATIONAL GROUNDING:
+   - Coordinate real-world progress. Frame next steps as real-world actions for the user/care team (e.g. "Next step: Confirm Maria's safe discharge destination with the care team. Once confirmed, let me know and I can record it as completed.").
+
 User request: ${prompt}`,
                 },
               ],
@@ -43,7 +60,7 @@ User request: ${prompt}`,
                 functionDeclarations: [
                   {
                     name: 'update_case_context',
-                    description: 'Update the case dollar budget or target dates. Call this tool whenever user asks to set, update, or change the budget limit.',
+                    description: 'Update the case dollar budget or target dates. Call this tool whenever user explicitly asks to set, update, or change the budget limit.',
                     parameters: {
                       type: Type.OBJECT,
                       properties: {
@@ -77,7 +94,7 @@ User request: ${prompt}`,
                   },
                   {
                     name: 'complete_task',
-                    description: 'Mark a specific transition task as completed by title query or ID with optional completion notes',
+                    description: 'Mark a specific transition task as completed by title query or ID with optional completion notes. ONLY call when user explicitly confirms completion or orders task completion.',
                     parameters: {
                       type: Type.OBJECT,
                       properties: {
@@ -193,12 +210,12 @@ Instruction: Using the tool execution results above, synthesize an empathetic, c
             suggestedNextAction: `Focus on ${overview?.urgentTask?.title || 'next plan priority'}.`,
           };
         }
-      } catch (err) {
-        console.warn('Gemini API function call failed, falling back to local deterministic workflow engine:', err);
+      } catch (err: any) {
+        console.warn(`[AIOrchestrator] Gemini API call failed (${err?.message || err}). Falling back to conservative deterministic engine.`);
       }
     }
 
-    // Deterministic fallback strictly used when GEMINI_API_KEY is absent or API call fails
+    // Conservative deterministic fallback strictly used when GEMINI_API_KEY is absent or API call fails
     return this.processUserIntentLocal(caseId, prompt);
   }
 
@@ -207,8 +224,45 @@ Instruction: Using the tool execution results above, synthesize an empathetic, c
     const toolResults: ToolExecutionResult[] = [];
     const responseMessages: string[] = [];
 
-    // Intent 1: Budget Modification
-    if (lower.includes('budget') || lower.includes('$')) {
+    // Action Guards: Questions, Negations, and Ambiguity MUST NEVER trigger mutation tools in fallback
+    const isQuestion =
+      lower.startsWith('why ') ||
+      lower.startsWith('what ') ||
+      lower.startsWith('when ') ||
+      lower.startsWith('how ') ||
+      lower.startsWith('should ') ||
+      lower.startsWith('would ') ||
+      lower.startsWith('could ') ||
+      lower.startsWith('can ') ||
+      lower.startsWith('is ') ||
+      lower.includes('?') ||
+      lower.includes('why would') ||
+      lower.includes('why should');
+
+    const isNegative =
+      lower.includes("don't") ||
+      lower.includes('do not') ||
+      lower.includes('not yet') ||
+      lower.includes("shouldn't") ||
+      lower.includes("wouldn't") ||
+      lower.includes('stop') ||
+      lower.includes('no');
+
+    // Intent: Explaining why an action would happen / answering questions about task completion
+    if (isQuestion && (lower.includes('mark') || lower.includes('complete') || lower.includes('finish'))) {
+      const overview = await caseService.getCaseOverview(caseId);
+      const seniorName = overview?.seniorProfile.name || 'Maria';
+      return {
+        message:
+          `I won't mark it completed yet! I only offer completion as an option when you have already confirmed real-world progress.\n\n` +
+          `The next recommended step is to confirm ${seniorName}'s safe discharge destination with the hospital or care team first. Once that's confirmed in reality, let me know and I can mark the task complete and record any notes!`,
+        toolResults: [],
+        suggestedNextAction: `Confirm ${seniorName}'s safe discharge destination.`,
+      };
+    }
+
+    // Intent 1: Budget Modification (Requires explicit non-question command)
+    if (!isQuestion && !isNegative && (lower.includes('budget') || lower.includes('$'))) {
       const match = lower.match(/\$?([0-9,]+)/);
       if (match) {
         const budgetVal = parseInt(match[1].replace(/,/g, ''), 10);
@@ -223,11 +277,11 @@ Instruction: Using the tool execution results above, synthesize an empathetic, c
       }
     }
 
-    // Intent 2: Task Assignment / Re-assignment
+    // Intent 2: Task Assignment / Re-assignment (Requires explicit command)
     if (
-      lower.includes('assign') ||
-      lower.includes('handle') ||
-      lower.includes('take care')
+      !isQuestion &&
+      !isNegative &&
+      (lower.includes('assign') || lower.includes('handle') || lower.includes('take care'))
     ) {
       let assigneeName = 'Jennifer';
 
@@ -289,8 +343,14 @@ Instruction: Using the tool execution results above, synthesize an empathetic, c
       responseMessages.push(res.message);
     }
 
-    // Intent 4: Task Completion (Strict Task Query Resolution)
-    if (lower.includes('complete') || lower.includes('done') || lower.includes('finished') || lower.includes('mark')) {
+    // Intent 4: Task Completion (Strict Command Guarding - NO MUTATION ON QUESTIONS OR NEGATIONS)
+    const explicitCompletionCommand =
+      /^mark\b.*\b(complete|done|finished)/i.test(prompt) ||
+      /^complete\b/i.test(prompt) ||
+      /\bmark it (complete|done)\b/i.test(prompt) ||
+      /\bI (?:have )?(?:finished|completed|confirmed)\b/i.test(prompt);
+
+    if (!isQuestion && !isNegative && explicitCompletionCommand) {
       const queryCleaned = lower
         .replace(/\bmark\b/g, '')
         .replace(/\bcomplete\b/g, '')
@@ -305,11 +365,7 @@ Instruction: Using the tool execution results above, synthesize an empathetic, c
         taskTitleQuery: queryCleaned || 'discharge',
       });
       toolResults.push(res);
-      if (res.success) {
-        responseMessages.push(res.message);
-      } else {
-        responseMessages.push(res.message);
-      }
+      responseMessages.push(res.message);
     }
 
     // Intent 5: Phase Concept Explanations
@@ -325,7 +381,7 @@ Instruction: Using the tool execution results above, synthesize an empathetic, c
       };
     }
 
-    // Proactive Next Step Suggestion Engine based on active case overview
+    // Proactive Next Step Suggestion Engine based on active case overview (Coordinates reality, doesn't push premature completion)
     const overview = await caseService.getCaseOverview(caseId);
     const seniorName = overview?.seniorProfile.name || 'Senior';
     let proactiveSuggestion = '';
@@ -334,7 +390,7 @@ Instruction: Using the tool execution results above, synthesize an empathetic, c
       const nextTask = overview.urgentTask || overview.tasks.find((t) => t.status === 'READY');
       if (nextTask) {
         if (nextTask.templateId === 'confirm-discharge-destination') {
-          proactiveSuggestion = `\n\n👉 Next recommended step: Confirming ${seniorName}'s safe discharge destination. Would you like me to mark that complete or search Houston care options?`;
+          proactiveSuggestion = `\n\n👉 Next recommended step: Confirm ${seniorName}'s safe discharge destination with the hospital team. Once confirmed, let me know and I can mark it complete or search Houston care options.`;
         } else if (nextTask.templateId === 'decide-temporary-vs-permanent') {
           proactiveSuggestion = `\n\n👉 Next recommended step: Decide temporary vs. permanent housing for ${seniorName}. Should we look into short-term rehab or accessible single-story residences?`;
         } else if (nextTask.templateId === 'request-moving-estimates') {
