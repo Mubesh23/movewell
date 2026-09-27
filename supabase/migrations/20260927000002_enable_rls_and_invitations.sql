@@ -20,7 +20,46 @@ CREATE INDEX IF NOT EXISTS idx_case_invitations_token_hash ON case_invitations(t
 CREATE INDEX IF NOT EXISTS idx_case_invitations_case_id ON case_invitations(case_id);
 CREATE INDEX IF NOT EXISTS idx_case_invitations_member_id ON case_invitations(member_id);
 
--- 2. Enable Row Level Security on Private & Case Tables
+-- Ensure prerequisite columns exist on core tables
+ALTER TABLE transition_cases ADD COLUMN IF NOT EXISTS owner_user_id VARCHAR(255);
+ALTER TABLE case_members ADD COLUMN IF NOT EXISTS user_id VARCHAR(255);
+
+-- 2. Ensure Cost Items Table Exists
+CREATE TABLE IF NOT EXISTS cost_items (
+  id TEXT PRIMARY KEY,
+  case_id TEXT NOT NULL REFERENCES transition_cases(id) ON DELETE CASCADE,
+  category TEXT NOT NULL,
+  description TEXT,
+  source TEXT NOT NULL DEFAULT 'ESTIMATE',
+  amount NUMERIC(10, 2),
+  min_amount NUMERIC(10, 2),
+  max_amount NUMERIC(10, 2),
+  provider_name TEXT,
+  document_name TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_cost_items_case_id ON cost_items(case_id);
+
+-- 3. Ensure Case Locations Table Exists
+CREATE TABLE IF NOT EXISTS case_locations (
+  id VARCHAR(255) PRIMARY KEY,
+  plan_draft_id VARCHAR(255),
+  case_id VARCHAR(255) REFERENCES transition_cases(id) ON DELETE CASCADE,
+  type VARCHAR(50) NOT NULL DEFAULT 'HOME',
+  label VARCHAR(255) NOT NULL,
+  address VARCHAR(255),
+  city VARCHAR(100),
+  state VARCHAR(50),
+  zip_code VARCHAR(10),
+  latitude NUMERIC(10, 6),
+  longitude NUMERIC(10, 6),
+  external_place_id VARCHAR(255),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_case_locations_case ON case_locations(case_id);
+
+-- 4. Enable Row Level Security on Private & Case Tables
 ALTER TABLE transition_cases ENABLE ROW LEVEL SECURITY;
 ALTER TABLE senior_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE case_members ENABLE ROW LEVEL SECURITY;
