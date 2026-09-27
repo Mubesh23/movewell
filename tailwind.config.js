@@ -8,8 +8,9 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        canvas: '#F7F5F0',
-        surface: '#FFFFFF',
+        // Main Warm Palette
+        canvas: '#FBF6EE', // Warm cream canvas
+        surface: '#FFFFFF', // Clean surface
         forest: {
           DEFAULT: '#183C32',
           deep: '#102A23',
@@ -18,31 +19,60 @@ module.exports = {
         },
         charcoal: '#262824',
         muted: '#6F716C',
+        cocoa: '#4B3A31', // Deep cocoa neutral
+        
+        // Emotional Warmth & Accents
+        terracotta: {
+          DEFAULT: '#C86F4A',
+          hover: '#B55E3A',
+          subtle: '#FDF2EC',
+          border: '#ECC2AF',
+        },
+        clay: {
+          DEFAULT: '#C86F4A',
+          hover: '#B55E3A',
+          subtle: '#FDF2EC',
+          border: '#ECC2AF',
+        },
+        apricot: {
+          DEFAULT: '#E6A27C',
+          subtle: '#FCF3EE',
+          border: '#F5CEBA',
+        },
+        ochre: {
+          DEFAULT: '#C8923F',
+          subtle: '#FDF8EE',
+          border: '#F3DCB1',
+          text: '#996B22',
+        },
         sage: {
           DEFAULT: '#789184',
           subtle: '#EEF3F0',
           border: '#C3D1CA',
         },
+        
+        // Warm Stone & Taupe Structure
         stone: {
-          warm: '#D8D1C5',
-          subtle: '#EDE8E0',
-          line: '#E5DFD5',
+          warm: '#CFC3B4', // Warm taupe
+          subtle: '#F4EFE6', // Soft cream-stone fill
+          line: '#E8DFD3',   // Subtle divider
+          border: '#D8CEBE', // Control border
+          text: '#7A7063',   // Warm secondary text
         },
-        clay: {
-          DEFAULT: '#C66D45',
-          subtle: '#FDF1EB',
-          border: '#E8A78A',
-        },
+
+        // Functional Status Scale (retained with warm backgrounds)
         status: {
           success: '#3E745D',
           'success-bg': '#EFF7F3',
-          warning: '#B7803B',
-          'warning-bg': '#FEF7EC',
+          warning: '#C8923F',
+          'warning-bg': '#FDF8EE',
           critical: '#A95145',
           'critical-bg': '#FDF2F0',
-          neutral: '#7C8079',
-          'neutral-bg': '#F2F2F0',
+          neutral: '#7A7063',
+          'neutral-bg': '#F4EFE6',
         },
+
+        // Legacy / helper aliases for compatibility
         brand: {
           50: '#f2f8f5',
           100: '#dfefe8',
@@ -57,23 +87,23 @@ module.exports = {
           950: '#102A23',
         },
         sand: {
-          50: '#fdfbf7',
-          100: '#F7F5F0',
-          200: '#f2ece2',
-          300: '#ebe1d1',
-          400: '#dcceb7',
+          50: '#FDFBF8',
+          100: '#FBF6EE',
+          200: '#F4EFE6',
+          300: '#E8DFD3',
+          400: '#D8CEBE',
         },
         coral: {
-          50: '#fdf3f2',
-          100: '#fce5e3',
-          500: '#C66D45',
-          600: '#b63b23',
+          50: '#FDF2EC',
+          100: '#FBE4D8',
+          500: '#C86F4A',
+          600: '#B55E3A',
         },
         amber: {
-          50: '#fef9ed',
-          100: '#fcf0d3',
-          500: '#B7803B',
-          600: '#9e6d30',
+          50: '#FDF8EE',
+          100: '#FBF0D9',
+          500: '#C8923F',
+          600: '#B07B2D',
         },
       },
       fontFamily: {
@@ -88,6 +118,12 @@ module.exports = {
         '2xl': '1rem',      // 16px (standard surface)
         '3xl': '1.125rem',  // 18px (max feature area)
         full: '9999px',
+      },
+      boxShadow: {
+        '2xs': '0 1px 2px 0 rgba(75, 58, 49, 0.04)',
+        xs: '0 1px 3px 0 rgba(75, 58, 49, 0.06), 0 1px 2px -1px rgba(75, 58, 49, 0.05)',
+        sm: '0 2px 5px 0 rgba(75, 58, 49, 0.06)',
+        md: '0 4px 8px -1px rgba(75, 58, 49, 0.08), 0 2px 4px -2px rgba(75, 58, 49, 0.06)',
       },
     },
   },

@@ -9,13 +9,14 @@ import { PageHeader } from '@/components/movewell/PageHeader';
 import { Section } from '@/components/ui/Section';
 import { Badge } from '@/components/ui/Badge';
 import { Tabs } from '@/components/ui/Tabs';
-import { ServiceResource } from '@/types';
+import { ServiceResource, TransitionCase } from '@/types';
 import {
   MapPin,
   Phone,
   Globe,
   ExternalLink,
   ShieldCheck,
+  Info,
 } from 'lucide-react';
 
 export default function ResourcesPage() {
@@ -23,6 +24,7 @@ export default function ResourcesPage() {
   const caseId = params.caseId as string;
 
   const [resources, setResources] = useState<ServiceResource[]>([]);
+  const [caseData, setCaseData] = useState<TransitionCase | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
 
@@ -35,6 +37,19 @@ export default function ResourcesPage() {
     { id: 'home_modification', label: 'Home Modifications' },
     { id: 'storage', label: 'Storage' },
   ];
+
+  useEffect(() => {
+    if (caseId) {
+      fetch(`/api/cases/${caseId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.data?.caseData) {
+            setCaseData(data.data.caseData);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [caseId]);
 
   const fetchResources = async (cat?: string) => {
     setLoading(true);
@@ -56,22 +71,45 @@ export default function ResourcesPage() {
     fetchResources(selectedCategory);
   }, [selectedCategory]);
 
+  const isHoustonArea =
+    !caseData?.zipCode ||
+    caseData.zipCode.startsWith('770') ||
+    caseData.zipCode.startsWith('772') ||
+    caseData.zipCode.startsWith('773') ||
+    caseData.zipCode.startsWith('774') ||
+    caseData.zipCode.startsWith('775');
+
   return (
     <div className="min-h-screen bg-canvas flex flex-col font-sans">
-      <Navbar caseId={caseId} seniorName="Local Directory" />
+      <Navbar caseId={caseId} seniorName="Houston Directory" />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1 space-y-8">
         <PageHeader
-          title="Verified Local Resources"
-          subtitle="Open Referral HSDS directory of verified senior transition providers, public agencies, and vetted services in Greater Houston."
-          statusLabel="Harris County Coverage"
-          statusVariant="info"
+          title="Houston Area Resource Directory"
+          subtitle="Open Referral HSDS catalog of verified senior transition providers and public programs. MoveWell's verified directory is currently localized to Greater Houston for this pilot."
+          statusLabel={isHoustonArea ? 'Greater Houston Pilot' : 'Houston Pilot (Non-local ZIP)'}
+          statusVariant={isHoustonArea ? 'ochre' : 'warning'}
           summaryItems={[
-            { label: 'Directory', value: `${resources.length} providers` },
-            { label: 'Area Coverage', value: 'Houston & Harris Co.' },
-            { label: 'Data Standard', value: 'Open Referral HSDS' },
+            { label: 'Directory', value: `${resources.length} verified providers` },
+            { label: 'Pilot Scope', value: 'Harris County & Greater Houston' },
+            { label: 'Standard', value: 'Open Referral HSDS' },
           ]}
         />
+
+        {/* Explicit Geographic Notice if case ZIP is outside Greater Houston */}
+        {!isHoustonArea && caseData?.zipCode && (
+          <div className="p-4 rounded-xl border border-ochre-border bg-ochre-subtle text-xs text-charcoal flex items-start gap-3">
+            <Info className="w-4 h-4 text-ochre shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-semibold text-charcoal">
+                Directory Geographic Scope Notice
+              </p>
+              <p className="text-muted leading-relaxed">
+                This case has ZIP code <strong>{caseData.zipCode}</strong>. MoveWell&apos;s verified provider directory is currently active in <strong>Greater Houston &amp; Harris County</strong> for this hackathon pilot. Nationwide provider verification is expanding soon. You can still use Nora for general guidance and itemize custom vendor quotes on your budget ledger.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Category Filter Tabs */}
         <div>

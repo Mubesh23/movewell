@@ -9,11 +9,13 @@ import {
   ChevronDown,
   ChevronRight,
   CheckCircle2,
+  Check,
   Clock,
   User,
   AlertCircle,
   MessageSquare,
   DollarSign,
+  Lock,
 } from 'lucide-react';
 
 export interface TaskRowProps {
@@ -27,6 +29,18 @@ export interface TaskRowProps {
   isUpdating?: boolean;
   className?: string;
   defaultExpanded?: boolean;
+}
+
+function formatFriendlyDate(dateStr?: string): string {
+  if (!dateStr) return '';
+  try {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    if (year && month && day) {
+      const date = new Date(year, month - 1, day);
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+  } catch {}
+  return dateStr;
 }
 
 export function TaskRow({
@@ -50,6 +64,7 @@ export function TaskRow({
 
   // Resolve dependencies into titles
   const prereqTasks = allTasks.filter((t) => task.dependsOnTaskIds?.includes(t.id));
+  const uncompletedPrereqs = prereqTasks.filter((pt) => pt.status !== 'COMPLETED');
 
   const handleCompleteWithNote = () => {
     if (onComplete) {
@@ -63,7 +78,7 @@ export function TaskRow({
     <div
       className={cn(
         'group border-b border-stone-line/70 last:border-b-0 py-3.5 transition-colors',
-        isCompleted && 'opacity-70',
+        isCompleted && 'opacity-75',
         className
       )}
     >
@@ -74,36 +89,50 @@ export function TaskRow({
           <button
             type="button"
             onClick={() => setExpanded(!expanded)}
-            className="p-1 -ml-1 text-muted hover:text-charcoal transition-colors mt-0.5 sm:mt-0 shrink-0"
-            aria-label={expanded ? 'Collapse task details' : 'Expand task details'}
+            className="p-1 -ml-1 text-muted hover:text-charcoal transition-colors mt-0.5 sm:mt-0 shrink-0 min-h-[32px] min-w-[32px] flex items-center justify-center rounded"
+            aria-label={expanded ? `Collapse details for ${task.title}` : `Expand details for ${task.title}`}
           >
             {expanded ? (
-              <ChevronDown className="w-4 h-4" />
+              <ChevronDown className="w-4 h-4 text-charcoal" />
             ) : (
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-4 h-4 text-muted group-hover:text-charcoal" />
             )}
           </button>
 
           {/* Quick complete / circle icon */}
-          <button
-            type="button"
-            disabled={isBlocked || isUpdating}
-            onClick={() => {
-              if (isCompleted && onReopen) onReopen(task);
-              else if (!isCompleted && onComplete) onComplete(task);
-            }}
-            className={cn(
-              'w-5 h-5 rounded-full border transition-all flex items-center justify-center shrink-0 mt-0.5 sm:mt-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest',
-              isCompleted
-                ? 'bg-status-success border-status-success text-surface'
-                : isBlocked
-                ? 'border-stone-warm bg-stone-subtle cursor-not-allowed text-transparent'
-                : 'border-stone-warm hover:border-forest text-transparent hover:text-forest/30'
-            )}
-            title={isCompleted ? 'Mark incomplete' : isBlocked ? 'Blocked by prerequisites' : 'Mark complete'}
-          >
-            <CheckCircle2 className="w-3.5 h-3.5" />
-          </button>
+          {isCompleted ? (
+            <button
+              type="button"
+              disabled={isUpdating}
+              onClick={() => onReopen && onReopen(task)}
+              className="w-5 h-5 rounded-full bg-status-success text-surface flex items-center justify-center shrink-0 mt-0.5 sm:mt-0 shadow-2xs hover:bg-status-success/80 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
+              title="Completed — Click to reopen"
+              aria-label={`Task "${task.title}" is completed. Click to reopen.`}
+            >
+              <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+            </button>
+          ) : isBlocked ? (
+            <button
+              type="button"
+              disabled
+              className="w-5 h-5 rounded-full border border-ochre/40 bg-ochre-subtle text-ochre flex items-center justify-center shrink-0 mt-0.5 sm:mt-0 cursor-not-allowed"
+              title="Blocked by incomplete prerequisites"
+              aria-label={`Task "${task.title}" is blocked by prerequisite tasks.`}
+            >
+              <Lock className="w-2.5 h-2.5 text-ochre" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={isUpdating}
+              onClick={() => onComplete && onComplete(task)}
+              className="w-5 h-5 rounded-full border-2 border-stone-border hover:border-forest text-transparent hover:text-forest/60 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
+              title="Click to mark complete"
+              aria-label={`Mark task "${task.title}" complete`}
+            >
+              <Check className="w-3 h-3 text-transparent hover:text-forest" />
+            </button>
+          )}
 
           {/* Task Title & Quick Assignee */}
           <div className="min-w-0 flex-1">
@@ -119,12 +148,18 @@ export function TaskRow({
               </span>
             </div>
 
-            <div className="flex items-center gap-3 text-xs text-muted mt-0.5">
+            <div className="flex items-center gap-2.5 text-xs text-muted mt-0.5 flex-wrap">
               <span>{task.assignee ? task.assignee.name : 'Unassigned'}</span>
               {task.dueDate && (
                 <>
                   <span className="text-stone-line" aria-hidden="true">&bull;</span>
-                  <span>Due {task.dueDate}</span>
+                  <span>Due {formatFriendlyDate(task.dueDate)}</span>
+                </>
+              )}
+              {isBlocked && (
+                <>
+                  <span className="text-stone-line" aria-hidden="true">&bull;</span>
+                  <span className="text-ochre-text font-medium">Blocked by {uncompletedPrereqs.length} prerequisite{uncompletedPrereqs.length === 1 ? '' : 's'}</span>
                 </>
               )}
             </div>
@@ -132,7 +167,7 @@ export function TaskRow({
         </div>
 
         {/* Right: Status Indicator & Action */}
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <StatusIndicator status={task.status} />
 
           {onAskNora && (
@@ -141,6 +176,7 @@ export function TaskRow({
               onClick={() => onAskNora(task)}
               className="hidden sm:inline-flex p-1.5 rounded-md text-muted hover:text-forest hover:bg-forest/5 transition-colors"
               title="Ask Nora about this task"
+              aria-label={`Ask Nora about ${task.title}`}
             >
               <MessageSquare className="w-3.5 h-3.5" />
             </button>
@@ -150,44 +186,52 @@ export function TaskRow({
 
       {/* Expanded Details Drawer */}
       {expanded && (
-        <div className="mt-3 ml-7 sm:ml-12 pl-3 border-l-2 border-stone-subtle space-y-3 text-xs text-muted pt-1 pb-2">
+        <div className="mt-3 ml-7 sm:ml-10 pl-3 border-l-2 border-stone-line space-y-3 text-xs text-muted pt-1 pb-2">
           {task.whyItMatters && (
             <div>
-              <p className="font-semibold text-charcoal mb-0.5">Why this matters now</p>
+              <p className="font-semibold text-charcoal mb-0.5 font-sans">Why this matters now</p>
               <p className="text-muted leading-relaxed">{task.whyItMatters}</p>
             </div>
           )}
 
           {task.description && task.description !== task.whyItMatters && (
             <div>
-              <p className="font-semibold text-charcoal mb-0.5">Guidance & Details</p>
+              <p className="font-semibold text-charcoal mb-0.5 font-sans">Guidance & Details</p>
               <p className="text-muted leading-relaxed">{task.description}</p>
             </div>
           )}
 
-          {/* Prerequisites / Blockers */}
-          {prereqTasks.length > 0 && (
-            <div className="space-y-1">
-              <p className="font-semibold text-charcoal flex items-center gap-1.5">
-                <AlertCircle className="w-3.5 h-3.5 text-status-warning" />
-                <span>Prerequisites ({prereqTasks.length})</span>
+          {/* Stronger Blocked / Prerequisites Explanation */}
+          {isBlocked && uncompletedPrereqs.length > 0 && (
+            <div className="p-3 rounded-lg border border-ochre-border bg-ochre-subtle text-xs space-y-1.5">
+              <p className="font-semibold text-ochre-text flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 text-ochre shrink-0" />
+                <span>Prerequisites must be completed before starting:</span>
               </p>
-              <ul className="space-y-1 pl-4 list-disc text-muted">
-                {prereqTasks.map((pt) => (
+              <ul className="space-y-1 pl-5 list-disc text-charcoal">
+                {uncompletedPrereqs.map((pt) => (
                   <li key={pt.id}>
-                    <span className={pt.status === 'COMPLETED' ? 'line-through' : 'font-medium text-charcoal'}>
-                      {pt.title}
-                    </span>
-                    <span className="ml-1.5 text-stone-warm">({pt.status.toLowerCase()})</span>
+                    <span className="font-medium">{pt.title}</span>{' '}
+                    <span className="text-muted">({pt.status.toLowerCase().replace('_', ' ')})</span>
                   </li>
                 ))}
               </ul>
             </div>
           )}
 
+          {/* Completed Prerequisites if all done */}
+          {!isBlocked && prereqTasks.length > 0 && (
+            <div className="space-y-1 text-xs text-muted">
+              <p className="font-semibold text-charcoal flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-status-success shrink-0" />
+                <span>Prerequisites fulfilled ({prereqTasks.length})</span>
+              </p>
+            </div>
+          )}
+
           {/* Completion Note */}
           {task.completionNotes && (
-            <div className="p-2.5 rounded-md bg-stone-subtle/70 text-charcoal">
+            <div className="p-2.5 rounded-md bg-stone-subtle text-charcoal">
               <p className="font-semibold text-[11px] uppercase tracking-wider text-muted mb-0.5">
                 Completion Note
               </p>
@@ -200,7 +244,7 @@ export function TaskRow({
             <div className="flex items-center gap-1.5 text-charcoal font-medium">
               <DollarSign className="w-3.5 h-3.5 text-forest" />
               <span>
-                Estimated cost: ${task.minEstimatedCost.toLocaleString()} &ndash; ${task.maxEstimatedCost.toLocaleString()}
+                Planning estimate: ${task.minEstimatedCost.toLocaleString()} &ndash; ${task.maxEstimatedCost.toLocaleString()}
               </span>
             </div>
           )}
@@ -213,7 +257,7 @@ export function TaskRow({
                 <select
                   value={task.assigneeId || ''}
                   onChange={(e) => onAssign(task.id, e.target.value)}
-                  className="h-7 px-2 text-xs rounded-md border border-stone-line bg-surface text-charcoal"
+                  className="h-8 px-2 text-xs rounded-md border border-stone-line bg-surface text-charcoal focus:outline-none focus:ring-1 focus:ring-forest"
                 >
                   <option value="">Unassigned</option>
                   {members.map((m) => (
@@ -229,7 +273,7 @@ export function TaskRow({
               <button
                 type="button"
                 onClick={() => setShowNoteInput(true)}
-                className="text-forest hover:underline font-medium text-xs ml-auto"
+                className="text-forest hover:text-forest-deep underline underline-offset-2 font-medium text-xs ml-auto min-h-[36px] flex items-center"
               >
                 Add completion note &rarr;
               </button>
@@ -242,7 +286,7 @@ export function TaskRow({
                   placeholder="e.g. Confirmed with Dr. Miller that rehab is recommended for 2 weeks."
                   value={noteText}
                   onChange={(e) => setNoteText(e.target.value)}
-                  className="w-full h-8 px-2.5 text-xs rounded-md border border-stone-line bg-surface text-charcoal"
+                  className="w-full h-9 px-3 text-xs rounded-md border border-stone-line bg-surface text-charcoal focus:outline-none focus:ring-1 focus:ring-forest"
                 />
                 <div className="flex items-center justify-end gap-2">
                   <Button

@@ -27,15 +27,15 @@ export function PriorityAction({
   return (
     <div
       className={cn(
-        'rounded-xl border border-forest/20 bg-surface p-6 sm:p-7 shadow-xs relative overflow-hidden transition-all',
-        isCompleted && 'border-stone-line bg-surface/80',
+        'rounded-xl border border-stone-line border-l-4 border-l-terracotta bg-surface p-6 sm:p-7 shadow-xs relative overflow-hidden transition-all',
+        isCompleted && 'border-stone-line border-l-stone-warm bg-surface/80',
         className
       )}
     >
       {/* Top eyebrow & status */}
       <div className="flex items-center justify-between gap-3 mb-3">
-        <span className="text-xs font-semibold uppercase tracking-wider text-forest">
-          Needs attention today
+        <span className="text-xs font-semibold uppercase tracking-wider text-terracotta font-sans">
+          Immediate Focus Task
         </span>
         <StatusIndicator status={task.status} />
       </div>

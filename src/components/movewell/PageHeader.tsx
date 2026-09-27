@@ -7,7 +7,7 @@ export interface PageHeaderProps {
   subtitle?: string;
   urgency?: 'PLANNED' | 'URGENT' | 'IMMEDIATE' | string;
   statusLabel?: string;
-  statusVariant?: 'completed' | 'warning' | 'info' | 'urgent' | 'outline' | 'forest';
+  statusVariant?: 'completed' | 'warning' | 'info' | 'urgent' | 'outline' | 'forest' | 'ochre' | 'terracotta' | 'clay';
   badge?: React.ReactNode;
   summaryItems?: Array<{
     label: string;

@@ -4,12 +4,12 @@
 
 @layer base {
   :root {
-    --background: 43 20% 95%; /* #F7F5F0 */
+    --background: 40 45% 96%; /* #FBF6EE warm cream */
     --foreground: 75 5% 15%; /* #262824 Charcoal */
   }
 
   body {
-    background-color: #F7F5F0;
+    background-color: #FBF6EE;
     color: #262824;
     font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     -webkit-tap-highlight-color: transparent;
@@ -18,6 +18,11 @@
   h1, h2, h3, .font-serif {
     font-family: var(--font-serif), Georgia, serif;
     letter-spacing: -0.015em;
+  }
+
+  ::selection {
+    background-color: #FDF2EC;
+    color: #4B3A31;
   }
 }
 
@@ -35,9 +40,9 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #D8D1C5;
+  background: #CFC3B4;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #B5ADA1;
+  background: #B3A696;
 }

@@ -16,6 +16,8 @@ export const badgeVariants = cva(
         warning: 'bg-status-warning-bg text-status-warning border border-status-warning/20',
         info: 'bg-sage-subtle text-forest border border-sage-border/50',
         clay: 'bg-clay-subtle text-clay border border-clay-border/30',
+        terracotta: 'bg-terracotta-subtle text-terracotta border border-terracotta-border',
+        ochre: 'bg-ochre-subtle text-ochre-text border border-ochre-border',
         outline: 'border border-stone-line text-muted bg-transparent',
         forest: 'bg-forest text-surface',
       },
@@ -43,7 +45,8 @@ export function Badge({ className, variant, dot, children, ...props }: BadgeProp
             'bg-muted': variant === 'blocked',
             'bg-status-success': variant === 'completed',
             'bg-status-critical': variant === 'urgent',
-            'bg-clay': variant === 'clay',
+            'bg-clay': variant === 'clay' || variant === 'terracotta',
+            'bg-ochre': variant === 'ochre',
             'bg-charcoal': variant === 'default' || variant === 'outline',
           })}
         />

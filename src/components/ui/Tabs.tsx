@@ -53,7 +53,7 @@ export function Tabs({
               variant === 'underline' && [
                 'py-2.5 px-3 border-b-2 -mb-px',
                 isActive
-                  ? 'border-forest text-forest font-semibold'
+                  ? 'border-terracotta text-forest font-semibold'
                   : 'border-transparent text-muted hover:text-charcoal hover:border-stone-warm',
               ],
               variant === 'pill' && [

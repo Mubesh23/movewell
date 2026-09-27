@@ -4,9 +4,10 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, AlertCircle, CheckCircle2, ChevronRight } from 'lucide-react';
+import { ArrowRight, AlertCircle, CheckCircle2, ChevronRight, MapPin, DollarSign, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
+import { Input } from '@/components/ui/Input';
 
 export default function LandingPage() {
   const router = useRouter();
@@ -16,6 +17,10 @@ export default function LandingPage() {
   const [candidatePlan, setCandidatePlan] = useState<any | null>(null);
   const [intakeError, setIntakeError] = useState<string | null>(null);
   const [creatingPlan, setCreatingPlan] = useState(false);
+
+  // Editable candidate fields for explicit confirmation
+  const [customZip, setCustomZip] = useState('');
+  const [customBudget, setCustomBudget] = useState('8000');
 
   const handleAnalyzeSituation = async (customText?: string) => {
     const textToAnalyze = customText || situation;
@@ -34,6 +39,8 @@ export default function LandingPage() {
       const data = await res.json();
       if (data.success && data.data) {
         setCandidatePlan(data.data);
+        if (data.data.zipCode) setCustomZip(data.data.zipCode);
+        if (data.data.budget) setCustomBudget(String(data.data.budget));
       } else {
         setIntakeError(data.error || "I couldn't confidently extract the transition details.");
       }
@@ -55,8 +62,8 @@ export default function LandingPage() {
           transitionType: candidatePlan.transitionType || 'POST_HOSPITAL',
           seniorName: candidatePlan.seniorName,
           ageRange: candidatePlan.ageRange || '75-80',
-          budget: candidatePlan.budget || 8000,
-          zipCode: candidatePlan.zipCode || '77004',
+          budget: Number(customBudget) || candidatePlan.budget || 8000,
+          zipCode: customZip.trim() || candidatePlan.zipCode || '77004',
           livesAlone: candidatePlan.livesAlone !== false,
           mobilityConstraint: candidatePlan.mobilityConstraint !== false,
           stairsConstraint: candidatePlan.stairsConstraint !== false,
@@ -102,9 +109,9 @@ export default function LandingPage() {
     'My mom Maria is 78. She had a fall and is in the hospital in Houston. They expect to discharge her in 5 days. She lives alone in a two-story house and cannot safely use stairs anymore. I live in Chicago, but my sister Jennifer lives nearby. We have around $8,000 to work with.';
 
   return (
-    <div className="min-h-screen bg-canvas text-charcoal flex flex-col justify-between selection:bg-forest/10 selection:text-forest-deep">
+    <div className="min-h-screen bg-canvas text-charcoal flex flex-col justify-between selection:bg-terracotta-subtle selection:text-cocoa font-sans">
       {/* Editorial Header */}
-      <header className="border-b border-stone-line bg-surface/80 backdrop-blur-xs sticky top-0 z-30">
+      <header className="border-b border-stone-line bg-surface/90 backdrop-blur-xs sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
             <span className="w-7 h-7 rounded-md bg-forest text-surface font-serif font-bold text-sm flex items-center justify-center">
@@ -118,7 +125,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-5">
             <Link
               href="/start"
-              className="text-xs font-semibold text-muted hover:text-forest transition-colors"
+              className="text-xs font-semibold text-terracotta hover:text-terracotta-hover transition-colors"
             >
               Use guided intake &rarr;
             </Link>
@@ -131,11 +138,14 @@ export default function LandingPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start">
           {/* Left Column (7 cols): Editorial Narrative + Conversational Intake */}
           <div className="lg:col-span-7 space-y-6">
-            <div className="space-y-4">
-              <h1 className="text-4xl sm:text-5xl lg:text-[54px] font-serif font-bold text-charcoal tracking-tight leading-[1.12]">
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-widest text-terracotta font-sans">
+                Hospital Discharge &amp; Family Care Coordination
+              </p>
+              <h1 className="text-4xl sm:text-5xl lg:text-[52px] font-serif font-bold text-charcoal tracking-tight leading-[1.12]">
                 A calmer way through what comes next.
               </h1>
-              <p className="text-base sm:text-lg text-muted leading-relaxed max-w-xl">
+              <p className="text-base sm:text-lg text-stone-text leading-relaxed max-w-xl">
                 When a parent suddenly needs more support, MoveWell helps your family understand what needs to happen, coordinate who&apos;s doing it, and keep the transition moving.
               </p>
             </div>
@@ -165,7 +175,7 @@ export default function LandingPage() {
                     setSituation(samplePrompt);
                     handleAnalyzeSituation(samplePrompt);
                   }}
-                  className="text-xs text-forest hover:text-forest-deep underline underline-offset-4 text-left font-medium"
+                  className="text-xs text-forest hover:text-terracotta underline underline-offset-4 text-left font-medium transition-colors"
                 >
                   Use sample situation (Maria, 78 &bull; Houston)
                 </button>
@@ -184,7 +194,7 @@ export default function LandingPage() {
                 </Button>
               </div>
 
-              <p className="text-[12px] text-muted/80">
+              <p className="text-[12px] text-muted">
                 No account or payment needed to create your transition plan.
               </p>
 
@@ -218,32 +228,63 @@ export default function LandingPage() {
               {/* Candidate Plan Summary after Nora Analysis */}
               {candidatePlan && (
                 <div className="mt-4 pt-5 border-t border-stone-line space-y-4 animate-in fade-in">
-                  <div className="rounded-lg bg-sage-subtle/70 p-4 border border-sage-border/40 text-xs space-y-3">
-                    <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-forest text-surface font-serif text-[10px] font-bold flex items-center justify-center">
-                        N
-                      </span>
-                      <span className="font-semibold text-charcoal text-sm">
-                        Transition Assessment for {candidatePlan.seniorName}
-                      </span>
+                  <div className="rounded-lg bg-surface border border-stone-line p-4 text-xs space-y-3 shadow-2xs">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-forest text-surface font-serif text-[10px] font-bold flex items-center justify-center">
+                          N
+                        </span>
+                        <span className="font-semibold text-charcoal text-sm">
+                          Transition Assessment for {candidatePlan.seniorName}
+                        </span>
+                      </div>
+
+                      {candidatePlan.dischargeDays && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-ochre-text bg-ochre-subtle border border-ochre-border px-2 py-0.5 rounded-full">
+                          <Calendar className="w-3 h-3" />
+                          {candidatePlan.dischargeDays} days to discharge
+                        </span>
+                      )}
                     </div>
 
                     <p className="text-charcoal/90 leading-relaxed">
                       {candidatePlan.summaryText}
                     </p>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 text-[11px] text-muted">
-                      <div className="bg-surface px-2.5 py-1.5 rounded-md border border-stone-line">
-                        <span className="text-muted/70 block text-[10px] uppercase tracking-wider">Senior</span>
-                        <strong className="text-charcoal">{candidatePlan.seniorName} {candidatePlan.ageRange ? `(${candidatePlan.ageRange})` : ''}</strong>
+                    {/* Explicit Confirmation of Extracted Fields / Assumptions */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-stone-line/60">
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-wider text-muted font-semibold mb-1">
+                          Location / ZIP {candidatePlan.zipCode ? '(Detected)' : '(Required for Local Providers)'}
+                        </label>
+                        <Input
+                          value={customZip}
+                          onChange={(e) => setCustomZip(e.target.value)}
+                          placeholder="e.g. 77005 (Houston)"
+                          className="h-8 text-xs"
+                        />
+                        {!candidatePlan.zipCode && (
+                          <p className="text-[10px] text-terracotta mt-0.5">
+                            ZIP code wasn&apos;t explicitly mentioned. Defaults to Houston pilot if blank.
+                          </p>
+                        )}
                       </div>
-                      <div className="bg-surface px-2.5 py-1.5 rounded-md border border-stone-line">
-                        <span className="text-muted/70 block text-[10px] uppercase tracking-wider">Discharge</span>
-                        <strong className="text-charcoal">{candidatePlan.dischargeDays ? `${candidatePlan.dischargeDays} Days` : 'Imminent'}</strong>
-                      </div>
-                      <div className="bg-surface px-2.5 py-1.5 rounded-md border border-stone-line">
-                        <span className="text-muted/70 block text-[10px] uppercase tracking-wider">Budget</span>
-                        <strong className="text-charcoal">${candidatePlan.budget ? candidatePlan.budget.toLocaleString() : '8,000'}</strong>
+
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-wider text-muted font-semibold mb-1">
+                          Family Stated Budget ($)
+                        </label>
+                        <Input
+                          value={customBudget}
+                          onChange={(e) => setCustomBudget(e.target.value)}
+                          placeholder="e.g. 8000"
+                          className="h-8 text-xs"
+                        />
+                        {!candidatePlan.budget && (
+                          <p className="text-[10px] text-muted mt-0.5">
+                            No budget mentioned. Baseline contingency of $8,000 assumed.
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -287,23 +328,25 @@ export default function LandingPage() {
                 sizes="(max-width: 1024px) 100vw, 40vw"
               />
             </div>
-            <p className="text-xs text-muted/80 leading-relaxed italic text-center sm:text-left">
-              &ldquo;MoveWell gave our family a calm, shared checklist during the critical 5 days before mom&apos;s hospital discharge.&rdquo;
+            
+            {/* Neutral Product Copy (Replaced fabricated testimonial) */}
+            <p className="text-xs text-stone-text leading-relaxed text-center sm:text-left">
+              Designed to give families one shared place to coordinate the days before and after discharge.
             </p>
 
             {/* Clearly Separated Demo Scenario Box */}
-            <div className="rounded-xl border border-stone-line/80 bg-surface/60 p-4 space-y-2 mt-6">
+            <div className="rounded-xl border border-stone-line border-l-4 border-l-terracotta bg-surface p-4 space-y-2 mt-6 shadow-2xs">
               <p className="text-xs font-semibold text-charcoal">
                 Evaluating MoveWell?
               </p>
-              <p className="text-xs text-muted">
+              <p className="text-xs text-muted leading-relaxed">
                 Explore our full sample transition scenario for Maria Thompson ($8,000 budget, 5 days to discharge in Houston).
               </p>
               <button
                 type="button"
                 disabled={loadingPreset}
                 onClick={handleLoadMariaScenario}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-forest hover:text-forest-deep transition-colors pt-1"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-terracotta hover:text-terracotta-hover transition-colors pt-1"
               >
                 {loadingPreset ? (
                   <span>Loading demo case...</span>
@@ -318,10 +361,10 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Section 15: Below the Fold — Editorial Narrative with horizontal dividers */}
+        {/* Section: Below the Fold — Editorial Narrative with horizontal dividers */}
         <section className="pt-12 border-t border-stone-line space-y-8">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted mb-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-terracotta mb-1">
               One plan. Everyone aligned.
             </p>
             <h2 className="text-2xl sm:text-3xl font-serif font-bold text-charcoal tracking-tight">
@@ -331,38 +374,38 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10 pt-2">
             <div className="space-y-2">
-              <span className="font-serif text-2xl font-bold text-forest">01</span>
+              <span className="font-serif text-2xl font-bold text-terracotta">01</span>
               <h3 className="font-serif font-semibold text-lg text-charcoal">
                 Understand what matters now
               </h3>
-              <p className="text-sm text-muted leading-relaxed">
-                MoveWell identifies the critical path decision that must be resolved first—such as post-hospital rehab confirmation—before downstream actions can unlock.
+              <p className="text-sm text-stone-text leading-relaxed">
+                MoveWell identifies the critical path decision that must be resolved first—such as post-hospital destination confirmation—before downstream actions can unlock.
               </p>
             </div>
 
             <div className="space-y-2">
-              <span className="font-serif text-2xl font-bold text-forest">02</span>
+              <span className="font-serif text-2xl font-bold text-terracotta">02</span>
               <h3 className="font-serif font-semibold text-lg text-charcoal">
                 Coordinate the whole family
               </h3>
-              <p className="text-sm text-muted leading-relaxed">
+              <p className="text-sm text-stone-text leading-relaxed">
                 Clear task ownership whether family members are coordinating remotely from another state or helping hands-on locally.
               </p>
             </div>
 
             <div className="space-y-2">
-              <span className="font-serif text-2xl font-bold text-forest">03</span>
+              <span className="font-serif text-2xl font-bold text-terracotta">03</span>
               <h3 className="font-serif font-semibold text-lg text-charcoal">
                 Adapt as reality changes
               </h3>
-              <p className="text-sm text-muted leading-relaxed">
+              <p className="text-sm text-stone-text leading-relaxed">
                 When discharge decisions evolve, tasks are marked complete, or moving quotes arrive, the transition plan adapts dynamically without losing budget integrity.
               </p>
             </div>
           </div>
         </section>
 
-        {/* Section 16: Product Preview Snippet */}
+        {/* Section: Product Preview Snippet */}
         <section className="pt-10 border-t border-stone-line space-y-4">
           <div className="flex items-baseline justify-between">
             <h3 className="text-lg font-serif font-semibold text-charcoal">
@@ -371,14 +414,14 @@ export default function LandingPage() {
             <span className="text-xs text-muted">Command center preview</span>
           </div>
 
-          <div className="rounded-xl border border-forest/20 bg-surface p-6 shadow-2xs space-y-3">
+          <div className="rounded-xl border border-stone-line border-l-4 border-l-terracotta bg-surface p-6 shadow-2xs space-y-3">
             <div className="flex items-center justify-between text-xs text-muted">
-              <span className="font-semibold uppercase tracking-wider text-forest">
-                Priority action
+              <span className="font-semibold uppercase tracking-wider text-terracotta font-sans">
+                Immediate Focus Task
               </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-sage-subtle text-forest border border-sage-border/40">
-                <span className="w-1.5 h-1.5 rounded-full bg-forest" />
-                Ready
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-ochre-subtle text-ochre-text border border-ochre-border">
+                <span className="w-1.5 h-1.5 rounded-full bg-ochre" />
+                Ready to decide
               </span>
             </div>
 
@@ -386,7 +429,7 @@ export default function LandingPage() {
               Confirm where Maria will go after hospital discharge
             </h4>
 
-            <p className="text-sm text-muted max-w-2xl leading-relaxed">
+            <p className="text-sm text-stone-text max-w-2xl leading-relaxed">
               Maria cannot safely navigate the two-story stairs at home. The social worker needs to confirm short-term rehab vs return-home support before movers or equipment can be scheduled.
             </p>
 

@@ -73,7 +73,7 @@ export default function BudgetPage() {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1 space-y-8">
         <PageHeader
           title="Cost & Budget Ledger"
-          subtitle={`Deterministic planning ranges and vendor quotes for ${seniorProfile.name}'s post-hospital transition.`}
+          subtitle={`Deterministic planning ranges and confirmed vendor quotes for ${seniorProfile.name}'s post-hospital transition.`}
           statusLabel={isOver ? `+$${costSummary.budgetGap.toLocaleString()} Over` : 'Within Budget'}
           statusVariant={isOver ? 'warning' : 'completed'}
           summaryItems={summaryItems}
@@ -84,7 +84,7 @@ export default function BudgetPage() {
           <SectionHeader
             eyebrow="Financial Ledger"
             title="Overview & Contingency"
-            subtitle="Comparing family budget against calculated ranges and verified quotes."
+            subtitle="Comparing family budget against calculated ranges and confirmed vendor quotes."
           />
           <div className="mt-4">
             <BudgetSummary costSummary={costSummary} costItems={costItems} />
@@ -111,9 +111,9 @@ export default function BudgetPage() {
         {costItems.length > 0 && (
           <Section>
             <SectionHeader
-              eyebrow="Verified Quotes"
+              eyebrow="Confirmed Quotes"
               title="Applied Vendor Quotes"
-              subtitle="These quotes have replaced planning estimates in your total expected costs."
+              subtitle="These confirmed quotes have replaced planning estimates in your total expected costs."
             />
             <div className="mt-4 space-y-3">
               {costItems.map((quote) => (
@@ -128,21 +128,46 @@ export default function BudgetPage() {
           <SectionHeader
             eyebrow="Itemized Breakdown"
             title="Task Cost Estimates"
-            subtitle="Individual cost ranges assigned to action items across all transition phases."
+            subtitle="Individual cost ranges assigned to action items across all transition phases. Applied quotes supersede planning estimates."
           />
           <div className="mt-4 divide-y divide-stone-line/60">
             {tasks
               .filter((t) => t.minEstimatedCost > 0 || t.maxEstimatedCost > 0)
-              .map((t) => (
-                <CostLine
-                  key={t.id}
-                  category={t.phase.replace('_', ' ')}
-                  title={t.title}
-                  subtitle={t.whyItMatters || t.description}
-                  amount={`$${t.minEstimatedCost.toLocaleString()} \u2013 $${t.maxEstimatedCost.toLocaleString()}`}
-                  type="ESTIMATE"
-                />
-              ))}
+              .map((t) => {
+                const isMovingTask =
+                  t.templateId?.includes('move') ||
+                  t.title.toLowerCase().includes('mover') ||
+                  t.title.toLowerCase().includes('moving');
+
+                const appliedQuote = isMovingTask
+                  ? costItems.find((ci) => ci.category === 'moving')
+                  : undefined;
+
+                if (appliedQuote && appliedQuote.amount) {
+                  return (
+                    <CostLine
+                      key={t.id}
+                      category={t.phase.replace('_', ' ')}
+                      title={t.title}
+                      subtitle={`Replaced by applied quote: ${appliedQuote.providerName || 'Vendor'}`}
+                      amount={`$${appliedQuote.amount.toLocaleString()}`}
+                      type="QUOTE"
+                      previousEstimate={`$${t.minEstimatedCost.toLocaleString()} \u2013 $${t.maxEstimatedCost.toLocaleString()}`}
+                    />
+                  );
+                }
+
+                return (
+                  <CostLine
+                    key={t.id}
+                    category={t.phase.replace('_', ' ')}
+                    title={t.title}
+                    subtitle={t.whyItMatters || t.description}
+                    amount={`$${t.minEstimatedCost.toLocaleString()} \u2013 $${t.maxEstimatedCost.toLocaleString()}`}
+                    type="ESTIMATE"
+                  />
+                );
+              })}
           </div>
         </Section>
       </main>
