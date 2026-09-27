@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Navbar } from '@/components/layout/Navbar';
 import {
   ArrowRight,
@@ -151,7 +152,7 @@ export default function LandingPage() {
                           Nora
                         </strong>
                         <span className="text-[11px] text-muted-ink leading-tight">
-                          MoveWell&apos;s AI planning guide
+                          {BRAND_NAME}&apos;s AI planning guide
                         </span>
                       </div>
                     </div>
@@ -170,32 +171,43 @@ export default function LandingPage() {
                       Hi, I&apos;m Nora. I can help you make sense of what&apos;s next and turn a big transition into a clear, doable plan.
                     </div>
 
-                    {noraPreview && (
-                      <>
-                        {/* User Bubble */}
-                        <div className="p-3 rounded-2xl bg-evergreen text-white text-xs leading-relaxed self-end max-w-[85%] font-medium">
-                          {noraPreview.userMessage}
-                        </div>
+                    <AnimatePresence>
+                      {noraPreview && (
+                        <motion.div
+                          key="nora-preview-group"
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                          className="space-y-3 flex flex-col"
+                        >
+                          {/* User Bubble */}
+                          <div className="p-3 rounded-2xl bg-evergreen text-white text-xs leading-relaxed self-end max-w-[85%] font-medium shadow-2xs">
+                            {noraPreview.userMessage}
+                          </div>
 
-                        {/* Nora Response Bubble */}
-                        <div className="p-3.5 rounded-2xl bg-cream/70 border border-line text-xs text-ink leading-relaxed self-start max-w-[90%]">
-                          {noraPreview.noraReply}
-                        </div>
-                      </>
-                    )}
+                          {/* Nora Response Bubble */}
+                          <div className="p-3.5 rounded-2xl bg-cream/70 border border-line text-xs text-ink leading-relaxed self-start max-w-[90%] shadow-2xs">
+                            {noraPreview.noraReply}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                   {/* Interaction Area */}
                   {noraPreview ? (
                     <div className="pt-2">
-                      <button
+                      <motion.button
                         type="button"
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={handleContinueWithNora}
-                        className="w-full py-3 px-4 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-2xs"
+                        className="w-full py-3 px-4 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-2xs"
                       >
                         <span>Continue with Nora</span>
                         <ArrowRight className="w-4 h-4" />
-                      </button>
+                      </motion.button>
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -206,14 +218,16 @@ export default function LandingPage() {
                           'My parent is leaving the hospital',
                           "I'm not sure what help we need",
                         ].map((prompt, i) => (
-                          <button
+                          <motion.button
                             key={i}
                             type="button"
+                            whileHover={{ x: 2 }}
+                            whileTap={{ scale: 0.99 }}
                             onClick={() => handleChipClick(prompt)}
                             className="text-left px-3 py-2 rounded-xl bg-sage/40 hover:bg-sage border border-line/60 text-xs font-medium text-evergreen hover:text-evergreen-dark transition-colors"
                           >
                             {prompt}
-                          </button>
+                          </motion.button>
                         ))}
                       </div>
 

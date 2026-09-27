@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { draftService } from '@/services/draft-service';
-import { getSessionUserId } from '@/lib/auth-helper';
+import { requireDraftAccess } from '@/lib/auth-guards';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -11,9 +11,16 @@ export async function POST(
 ) {
   try {
     const { draftId } = await params;
-    const userId = await getSessionUserId(req);
+    const access = await requireDraftAccess(req, draftId);
 
-    const result = await draftService.activateDraft(draftId, userId);
+    if (!access.authorized) {
+      return NextResponse.json(
+        { success: false, error: access.error || 'Access denied' },
+        { status: access.status }
+      );
+    }
+
+    const result = await draftService.activateDraft(draftId, access.userId);
 
     return NextResponse.json({
       success: true,

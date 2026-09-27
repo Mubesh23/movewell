@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { repository } from '@/db/repository';
 import { emailService } from '@/services/email-service';
+import { invitationService } from '@/services/invitation-service';
 import { eventService } from '@/services/event-service';
+import { requireCaseOwner } from '@/lib/auth-guards';
 
 export async function POST(
   req: NextRequest,
@@ -9,6 +11,14 @@ export async function POST(
 ) {
   try {
     const { caseId, memberId } = params;
+
+    const access = await requireCaseOwner(req, caseId);
+    if (!access.authorized) {
+      return NextResponse.json(
+        { success: false, error: access.error || 'Access denied' },
+        { status: access.status }
+      );
+    }
 
     const members = await repository.getCaseMembers(caseId);
     const member = members.find((m) => m.id === memberId);
@@ -23,12 +33,13 @@ export async function POST(
     const senior = await repository.getSeniorProfileByCaseId(caseId);
     const owner = members.find((m) => m.role === 'OWNER') || { name: 'Family Coordinator' };
 
-    await emailService.sendCareCircleInvite({
-      toEmail: member.email,
+    await invitationService.createAndSendInvitation({
+      caseId,
+      memberId: member.id,
+      email: member.email,
       recipientName: member.name,
       inviterName: owner.name,
       seniorName: senior?.name || 'your loved one',
-      caseId,
       role: member.role,
       relationship: member.relationship,
     });

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Navbar } from '@/components/layout/Navbar';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { WhatChanged } from '@/components/movewell/WhatChanged';
+import { BRAND_NAME } from '@/lib/brand';
 import {
   ArrowRight,
   CheckCircle2,
@@ -354,7 +355,7 @@ export default function DraftReviewPage() {
           state: r.location?.state,
           zipCode: r.location?.zipCode,
           trustLabel: r.verification?.verificationStatus?.includes('Verified')
-            ? 'MoveWell-reviewed'
+            ? 'Bridgewell-reviewed'
             : 'Nearby option',
           website: r.website,
         }));
@@ -511,7 +512,11 @@ export default function DraftReviewPage() {
               </strong>
               <p className="text-xs text-muted-ink leading-relaxed">
                 {draft.seniorProfile.homeType || 'Residential residence'} ·{' '}
-                {draft.seniorProfile.livesAlone ? 'Lives alone' : 'Lives with family'}
+                {draft.seniorProfile.livesAlone === true
+                  ? 'Lives alone'
+                  : draft.seniorProfile.livesAlone === false
+                  ? 'Lives with family'
+                  : 'Living arrangement not specified'}
               </p>
             </div>
           </div>
@@ -598,7 +603,7 @@ export default function DraftReviewPage() {
               </span>
               <h2 className="text-xl font-bold text-ink">Family &amp; Helpers</h2>
               <p className="text-xs text-muted-ink">
-                People coordinating or helping in person. You can stage invitations to MoveWell now.
+                People coordinating or helping in person. You can stage invitations to {BRAND_NAME} now.
               </p>
             </div>
             <button
@@ -1234,7 +1239,7 @@ export default function DraftReviewPage() {
             handleActivatePlan(userId);
           }}
           title="Save &amp; Start Your Plan"
-          subtitle="Create your MoveWell account with Google or email to activate and coordinate."
+          subtitle={`Create your ${BRAND_NAME} account with Google or email to activate and coordinate.`}
         />
       </main>
     </div>

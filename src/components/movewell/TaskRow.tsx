@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { TransitionTask, CaseMember } from '@/types';
 import { StatusIndicator } from './StatusIndicator';
@@ -162,16 +163,17 @@ export function TaskRow({
 
           {/* Quick complete / circle icon */}
           {isCompleted ? (
-            <button
+            <motion.button
               type="button"
               disabled={isUpdating}
+              whileTap={{ scale: 0.88 }}
               onClick={() => onReopen && onReopen(task)}
-              className="w-5 h-5 rounded-full bg-status-success text-surface flex items-center justify-center shrink-0 mt-0.5 sm:mt-0 shadow-2xs hover:bg-status-success/80 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
+              className="w-5 h-5 rounded-full bg-status-success text-surface flex items-center justify-center shrink-0 mt-0.5 sm:mt-0 shadow-2xs hover:bg-status-success/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
               title="Completed — Click to reopen"
               aria-label={`Task "${task.title}" is completed. Click to reopen.`}
             >
               <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-            </button>
+            </motion.button>
           ) : isBlocked ? (
             <button
               type="button"
@@ -183,16 +185,17 @@ export function TaskRow({
               <Lock className="w-2.5 h-2.5 text-ochre" />
             </button>
           ) : (
-            <button
+            <motion.button
               type="button"
               disabled={isUpdating}
+              whileTap={{ scale: 0.88 }}
               onClick={() => onComplete && onComplete(task)}
               className="w-5 h-5 rounded-full border-2 border-stone-border hover:border-forest text-transparent hover:text-forest/60 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
               title="Click to mark complete"
               aria-label={`Mark task "${task.title}" complete`}
             >
               <Check className="w-3 h-3 text-transparent hover:text-forest" />
-            </button>
+            </motion.button>
           )}
 
           {/* Tinted Category Icon Square */}
@@ -282,149 +285,159 @@ export function TaskRow({
       </div>
 
       {/* Expanded Details Drawer */}
-      {expanded && (
-        <div className="mt-3 ml-7 sm:ml-10 pl-3 border-l-2 border-stone-line space-y-3 text-xs text-muted pt-1 pb-2">
-          {task.whyItMatters && (
-            <div>
-              <p className="font-semibold text-charcoal mb-0.5 font-sans">Why this matters now</p>
-              <p className="text-muted leading-relaxed">{task.whyItMatters}</p>
-            </div>
-          )}
-
-          {task.description && task.description !== task.whyItMatters && (
-            <div>
-              <p className="font-semibold text-charcoal mb-0.5 font-sans">Guidance & Details</p>
-              <p className="text-muted leading-relaxed">{task.description}</p>
-            </div>
-          )}
-
-          {/* Stronger Blocked / Prerequisites Explanation */}
-          {isBlocked && uncompletedPrereqs.length > 0 && (
-            <div className="p-3 rounded-lg border border-ochre-border bg-ochre-subtle text-xs space-y-1.5">
-              <p className="font-semibold text-ochre-text flex items-center gap-1.5">
-                <AlertCircle className="w-3.5 h-3.5 text-ochre shrink-0" />
-                <span>Prerequisites must be completed before starting:</span>
-              </p>
-              <ul className="space-y-1 pl-5 list-disc text-charcoal">
-                {uncompletedPrereqs.map((pt) => (
-                  <li key={pt.id}>
-                    <span className="font-medium">{pt.title}</span>{' '}
-                    <span className="text-muted">({pt.status.toLowerCase().replace('_', ' ')})</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Completed Prerequisites if all done */}
-          {!isBlocked && prereqTasks.length > 0 && (
-            <div className="space-y-1 text-xs text-muted">
-              <p className="font-semibold text-charcoal flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-status-success shrink-0" />
-                <span>Prerequisites fulfilled ({prereqTasks.length})</span>
-              </p>
-            </div>
-          )}
-
-          {/* Completion Note */}
-          {task.completionNotes && (
-            <div className="p-2.5 rounded-md bg-stone-subtle text-charcoal">
-              <p className="font-semibold text-[11px] uppercase tracking-wider text-muted mb-0.5">
-                Completion Note
-              </p>
-              <p className="italic">{task.completionNotes}</p>
-            </div>
-          )}
-
-          {/* Cost Estimates */}
-          {(task.minEstimatedCost > 0 || task.maxEstimatedCost > 0) && (
-            <div className="flex items-center gap-1.5 text-charcoal font-medium">
-              <DollarSign className="w-3.5 h-3.5 text-forest" />
-              <span>
-                Planning estimate: ${task.minEstimatedCost.toLocaleString()} &ndash; ${task.maxEstimatedCost.toLocaleString()}
-              </span>
-            </div>
-          )}
-
-          {/* Contextual Resource Directory Link */}
-          {(() => {
-            const resourceLink = getMatchingResourceLink(task);
-            if (!resourceLink) return null;
-            return (
-              <div className="pt-0.5">
-                <Link
-                  href={resourceLink.href}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#1f4d45] hover:text-[#153c36] hover:underline transition-colors"
-                >
-                  <FileText className="w-3.5 h-3.5 text-[#3f6c5c]" />
-                  <span>{resourceLink.label} &rarr;</span>
-                </Link>
-              </div>
-            );
-          })()}
-
-          {/* Actions inside expansion */}
-          <div className="pt-2 flex items-center gap-3 flex-wrap">
-            {onAssign && members.length > 0 && (
-              <div className="inline-flex items-center gap-1.5">
-                <span className="text-muted">Assign to:</span>
-                <select
-                  value={task.assigneeId || ''}
-                  onChange={(e) => onAssign(task.id, e.target.value)}
-                  className="h-8 px-2 text-xs rounded-md border border-stone-line bg-surface text-charcoal focus:outline-none focus:ring-1 focus:ring-forest"
-                >
-                  <option value="">Unassigned</option>
-                  {members.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name} ({m.role})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {!isCompleted && !showNoteInput && onComplete && (
-              <button
-                type="button"
-                onClick={() => setShowNoteInput(true)}
-                className="text-forest hover:text-forest-deep underline underline-offset-2 font-medium text-xs ml-auto min-h-[36px] flex items-center"
-              >
-                Add completion note &rarr;
-              </button>
-            )}
-
-            {showNoteInput && (
-              <div className="w-full space-y-2 pt-2 border-t border-stone-line">
-                <input
-                  type="text"
-                  placeholder="e.g. Confirmed with Dr. Miller that rehab is recommended for 2 weeks."
-                  value={noteText}
-                  onChange={(e) => setNoteText(e.target.value)}
-                  className="w-full h-9 px-3 text-xs rounded-md border border-stone-line bg-surface text-charcoal focus:outline-none focus:ring-1 focus:ring-forest"
-                />
-                <div className="flex items-center justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowNoteInput(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="default"
-                    size="sm"
-                    onClick={handleCompleteWithNote}
-                  >
-                    Mark complete with note
-                  </Button>
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="mt-3 ml-7 sm:ml-10 pl-3 border-l-2 border-stone-line space-y-3 text-xs text-muted pt-1 pb-2">
+              {task.whyItMatters && (
+                <div>
+                  <p className="font-semibold text-charcoal mb-0.5 font-sans">Why this matters now</p>
+                  <p className="text-muted leading-relaxed">{task.whyItMatters}</p>
                 </div>
+              )}
+
+              {task.description && task.description !== task.whyItMatters && (
+                <div>
+                  <p className="font-semibold text-charcoal mb-0.5 font-sans">Guidance & Details</p>
+                  <p className="text-muted leading-relaxed">{task.description}</p>
+                </div>
+              )}
+
+              {/* Stronger Blocked / Prerequisites Explanation */}
+              {isBlocked && uncompletedPrereqs.length > 0 && (
+                <div className="p-3 rounded-lg border border-ochre-border bg-ochre-subtle text-xs space-y-1.5">
+                  <p className="font-semibold text-ochre-text flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 text-ochre shrink-0" />
+                    <span>Prerequisites must be completed before starting:</span>
+                  </p>
+                  <ul className="space-y-1 pl-5 list-disc text-charcoal">
+                    {uncompletedPrereqs.map((pt) => (
+                      <li key={pt.id}>
+                        <span className="font-medium">{pt.title}</span>{' '}
+                        <span className="text-muted">({pt.status.toLowerCase().replace('_', ' ')})</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Completed Prerequisites if all done */}
+              {!isBlocked && prereqTasks.length > 0 && (
+                <div className="space-y-1 text-xs text-muted">
+                  <p className="font-semibold text-charcoal flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-status-success shrink-0" />
+                    <span>Prerequisites fulfilled ({prereqTasks.length})</span>
+                  </p>
+                </div>
+              )}
+
+              {/* Completion Note */}
+              {task.completionNotes && (
+                <div className="p-2.5 rounded-md bg-stone-subtle text-charcoal">
+                  <p className="font-semibold text-[11px] uppercase tracking-wider text-muted mb-0.5">
+                    Completion Note
+                  </p>
+                  <p className="italic">{task.completionNotes}</p>
+                </div>
+              )}
+
+              {/* Cost Estimates */}
+              {(task.minEstimatedCost > 0 || task.maxEstimatedCost > 0) && (
+                <div className="flex items-center gap-1.5 text-charcoal font-medium">
+                  <DollarSign className="w-3.5 h-3.5 text-forest" />
+                  <span>
+                    Planning estimate: ${task.minEstimatedCost.toLocaleString()} &ndash; ${task.maxEstimatedCost.toLocaleString()}
+                  </span>
+                </div>
+              )}
+
+              {/* Contextual Resource Directory Link */}
+              {(() => {
+                const resourceLink = getMatchingResourceLink(task);
+                if (!resourceLink) return null;
+                return (
+                  <div className="pt-0.5">
+                    <Link
+                      href={resourceLink.href}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#1f4d45] hover:text-[#153c36] hover:underline transition-colors"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-[#3f6c5c]" />
+                      <span>{resourceLink.label} &rarr;</span>
+                    </Link>
+                  </div>
+                );
+              })()}
+
+              {/* Actions inside expansion */}
+              <div className="pt-2 flex items-center gap-3 flex-wrap">
+                {onAssign && members.length > 0 && (
+                  <div className="inline-flex items-center gap-1.5">
+                    <span className="text-muted">Assign to:</span>
+                    <select
+                      value={task.assigneeId || ''}
+                      onChange={(e) => onAssign(task.id, e.target.value)}
+                      className="h-8 px-2 text-xs rounded-md border border-stone-line bg-surface text-charcoal focus:outline-none focus:ring-1 focus:ring-forest"
+                    >
+                      <option value="">Unassigned</option>
+                      {members.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} ({m.role})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {!isCompleted && !showNoteInput && onComplete && (
+                  <button
+                    type="button"
+                    onClick={() => setShowNoteInput(true)}
+                    className="text-forest hover:text-forest-deep underline underline-offset-2 font-medium text-xs ml-auto min-h-[36px] flex items-center"
+                  >
+                    Add completion note &rarr;
+                  </button>
+                )}
+
+                {showNoteInput && (
+                  <div className="w-full space-y-2 pt-2 border-t border-stone-line">
+                    <input
+                      type="text"
+                      placeholder="e.g. Confirmed with Dr. Miller that rehab is recommended for 2 weeks."
+                      value={noteText}
+                      onChange={(e) => setNoteText(e.target.value)}
+                      className="w-full h-9 px-3 text-xs rounded-md border border-stone-line bg-surface text-charcoal focus:outline-none focus:ring-1 focus:ring-forest"
+                    />
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowNoteInput(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="default"
+                        size="sm"
+                        onClick={handleCompleteWithNote}
+                      >
+                        Mark complete with note
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </div>
-      )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

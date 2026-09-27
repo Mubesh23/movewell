@@ -1,6 +1,7 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import { AI_TOOLS_REGISTRY, ToolExecutionResult } from '../ai/tools';
 import { caseService } from './case-service';
+import { BRAND_NAME } from '../lib/brand';
 
 export interface ChatMessageTurn {
   role: 'user' | 'assistant';
@@ -60,7 +61,7 @@ export class AIOrchestrator {
           return prereqIds.map((id) => `"${taskTitleById.get(id) || id}"`).join(', ');
         };
 
-        const systemInstruction = `You are Nora, an empathetic senior transition coordinator for MoveWell.
+        const systemInstruction = `You are Nora, an empathetic senior transition coordinator for ${BRAND_NAME}.
 You are helping coordinate a post-hospital senior transition plan.
 
 === ACTIVE CASE CONTEXT ===
@@ -143,7 +144,7 @@ ${
    - Treat structured case context (Destination Status, Budget, Tasks, Cost & Quotes) as authoritative product truth. When asked about case state (e.g. "Where is Maria going after discharge?"), answer based on structured Destination Status ("${destStatusLabel}").
    - Distinguish between Family Available Budget and Vendor Quotes: A vendor quote (e.g. moving quote of $2,150) is an expense item for a service, NOT the family's total available transition budget ($${caseData?.budget ? caseData.budget.toLocaleString() : '8,000'}). Never overwrite or confuse total family budget with an individual vendor quote.
    - NEVER invent or fabricate verification, certification, NASMM membership, partnership, phone numbers, addresses, prices, or service offerings beyond what tool results or structured case state contain.
-   - NEVER use terms like "partner", "MoveWell partner", "our providers", or "certified" unless explicitly present in tool verification data. Use neutral terms ("resource", "provider", "directory listing", "verified listing", "local service").
+   - NEVER use terms like "partner", "${BRAND_NAME} partner", "our providers", or "certified" unless explicitly present in tool verification data. Use neutral terms ("resource", "provider", "directory listing", "verified listing", "local service").
    - Frame operational advice (how to talk with hospital staff) as general guidance ("A common next step is...", "You may want to ask..."). Do not present general advice as hospital-specific facts unless specified in case state.`;
 
         // Format conversation turns for Gemini API
@@ -190,7 +191,7 @@ ${
                   },
                   {
                     name: 'find_resources',
-                    description: 'Search for local senior transition services, Houston care options, housing, moving companies, storage, and community support resources in the MoveWell directory.',
+                    description: `Search for local senior transition services, Houston care options, housing, moving companies, storage, and community support resources in the ${BRAND_NAME} directory.`,
                     parameters: {
                       type: Type.OBJECT,
                       properties: {
@@ -319,7 +320,7 @@ ${
                         `PASS 2 SYNTHESIS RULES:\n` +
                         `- Treat tool results and structured case state as authoritative product truth.\n` +
                         `- Do not invent or fabricate verification, certification, NASMM status, partnership, phone numbers, addresses, prices, availability, insurance acceptance, or service capabilities.\n` +
-                        `- Do NOT use words like "partner", "MoveWell partner", "our providers", or "certified" unless explicitly stated in the tool results.\n` +
+                        `- Do NOT use words like "partner", "${BRAND_NAME} partner", "our providers", or "certified" unless explicitly stated in the tool results.\n` +
                         `- Clearly label general guidance as general guidance (e.g. "A common next step is...").\n` +
                         `- If a fact is unavailable, state neutrally what is available in the directory rather than filling it in.\n` +
                         `- Synthesize an empathetic, clear markdown response based strictly on conversation history, structured case state, and tool results.`,
@@ -371,7 +372,7 @@ ${
   public async processUserIntentLocal(caseId: string, prompt?: string): Promise<AIResponse> {
     return {
       message:
-        "I'm having trouble processing conversational requests right now. Your plan has not been changed. You can still manage tasks, family members, budget, and resources directly from MoveWell.",
+        `I'm having trouble processing conversational requests right now. Your plan has not been changed. You can still manage tasks, family members, budget, and resources directly from ${BRAND_NAME}.`,
       toolResults: [],
       suggestedNextAction: 'Review your transition plan tasks directly from the dashboard.',
     };

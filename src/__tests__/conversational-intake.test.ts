@@ -70,6 +70,8 @@ describe('Conversational Intake State Machine & Deterministic Readiness', () => 
         zipCode: '77004',
         hasLocalHelper: true,
         localHelperName: 'Jennifer',
+        userName: 'Sarah',
+        userRelationship: 'Daughter',
         userIsRemote: true,
       };
       const res = intakeReadinessService.evaluate(draft);
@@ -89,6 +91,8 @@ describe('Conversational Intake State Machine & Deterministic Readiness', () => 
         zipCode: '77004',
         hasLocalHelper: true,
         localHelperName: 'Jennifer',
+        userName: 'Sarah',
+        userRelationship: 'Daughter',
         userIsRemote: true,
         budgetStatus: 'UNSET',
       };
@@ -181,23 +185,38 @@ describe('Conversational Intake State Machine & Deterministic Readiness', () => 
 
       expect(t5Json.draft.localHelperName).toBe('Jennifer');
       expect(t5Json.draft.hasLocalHelper).toBe(true);
-      expect(t5Json.nextTargetField).toBe('BUDGET');
+      expect(t5Json.nextTargetField).toBe('COORDINATOR_NAME');
 
-      // Turn 6: User answers budget: leave it open
+      // Turn 6: User answers coordinator identity and relationship
       const t6Req = new NextRequest('http://localhost:3000/api/ai/intake', {
         method: 'POST',
         body: JSON.stringify({
-          message: 'Leave it open for now.',
+          message: "I'm Sarah, her daughter.",
           currentDraft: t5Json.draft,
         }),
       });
       const t6Res = await intakePost(t6Req);
       const t6Json = await t6Res.json();
 
-      expect(t6Json.draft.budgetStatus).toBe('UNSET');
-      expect(t6Json.draft.budget).toBeUndefined();
-      expect(t6Json.isReady).toBe(true);
-      expect(t6Json.nextAction).toBe('CREATE_PLAN');
+      expect(t6Json.draft.coordinatorName).toBe('Sarah');
+      expect(t6Json.draft.coordinatorRelationship).toBe('Daughter');
+      expect(t6Json.nextTargetField).toBe('BUDGET');
+
+      // Turn 7: User answers budget: leave it open
+      const t7Req = new NextRequest('http://localhost:3000/api/ai/intake', {
+        method: 'POST',
+        body: JSON.stringify({
+          message: 'Leave it open for now.',
+          currentDraft: t6Json.draft,
+        }),
+      });
+      const t7Res = await intakePost(t7Req);
+      const t7Json = await t7Res.json();
+
+      expect(t7Json.draft.budgetStatus).toBe('UNSET');
+      expect(t7Json.draft.budget).toBeUndefined();
+      expect(t7Json.isReady).toBe(true);
+      expect(t7Json.nextAction).toBe('CREATE_PLAN');
     });
   });
 

@@ -8,6 +8,14 @@ export class IntakeReadinessService {
   public evaluate(draft: IntakeDraft): IntakeReadinessResult {
     const missingRequiredFields: string[] = [];
 
+    // Do not invent or accept invalid verbs as senior names
+    const INVALID_NAMES = new Set([
+      'fell', 'had', 'is', 'was', 'has', 'went', 'broke', 'needs', 'lives', 'called', 'got', 'suffered'
+    ]);
+    if (draft.seniorName && INVALID_NAMES.has(draft.seniorName.trim().toLowerCase())) {
+      draft.seniorName = undefined;
+    }
+
     const hasSenior = Boolean(draft.seniorName && draft.seniorName.trim().length > 0);
     const hasDischarge = Boolean(
       draft.dischargeDate ||
@@ -30,20 +38,27 @@ export class IntakeReadinessService {
       (draft.city && draft.city.trim().length > 0)
     );
 
-    const hasCoordinator = Boolean(
-      draft.coordinatorName ||
-      draft.userName ||
-      draft.userIsRemote !== undefined
+    const hasCoordinatorIdentity = Boolean(
+      (draft.coordinatorName && draft.coordinatorName.trim().length > 0) ||
+      (draft.userName && draft.userName.trim().length > 0)
     );
+
+    const hasCoordinatorRelationship = Boolean(
+      (draft.coordinatorRelationship && draft.coordinatorRelationship.trim().length > 0) ||
+      (draft.userRelationship && draft.userRelationship.trim().length > 0)
+    );
+
+    const hasCoordinator = hasCoordinatorIdentity && hasCoordinatorRelationship;
 
     const hasCareCircle = Boolean(
       draft.careCircleAddressed ||
       (draft.draftMembers && draft.draftMembers.length > 0) ||
+      (draft.familyMembers && draft.familyMembers.length > 0) ||
       draft.hasLocalHelper !== undefined ||
       draft.localHelperName
     );
 
-    const hasBudgetStatus = draft.budget !== undefined || draft.budgetStatus === 'UNSET';
+    const hasBudgetStatus = draft.budget !== undefined || draft.budgetStatus === 'UNSET' || draft.budgetStatus === 'SET';
 
     if (!hasSenior) missingRequiredFields.push('senior reference or name');
     if (!hasDischarge) missingRequiredFields.push('discharge timing');
@@ -52,10 +67,11 @@ export class IntakeReadinessService {
     if (!hasLocation) missingRequiredFields.push('location or ZIP code');
     if (!hasCareCircle) missingRequiredFields.push('care circle or local support');
     if (!hasCoordinator) missingRequiredFields.push('family coordinator role');
+    if (!hasCoordinatorIdentity) missingRequiredFields.push('coordinator name');
+    if (!hasCoordinatorRelationship) missingRequiredFields.push('coordinator relationship');
     if (!hasBudgetStatus) missingRequiredFields.push('budget preference');
 
-    // Determine the single highest-value question to ask next in priority sequence:
-    // Timing → Timing Clarification → Mobility/Safety → Location → Care Circle → Coordinator → Budget
+    // Sequence: Timing → Timing Clarification → Mobility/Safety → Location → Care Circle → Coordinator Identity → Coordinator Relationship → Budget
     let nextTargetField: IntakeTargetField = 'NONE';
     if (!hasDischarge) {
       nextTargetField = 'DISCHARGE_TIMING';
@@ -67,31 +83,26 @@ export class IntakeReadinessService {
       nextTargetField = 'LOCATION';
     } else if (!hasCareCircle) {
       nextTargetField = 'LOCAL_SUPPORT';
-    } else if (!hasCoordinator) {
+    } else if (!hasCoordinatorIdentity) {
       nextTargetField = 'COORDINATOR_NAME';
+    } else if (!hasCoordinatorRelationship) {
+      nextTargetField = 'COORDINATOR_RELATIONSHIP';
     } else if (!hasBudgetStatus) {
       nextTargetField = 'BUDGET';
     } else {
       nextTargetField = 'NONE';
     }
 
-    // Minimum viable threshold: senior, discharge (not needing clarification), mobility, location, care circle, coordinator, and budget
+    // Minimum viable threshold: senior, discharge, mobility, location, care circle, coordinator (identity + relationship), and budget
     const isReady =
       hasSenior &&
       hasDischarge &&
       !needsTimingClarification &&
       hasMobilityOrSafety &&
       hasLocation &&
+      hasCareCircle &&
       hasCoordinator &&
       hasBudgetStatus;
-
-    // Build concise, human confirmation bullet points
-    const INVALID_NAMES = new Set([
-      'fell', 'had', 'is', 'was', 'has', 'went', 'broke', 'needs', 'lives', 'called', 'got', 'suffered'
-    ]);
-    if (draft.seniorName && INVALID_NAMES.has(draft.seniorName.trim().toLowerCase())) {
-      draft.seniorName = 'Mom';
-    }
 
     const summaryBulletPoints: string[] = [];
     const seniorLabel = draft.seniorName || 'Family member';

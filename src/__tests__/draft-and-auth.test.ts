@@ -27,6 +27,7 @@ describe('Draft Proposal, Idempotent Activation & Auth Boundaries', () => {
         userName: 'Michael',
         userRelationship: 'Son',
         userIsRemote: true,
+        careCircleAddressed: true,
         budgetStatus: 'UNSET',
       };
 
@@ -66,6 +67,8 @@ describe('Draft Proposal, Idempotent Activation & Auth Boundaries', () => {
           mobilityConstraint: true,
           zipCode: '77004',
           userName: 'Michael',
+          userRelationship: 'Son',
+          careCircleAddressed: true,
           budgetStatus: 'UNSET',
         },
         'usr-michael-123'
@@ -111,6 +114,8 @@ describe('Draft Proposal, Idempotent Activation & Auth Boundaries', () => {
           stairsConstraint: true,
           zipCode: '77004',
           userName: 'David',
+          userRelationship: 'Son',
+          careCircleAddressed: true,
           budget: 5000,
           budgetStatus: 'SET',
         },
@@ -178,6 +183,8 @@ describe('Draft Proposal, Idempotent Activation & Auth Boundaries', () => {
           mobilityConstraint: false,
           zipCode: '77004',
           userName: 'Alice',
+          userRelationship: 'Daughter',
+          careCircleAddressed: true,
           budgetStatus: 'UNSET',
         },
         'usr-alice-real-owner'
@@ -223,6 +230,8 @@ describe('Draft Proposal, Idempotent Activation & Auth Boundaries', () => {
           mobilityConstraint: false,
           zipCode: '77004',
           userName: 'Alice',
+          userRelationship: 'Daughter',
+          careCircleAddressed: true,
           budgetStatus: 'UNSET',
         },
         'usr-alice-real-owner'
@@ -271,7 +280,7 @@ describe('Draft Proposal, Idempotent Activation & Auth Boundaries', () => {
 
       expect(candidates.length).toBeGreaterThan(0);
       candidates.forEach((c) => {
-        expect(['MoveWell-reviewed', 'Public agency', 'Directory listing', 'Nearby option']).toContain(
+        expect(['Bridgewell-reviewed', 'Public agency', 'Directory listing', 'Nearby option']).toContain(
           c.trustLabel
         );
         expect(c.trustLabel).not.toBe('Certified');

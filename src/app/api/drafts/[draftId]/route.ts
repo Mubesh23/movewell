@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { draftService } from '@/services/draft-service';
-import { getSessionUserId } from '@/lib/auth-helper';
+import { requireDraftAccess } from '@/lib/auth-guards';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -11,16 +11,16 @@ export async function GET(
 ) {
   try {
     const { draftId } = await params;
-    const draft = await draftService.getDraft(draftId);
+    const access = await requireDraftAccess(req, draftId);
 
-    if (!draft) {
+    if (!access.authorized || !access.draft) {
       return NextResponse.json(
-        { success: false, error: 'Draft not found' },
-        { status: 404 }
+        { success: false, error: access.error || 'Access denied' },
+        { status: access.status }
       );
     }
 
-    return NextResponse.json({ success: true, draft });
+    return NextResponse.json({ success: true, draft: access.draft });
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to fetch draft' },
@@ -35,10 +35,17 @@ export async function PATCH(
 ) {
   try {
     const { draftId } = await params;
-    const body = await req.json();
-    const userId = await getSessionUserId(req);
+    const access = await requireDraftAccess(req, draftId);
 
-    const updated = await draftService.updateDraft(draftId, body, userId);
+    if (!access.authorized) {
+      return NextResponse.json(
+        { success: false, error: access.error || 'Access denied' },
+        { status: access.status }
+      );
+    }
+
+    const body = await req.json();
+    const updated = await draftService.updateDraft(draftId, body, access.userId);
 
     return NextResponse.json({
       success: true,

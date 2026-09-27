@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { draftService } from '@/services/draft-service';
-import { getSessionUserId } from '@/lib/auth-helper';
+import { draftService, IntakeNotReadyError } from '@/services/draft-service';
+import { getSessionUserId, SESSION_COOKIE_NAME, LEGACY_COOKIE_NAME } from '@/lib/auth-helper';
 import { IntakeDraft } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -14,15 +14,26 @@ export async function POST(req: NextRequest) {
 
     const draft = await draftService.createDraftFromIntake(intakeDraft, userId);
 
-    const response = NextResponse.json({
-      success: true,
-      draftId: draft.id,
-      draft,
-    }, { status: 201 });
+    const response = NextResponse.json(
+      {
+        success: true,
+        draftId: draft.id,
+        draft,
+      },
+      { status: 201 }
+    );
 
-    // Set cookie if not already present
-    if (!req.cookies.get('movewell_user_id')) {
-      response.cookies.set('movewell_user_id', userId, {
+    // Set cookies if not already present
+    if (!req.cookies.get(SESSION_COOKIE_NAME)) {
+      response.cookies.set(SESSION_COOKIE_NAME, userId, {
+        path: '/',
+        httpOnly: false,
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 30, // 30 days
+      });
+    }
+    if (!req.cookies.get(LEGACY_COOKIE_NAME)) {
+      response.cookies.set(LEGACY_COOKIE_NAME, userId, {
         path: '/',
         httpOnly: false,
         sameSite: 'lax',
@@ -32,6 +43,17 @@ export async function POST(req: NextRequest) {
 
     return response;
   } catch (error: any) {
+    if (error instanceof IntakeNotReadyError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+          missingRequiredFields: error.missingRequiredFields,
+        },
+        { status: 400 }
+      );
+    }
+
     console.error('Error generating draft:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to generate plan proposal' },

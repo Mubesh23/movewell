@@ -57,6 +57,46 @@ describe('Temporal Reasoning, Coordinator Identity & Family Network Coordination
       expect(res?.time).toBe('14:00');
       expect(res?.precision).toBe('EXACT');
     });
+
+    it('resolves today as 0 days from reference', () => {
+      const res = resolveTemporalExpression('she is being released today', refDate);
+      expect(res).not.toBeNull();
+      expect(res?.date).toBe('2026-09-30');
+      expect(res?.daysFromReference).toBe(0);
+      expect(res?.precision).toBe('DAY');
+    });
+
+    it('resolves relative "in 5 days" accurately from reference date', () => {
+      const res = resolveTemporalExpression('discharge in 5 days', refDate);
+      expect(res).not.toBeNull();
+      expect(res?.date).toBe('2026-10-05');
+      expect(res?.daysFromReference).toBe(5);
+      expect(res?.precision).toBe('DAY');
+    });
+
+    it('resolves Friday afternoon with both date and afternoon time band', () => {
+      const res = resolveTemporalExpression('leaving Friday afternoon', refDate);
+      expect(res).not.toBeNull();
+      expect(res?.date).toBe('2026-10-02');
+      expect(res?.time).toBe('Afternoon (~2:00 PM)');
+      expect(res?.precision).toBe('EXACT');
+    });
+
+    it('resolves end-of-day deadline to 17:00', () => {
+      const res = resolveTemporalExpression('by eod tomorrow', refDate);
+      expect(res).not.toBeNull();
+      expect(res?.date).toBe('2026-10-01');
+      expect(res?.time).toBe('17:00');
+      expect(res?.precision).toBe('EXACT');
+    });
+
+    it('recognizes flexible or uncertain timing without guessing arbitrary dates', () => {
+      const res = resolveTemporalExpression('discharge is flexible, not sure yet', refDate);
+      expect(res).not.toBeNull();
+      expect(res?.precision).toBe('UNKNOWN');
+      expect(res?.date).toBeUndefined();
+      expect(res?.description).toBe('Timeline flexible');
+    });
   });
 
   describe('Coordinator Identity & Care Circle in Intake', () => {
@@ -123,6 +163,8 @@ describe('Temporal Reasoning, Coordinator Identity & Family Network Coordination
           userRelationship: 'Son',
           localHelperName: 'Jennifer',
           dischargeDays: 3,
+          mobilityConstraint: true,
+          zipCode: '77004',
           budgetStatus: 'UNSET',
         },
         'user-test-coord-1'
@@ -131,6 +173,10 @@ describe('Temporal Reasoning, Coordinator Identity & Family Network Coordination
       const params = Promise.resolve({ draftId: draft.id });
       const req = new NextRequest(`http://localhost:3000/api/drafts/${draft.id}/chat`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': 'user-test-coord-1',
+        },
         body: JSON.stringify({
           message: 'We actually have a $12,000 budget.',
         }),
@@ -156,6 +202,9 @@ describe('Temporal Reasoning, Coordinator Identity & Family Network Coordination
           userRelationship: 'Son',
           localHelperName: 'Jennifer',
           dischargeDays: 3,
+          mobilityConstraint: true,
+          zipCode: '77004',
+          budgetStatus: 'UNSET',
         },
         'user-test-coord-2'
       );
@@ -164,6 +213,10 @@ describe('Temporal Reasoning, Coordinator Identity & Family Network Coordination
       // Ask Nora to assign local tasks to Jennifer
       const req1 = new NextRequest(`http://localhost:3000/api/drafts/${draft.id}/chat`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': 'user-test-coord-2',
+        },
         body: JSON.stringify({
           message: 'Have Jennifer handle everything that needs someone local.',
         }),
@@ -181,6 +234,10 @@ describe('Temporal Reasoning, Coordinator Identity & Family Network Coordination
       // Now apply changes
       const req2 = new NextRequest(`http://localhost:3000/api/drafts/${draft.id}/chat`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': 'user-test-coord-2',
+        },
         body: JSON.stringify({
           action: 'APPLY_CHANGES',
           pendingChanges: json1.pendingChanges,
@@ -202,6 +259,8 @@ describe('Temporal Reasoning, Coordinator Identity & Family Network Coordination
           seniorName: 'Robert',
           coordinatorName: 'Mubesh',
           coordinatorRelationship: 'Son',
+          mobilityConstraint: true,
+          zipCode: '77004',
           familyMembers: [
             {
               id: 'fm-1',
@@ -261,7 +320,12 @@ describe('Temporal Reasoning, Coordinator Identity & Family Network Coordination
       // Test Resend invite endpoint
       const resendReq = new NextRequest(
         `http://localhost:3000/api/cases/${activation.caseId}/members/${newMember.id}/resend-invite`,
-        { method: 'POST' }
+        {
+          method: 'POST',
+          headers: {
+            'x-user-id': 'user-test-coord-3',
+          },
+        }
       );
       const resendRes = await resendInvitePost(resendReq, {
         params: { caseId: activation.caseId, memberId: newMember.id },
@@ -280,7 +344,12 @@ describe('Temporal Reasoning, Coordinator Identity & Family Network Coordination
         {
           seniorName: 'Margaret',
           coordinatorName: 'Mubesh',
+          coordinatorRelationship: 'Son',
+          careCircleAddressed: true,
+          mobilityConstraint: false,
+          zipCode: '77004',
           dischargeDays: 5,
+          budgetStatus: 'UNSET',
         },
         'user-test-coord-4'
       );

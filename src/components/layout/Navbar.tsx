@@ -160,7 +160,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     className="w-8 h-8 rounded-full bg-evergreen text-white font-bold text-xs flex items-center justify-center hover:opacity-90 transition-opacity"
                     title="Account"
                   >
-                    ML
+                    FM
                   </button>
                 </>
               ) : draftId ? (

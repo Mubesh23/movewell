@@ -3,6 +3,8 @@ import { planningEngine } from './planning-engine';
 import { resourceService } from './resource-service';
 import { eventService } from './event-service';
 import { emailService } from './email-service';
+import { invitationService } from './invitation-service';
+import { intakeReadinessService } from './intake-readiness';
 import {
   IntakeDraft,
   PlanDraft,
@@ -18,6 +20,15 @@ import {
   formatLocalDateYYYYMMDD,
 } from '../types';
 
+export class IntakeNotReadyError extends Error {
+  public missingRequiredFields: string[];
+  constructor(message: string, missingRequiredFields: string[]) {
+    super(message);
+    this.name = 'IntakeNotReadyError';
+    this.missingRequiredFields = missingRequiredFields;
+  }
+}
+
 export class DraftService {
   /**
    * Generates a structured PlanDraft proposal from an intake draft.
@@ -27,26 +38,28 @@ export class DraftService {
     intakeDraft: IntakeDraft,
     ownerUserId: string
   ): Promise<PlanDraft> {
+    // 1. Enforce strict readiness validation
+    const readiness = intakeReadinessService.evaluate(intakeDraft);
+    if (!readiness.isReady) {
+      throw new IntakeNotReadyError(
+        `Intake is not ready to generate plan proposal: missing ${readiness.missingRequiredFields.join(', ')}`,
+        readiness.missingRequiredFields
+      );
+    }
+
     const draftId = 'draft-' + Math.random().toString(36).substring(2, 9);
     const now = new Date();
 
-    // Calculate discharge date
-    let dischargeDateStr: string;
-    if (intakeDraft.dischargeDate) {
-      dischargeDateStr = intakeDraft.dischargeDate;
-    } else {
-      const days = intakeDraft.dischargeDays && intakeDraft.dischargeDays > 0 ? intakeDraft.dischargeDays : 5;
+    // 2. Resolve discharge date without silent artificial fallbacks
+    let dischargeDateStr: string | undefined = intakeDraft.dischargeDate;
+    if (!dischargeDateStr && intakeDraft.dischargeDays && intakeDraft.dischargeDays > 0) {
       const d = new Date(now);
-      d.setDate(d.getDate() + days);
+      d.setDate(d.getDate() + intakeDraft.dischargeDays);
       dischargeDateStr = formatLocalDateYYYYMMDD(d);
     }
 
-    const targetDate = new Date(now);
-    targetDate.setDate(targetDate.getDate() + 12);
-    const targetDateStr = formatLocalDateYYYYMMDD(targetDate);
-
-    const coordinatorName = intakeDraft.coordinatorName || intakeDraft.userName || 'You';
-    const coordinatorRel = intakeDraft.coordinatorRelationship || intakeDraft.userRelationship || 'Primary Coordinator';
+    const coordinatorName = intakeDraft.coordinatorName || intakeDraft.userName || 'Family Coordinator';
+    const coordinatorRel = intakeDraft.coordinatorRelationship || intakeDraft.userRelationship || 'Family Support';
     const homeType = intakeDraft.homeType || (intakeDraft.stairsConstraint ? 'Two-story house' : 'Single-story house');
 
     // Build proposed members
@@ -77,9 +90,9 @@ export class DraftService {
             role: dm.role || 'FAMILY',
             email: dm.email,
             phone: dm.phone,
-            invitation: dm.inviteRequested
+            invitation: (dm.inviteRequested || dm.invitationRequested) && dm.email
               ? {
-                  channel: dm.inviteChannel || 'SMS',
+                  channel: 'EMAIL',
                   email: dm.email,
                   phone: dm.phone,
                   status: 'DRAFT',
@@ -137,7 +150,7 @@ export class DraftService {
       id: 'loc-' + Math.random().toString(36).substring(2, 9),
       planDraftId: draftId,
       type: 'HOME',
-      label: `${intakeDraft.seniorName || 'Mom'}'s Home`,
+      label: intakeDraft.seniorName ? `${intakeDraft.seniorName}'s Home` : 'Primary Residence',
       city: intakeDraft.city,
       zipCode: intakeDraft.zipCode && intakeDraft.zipCode !== 'UNSET' ? intakeDraft.zipCode : undefined,
       createdAt: now.toISOString(),
@@ -157,9 +170,9 @@ export class DraftService {
       id: draftId,
       ownerUserId,
       seniorProfile: {
-        name: intakeDraft.seniorName || 'Mom',
+        name: intakeDraft.seniorName || 'Family Member',
         ageRange: intakeDraft.ageRange,
-        livesAlone: intakeDraft.livesAlone ?? true,
+        livesAlone: intakeDraft.livesAlone,
         mobilityConstraint: Boolean(intakeDraft.mobilityConstraint),
         stairsConstraint: Boolean(intakeDraft.stairsConstraint),
         homeType: intakeDraft.homeType,
@@ -167,7 +180,9 @@ export class DraftService {
       dischargeTiming: {
         date: dischargeDateStr,
         days: intakeDraft.dischargeDays,
+        time: intakeDraft.dischargeTime,
         description: intakeDraft.dischargeTimelineDescription,
+        precision: intakeDraft.dischargePrecision,
       },
       proposedTasks,
       proposedMembers,
@@ -207,17 +222,33 @@ export class DraftService {
       throw new Error(`Draft ${draftId} not found`);
     }
 
-    // Allow owner or linking if updating
+    // Strict ownership verification: requester must be the draft owner
     if (draft.ownerUserId !== userId) {
-      // If user was anonymous and is now claiming the draft, allow reassigning owner
-      if (draft.ownerUserId.startsWith('anon-') || draft.ownerUserId === 'anonymous') {
-        updates.ownerUserId = userId;
-      } else {
-        throw new Error('Unauthorized to modify this draft');
-      }
+      throw new Error('Unauthorized to modify this draft');
     }
 
     return repository.updatePlanDraft(draftId, updates);
+  }
+
+  /**
+   * Safely links/transfers an anonymous draft to an authenticated user,
+   * requiring proof of possession of the current session token.
+   */
+  public async claimDraft(
+    draftId: string,
+    currentSessionToken: string,
+    authenticatedUserId: string
+  ): Promise<PlanDraft> {
+    const draft = await repository.getPlanDraftById(draftId);
+    if (!draft) {
+      throw new Error(`Draft ${draftId} not found`);
+    }
+
+    if (draft.ownerUserId !== currentSessionToken) {
+      throw new Error('Unauthorized: cannot claim draft without possessing current draft session token');
+    }
+
+    return repository.updatePlanDraft(draftId, { ownerUserId: authenticatedUserId });
   }
 
   /**
@@ -238,13 +269,9 @@ export class DraftService {
       return { success: true, caseId: draft.caseId };
     }
 
-    // 2. Ownership check or claim
+    // 2. Strict ownership check
     if (draft.ownerUserId !== userId) {
-      if (draft.ownerUserId.startsWith('anon-') || draft.ownerUserId === 'anonymous') {
-        draft.ownerUserId = userId;
-      } else {
-        throw new Error('Unauthorized to activate this draft');
-      }
+      throw new Error('Unauthorized to activate this draft');
     }
 
     const now = new Date();
@@ -394,24 +421,19 @@ export class DraftService {
       budget: caseData.budget,
     });
 
-    // 8b. Dispatch email invitations for staged collaborators
+    // 8b. Dispatch email invitations for staged collaborators using secure tokenized invitations
     const ownerMember = createdMembers.find((m) => m.role === 'OWNER') || createdMembers[0];
     for (const member of createdMembers) {
       if (member.invitationStatus === 'PENDING' && member.email) {
-        await emailService.sendCareCircleInvite({
-          toEmail: member.email,
+        await invitationService.createAndSendInvitation({
+          caseId,
+          memberId: member.id,
+          email: member.email,
           recipientName: member.name,
           inviterName: ownerMember?.name || 'Family Coordinator',
           seniorName: seniorProfile.name,
-          caseId,
           role: member.role,
           relationship: member.relationship,
-        });
-        await eventService.recordEvent(caseId, 'CASE_MEMBER_INVITED', {
-          memberId: member.id,
-          name: member.name,
-          email: member.email,
-          channel: 'EMAIL',
         });
       }
     }

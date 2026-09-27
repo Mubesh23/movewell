@@ -26,6 +26,10 @@ module.exports = {
           DEFAULT: '#B96C2C',
           bg: '#FFF1E3',
           dot: '#E9A460',
+          50: '#FDF8EE',
+          100: '#FBF0D9',
+          500: '#C8923F',
+          600: '#B07B2D',
         },
         avatar: {
           peach: '#E5CDBD',
@@ -122,12 +126,6 @@ module.exports = {
           100: '#FBE4D8',
           500: '#C86F4A',
           600: '#B55E3A',
-        },
-        amber: {
-          50: '#FDF8EE',
-          100: '#FBF0D9',
-          500: '#C8923F',
-          600: '#B07B2D',
         },
       },
       fontFamily: {

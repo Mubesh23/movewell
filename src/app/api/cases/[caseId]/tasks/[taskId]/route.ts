@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { taskService } from '@/services/task-service';
 import { caseService } from '@/services/case-service';
+import { requireCaseAccess } from '@/lib/auth-guards';
 import { TaskAction } from '@/types';
 
 export async function PATCH(
@@ -8,18 +9,27 @@ export async function PATCH(
   { params }: { params: { caseId: string; taskId: string } }
 ) {
   try {
+    const access = await requireCaseAccess(req, params.caseId);
+    if (!access.authorized) {
+      return NextResponse.json(
+        { success: false, error: access.error || 'Access denied' },
+        { status: access.status }
+      );
+    }
+
     const body = await req.json();
-    const action = body.action as TaskAction;
+    const action = (body.action || (body.status === 'COMPLETED' ? 'COMPLETE' : body.status === 'READY' ? 'REOPEN' : undefined)) as TaskAction;
     const { assigneeId, memberId, assigneeName, actorName, note, completionNotes, dueDate } = body;
+    const effectiveActorName = actorName || access.currentMember?.name || (access.role === 'OWNER' ? 'Family Coordinator' : 'Care Circle Member');
 
     if (action === 'COMPLETE') {
       const noteToSave = note || completionNotes;
-      const updated = await taskService.completeTask(params.taskId, actorName || 'Family Coordinator', params.caseId, noteToSave);
+      const updated = await taskService.completeTask(params.taskId, effectiveActorName, params.caseId, noteToSave);
       return NextResponse.json({ success: true, data: updated });
     }
 
     if (action === 'REOPEN') {
-      const updated = await taskService.reopenTask(params.taskId, actorName || 'Family Coordinator', params.caseId);
+      const updated = await taskService.reopenTask(params.taskId, effectiveActorName, params.caseId);
       return NextResponse.json({ success: true, data: updated });
     }
 
@@ -44,7 +54,7 @@ export async function PATCH(
         params.taskId,
         body.dueDate,
         params.caseId,
-        actorName || 'Family Coordinator'
+        effectiveActorName
       );
       return NextResponse.json({ success: true, data: updated });
     }

@@ -5,6 +5,7 @@ import { Upload, FileText, CheckCircle2, AlertCircle, Sparkles, ArrowRight, File
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
 import { Badge } from '@/components/ui/Badge';
+import { BRAND_NAME } from '@/lib/brand';
 
 interface QuoteUploaderProps {
   caseId: string;
@@ -174,7 +175,7 @@ export function QuoteUploader({ caseId, currentBudget, onBudgetUpdated }: QuoteU
                   Demonstration Quote: Caring Transitions of Greater Houston
                 </p>
                 <p className="text-xs text-muted mt-1 leading-relaxed">
-                  Test how MoveWell extracts rightsizing, packing, transport, and supplies itemizations ($2,150) and replaces the estimated moving range ($1,200–$2,400).
+                  Test how {BRAND_NAME} extracts rightsizing, packing, transport, and supplies itemizations ($2,150) and replaces the estimated moving range ($1,200–$2,400).
                 </p>
               </div>
 

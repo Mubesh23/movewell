@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI, Type } from '@google/genai';
 import { draftService } from '@/services/draft-service';
-import { getSessionUserId } from '@/lib/auth-helper';
+import { requireDraftAccess } from '@/lib/auth-guards';
 import { PlanDraft, ProposedTask, PlanChangeDiff } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -26,15 +26,18 @@ export async function POST(
 ) {
   try {
     const { draftId } = await params;
-    const body: DraftChatRequestBody = await req.json();
-    const sessionUserId = await getSessionUserId(req);
+    const access = await requireDraftAccess(req, draftId);
 
-    const draft = await draftService.getDraft(draftId);
-    if (!draft) {
-      return NextResponse.json({ success: false, error: 'Draft not found' }, { status: 404 });
+    if (!access.authorized || !access.draft) {
+      return NextResponse.json(
+        { success: false, error: access.error || 'Access denied' },
+        { status: access.status }
+      );
     }
 
-    const userId = (sessionUserId && !sessionUserId.startsWith('anon-')) ? sessionUserId : draft.ownerUserId;
+    const draft = access.draft;
+    const userId = access.userId;
+    const body: DraftChatRequestBody = await req.json();
 
     // Handle user confirmation of previewed changes
     if (body.action === 'APPLY_CHANGES' && body.pendingChanges && body.pendingChanges.length > 0) {

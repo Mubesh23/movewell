@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { planningEngine } from '@/services/planning-engine';
 import { TransitionCase, SeniorProfile, CaseMember, formatLocalDateYYYYMMDD, CasePreset } from '@/types';
+import { BRAND_NAME } from '@/lib/brand';
 
 export async function POST(req: NextRequest) {
   try {
@@ -84,7 +85,7 @@ export async function POST(req: NextRequest) {
     const transitionType = body.transitionType || 'POST_HOSPITAL';
     if (transitionType !== 'POST_HOSPITAL') {
       return NextResponse.json(
-        { success: false, error: `Unsupported transition type: ${transitionType}. MoveWell currently supports POST_HOSPITAL transitions.` },
+        { success: false, error: `Unsupported transition type: ${transitionType}. ${BRAND_NAME} currently supports POST_HOSPITAL transitions.` },
         { status: 400 }
       );
     }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { repository } from '@/db/repository';
 import { eventService } from '@/services/event-service';
+import { requireCaseAccess } from '@/lib/auth-guards';
 import { CostItem } from '@/types';
 
 export async function POST(
@@ -8,6 +9,14 @@ export async function POST(
   { params }: { params: { caseId: string } }
 ) {
   try {
+    const access = await requireCaseAccess(req, params.caseId);
+    if (!access.authorized) {
+      return NextResponse.json(
+        { success: false, error: access.error || 'Access denied' },
+        { status: access.status }
+      );
+    }
+
     const { quote, documentName } = await req.json();
 
     if (!quote || !quote.totalAmount || !quote.providerName) {
@@ -38,30 +47,15 @@ export async function POST(
       'QUOTE_APPLIED',
       {
         costItemId: costItem.id,
-        providerName: quote.providerName,
-        amount: quote.totalAmount,
-        category: 'moving',
-        appliedBy: 'Sarah',
+        amount: costItem.amount,
+        providerName: costItem.providerName,
+        category: costItem.category,
       },
-      'USER'
+      'USER',
+      access.userId
     );
 
     return NextResponse.json({ success: true, data: costItem });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
-  }
-}
-
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { caseId: string } }
-) {
-  try {
-    const costItems = await repository.getCostItemsByCaseId(params.caseId);
-    return NextResponse.json({ success: true, data: costItems });
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message },

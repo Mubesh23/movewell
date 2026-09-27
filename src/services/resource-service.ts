@@ -30,7 +30,7 @@ export class CuratedDirectoryResourceProvider implements ResourceSearchProvider 
       ) {
         trustLabel = 'Nonprofit';
       } else if (s.verification?.verificationStatus?.toLowerCase().includes('verified')) {
-        trustLabel = 'MoveWell-reviewed';
+        trustLabel = 'Bridgewell-reviewed';
       } else if (s.organizationName) {
         trustLabel = 'Directory listing';
       }
@@ -51,12 +51,12 @@ export class CuratedDirectoryResourceProvider implements ResourceSearchProvider 
       };
     });
 
-    // Rank: 1. Public agency / Nonprofit / Free help -> 2. MoveWell-reviewed -> 3. Directory listing -> 4. Nearby option
+    // Rank: 1. Public agency / Nonprofit / Free help -> 2. Bridgewell-reviewed -> 3. Directory listing -> 4. Nearby option
     const rankScore = (r: ResourceCandidate) => {
       if (r.trustLabel === 'Public agency' || r.trustLabel === 'Nonprofit' || r.costType === 'free_public_service') {
         return 1;
       }
-      if (r.trustLabel === 'MoveWell-reviewed') {
+      if (r.trustLabel === 'Bridgewell-reviewed') {
         return 2;
       }
       if (r.trustLabel === 'Directory listing') {

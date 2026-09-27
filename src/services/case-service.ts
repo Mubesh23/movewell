@@ -3,6 +3,7 @@ import { costEngine } from './cost-engine';
 import { taskService } from './task-service';
 import { eventService } from './event-service';
 import { emailService } from './email-service';
+import { invitationService } from './invitation-service';
 import { pulseAndChangeService } from './pulse-and-change-service';
 import { CaseMember, CaseOverview } from '../types';
 
@@ -123,15 +124,24 @@ export class CaseService {
       const allMembers = await repository.getCaseMembers(caseId);
       const owner = allMembers.find((m) => m.role === 'OWNER') || { name: 'Family Coordinator' };
 
-      await emailService.sendCareCircleInvite({
-        toEmail: saved.email,
+      const invRes = await invitationService.createAndSendInvitation({
+        caseId,
+        memberId: saved.id,
+        email: saved.email,
         recipientName: saved.name,
         inviterName: owner.name,
         seniorName: senior?.name || 'your loved one',
-        caseId,
         role: saved.role,
         relationship: saved.relationship,
       });
+
+      return {
+        ...saved,
+        invitation: {
+          rawToken: invRes.rawToken,
+          inviteUrl: invRes.inviteUrl,
+        },
+      } as any;
     }
     return saved;
   }

@@ -174,7 +174,7 @@ export interface TransitionCase {
 }
 
 export interface StagedInvitation {
-  channel: 'EMAIL' | 'SMS';
+  channel: 'EMAIL';
   email?: string;
   phone?: string;
   status: 'DRAFT' | 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED';
@@ -191,7 +191,7 @@ export interface IntakeFamilyMember {
   email?: string;
   phone?: string;
   invite?: {
-    channel: 'EMAIL' | 'SMS';
+    channel: 'EMAIL';
     contact: string;
   };
 }
@@ -205,7 +205,8 @@ export interface DraftMember {
   isLocal?: boolean;
   availability?: string;
   inviteRequested?: boolean;
-  inviteChannel?: 'EMAIL' | 'SMS';
+  invitationRequested?: boolean;
+  inviteChannel?: 'EMAIL';
   email?: string;
   phone?: string;
 }
@@ -294,7 +295,7 @@ export interface SeniorProfile {
   caseId: string;
   name: string;
   ageRange?: string;
-  livesAlone: boolean;
+  livesAlone?: boolean;
   mobilityConstraint: boolean;
   stairsConstraint: boolean;
   immediateSafetyConcern: boolean;
@@ -317,7 +318,7 @@ export interface CaseMember {
   email?: string;
   phone?: string;
   invitationStatus?: 'NONE' | 'DRAFT' | 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED';
-  invitationChannel?: 'EMAIL' | 'SMS';
+  invitationChannel?: 'EMAIL';
   createdAt?: string;
   updatedAt?: string;
 }
@@ -348,6 +349,18 @@ export interface TaskDependency {
   dependsOnTaskId: string;
 }
 
+export interface CaseInvitation {
+  id: string;
+  caseId: string;
+  memberId: string;
+  email: string;
+  tokenHash: string;
+  status: 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'REVOKED';
+  expiresAt: string;
+  createdAt: string;
+  acceptedAt?: string;
+}
+
 export type CaseEventType =
   | 'CASE_CREATED'
   | 'PLAN_GENERATED'
@@ -359,6 +372,7 @@ export type CaseEventType =
   | 'PLAN_REGENERATED'
   | 'CASE_MEMBER_ADDED'
   | 'CASE_MEMBER_INVITED'
+  | 'CASE_MEMBER_ACCEPTED'
   | 'CASE_MEMBER_REMOVED'
   | 'DESTINATION_CONFIRMED'
   | 'QUOTE_EXTRACTED'
@@ -543,7 +557,7 @@ export interface PlanDraft {
   seniorProfile: {
     name: string;
     ageRange?: string;
-    livesAlone: boolean;
+    livesAlone?: boolean;
     mobilityConstraint: boolean;
     stairsConstraint: boolean;
     homeType?: string;
@@ -551,7 +565,10 @@ export interface PlanDraft {
   dischargeTiming?: {
     date?: string;
     days?: number;
+    time?: string;
+    timezone?: string;
     description?: string;
+    precision?: 'EXACT' | 'DAY' | 'RANGE' | 'APPROXIMATE' | 'UNKNOWN';
   };
   proposedTasks: ProposedTask[];
   proposedMembers: ProposedMember[];
@@ -569,7 +586,7 @@ export interface PlanDraft {
 export type ResourceTrustLabel =
   | 'Public agency'
   | 'Nonprofit'
-  | 'MoveWell-reviewed'
+  | 'Bridgewell-reviewed'
   | 'Directory listing'
   | 'Nearby option'
   | 'External listing';

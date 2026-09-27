@@ -1,0 +1,124 @@
+-- Migration: 20260927000002_enable_rls_and_invitations.sql
+-- 1. Create case_invitations table for high-entropy single-use invitation tokens
+-- 2. Enable Row Level Security (RLS) across all private and case-related tables
+
+-- 1. Case Invitations Table
+CREATE TABLE IF NOT EXISTS case_invitations (
+  id TEXT PRIMARY KEY,
+  case_id TEXT NOT NULL REFERENCES transition_cases(id) ON DELETE CASCADE,
+  member_id TEXT NOT NULL REFERENCES case_members(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  token_hash TEXT NOT NULL UNIQUE,
+  status TEXT NOT NULL DEFAULT 'PENDING'
+    CHECK (status IN ('PENDING', 'ACCEPTED', 'EXPIRED', 'REVOKED')),
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  accepted_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_case_invitations_token_hash ON case_invitations(token_hash);
+CREATE INDEX IF NOT EXISTS idx_case_invitations_case_id ON case_invitations(case_id);
+CREATE INDEX IF NOT EXISTS idx_case_invitations_member_id ON case_invitations(member_id);
+
+-- 2. Enable Row Level Security on Private & Case Tables
+ALTER TABLE transition_cases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE case_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE case_locations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE case_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cost_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE case_invitations ENABLE ROW LEVEL SECURITY;
+
+-- If plan_drafts and intake_drafts exist in the database, enable RLS
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'plan_drafts') THEN
+    ALTER TABLE plan_drafts ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'intake_drafts') THEN
+    ALTER TABLE intake_drafts ENABLE ROW LEVEL SECURITY;
+  END IF;
+END $$;
+
+-- 3. RLS Policies: Transition Cases
+-- Owners can read and write their cases; verified care circle members can read
+DROP POLICY IF EXISTS "Case owners have full access" ON transition_cases;
+CREATE POLICY "Case owners have full access" ON transition_cases
+  FOR ALL
+  USING (auth.uid() IS NOT NULL AND (owner_user_id = auth.uid()::text OR user_id = auth.uid()));
+
+DROP POLICY IF EXISTS "Care circle members can read assigned cases" ON transition_cases;
+CREATE POLICY "Care circle members can read assigned cases" ON transition_cases
+  FOR SELECT
+  USING (
+    auth.uid() IS NOT NULL AND EXISTS (
+      SELECT 1 FROM case_members
+      WHERE case_members.case_id = transition_cases.id
+        AND case_members.user_id = auth.uid()::text
+    )
+  );
+
+-- 4. RLS Policies: Case Members
+DROP POLICY IF EXISTS "Case members viewable by case participants" ON case_members;
+CREATE POLICY "Case members viewable by case participants" ON case_members
+  FOR SELECT
+  USING (
+    auth.uid() IS NOT NULL AND (
+      user_id = auth.uid()::text OR
+      EXISTS (
+        SELECT 1 FROM transition_cases
+        WHERE transition_cases.id = case_members.case_id
+          AND (transition_cases.owner_user_id = auth.uid()::text OR transition_cases.user_id = auth.uid())
+      )
+    )
+  );
+
+-- 5. RLS Policies: Tasks
+DROP POLICY IF EXISTS "Tasks viewable by case participants" ON tasks;
+CREATE POLICY "Tasks viewable by case participants" ON tasks
+  FOR SELECT
+  USING (
+    auth.uid() IS NOT NULL AND (
+      EXISTS (
+        SELECT 1 FROM transition_cases
+        WHERE transition_cases.id = tasks.case_id
+          AND (transition_cases.owner_user_id = auth.uid()::text OR transition_cases.user_id = auth.uid())
+      ) OR
+      EXISTS (
+        SELECT 1 FROM case_members
+        WHERE case_members.case_id = tasks.case_id
+          AND case_members.user_id = auth.uid()::text
+      )
+    )
+  );
+
+-- 6. RLS Policies: Case Events
+DROP POLICY IF EXISTS "Events viewable by case participants" ON case_events;
+CREATE POLICY "Events viewable by case participants" ON case_events
+  FOR SELECT
+  USING (
+    auth.uid() IS NOT NULL AND (
+      EXISTS (
+        SELECT 1 FROM transition_cases
+        WHERE transition_cases.id = case_events.case_id
+          AND (transition_cases.owner_user_id = auth.uid()::text OR transition_cases.user_id = auth.uid())
+      ) OR
+      EXISTS (
+        SELECT 1 FROM case_members
+        WHERE case_members.case_id = case_events.case_id
+          AND case_members.user_id = auth.uid()::text
+      )
+    )
+  );
+
+-- 7. RLS Policies: Invitations
+DROP POLICY IF EXISTS "Invitations viewable by case owner" ON case_invitations;
+CREATE POLICY "Invitations viewable by case owner" ON case_invitations
+  FOR SELECT
+  USING (
+    auth.uid() IS NOT NULL AND EXISTS (
+      SELECT 1 FROM transition_cases
+      WHERE transition_cases.id = case_invitations.case_id
+        AND (transition_cases.owner_user_id = auth.uid()::text OR transition_cases.user_id = auth.uid())
+    )
+  );

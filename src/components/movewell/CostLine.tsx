@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge';
 import { CostLifecycleStage, CostProvenance } from '@/types';
 import { Info, Check } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
+import { BRAND_NAME } from '@/lib/brand';
 
 export interface CostLineProps {
   category: string;
@@ -32,7 +33,7 @@ export function CostLine({
     confidence: 'Medium',
     sources: [
       'Regional Texas Senior Transition Cost Survey (2026)',
-      'Curated MoveWell Directory Median Pricing',
+      `Curated ${BRAND_NAME} Directory Median Pricing`,
     ],
   },
   previousEstimate,
@@ -96,7 +97,7 @@ export function CostLine({
         open={sourcesOpen}
         onOpenChange={setSourcesOpen}
         title={`Cost Provenance: ${title}`}
-        description="MoveWell distinguishes deterministic research data from model-generated assumptions."
+        description={`${BRAND_NAME} distinguishes deterministic research data from model-generated assumptions.`}
       >
         <div className="py-2 space-y-3 text-xs">
           <div className="p-3 rounded-xl bg-white border border-line space-y-1">

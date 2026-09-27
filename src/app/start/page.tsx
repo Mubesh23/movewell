@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { ArrowRight, ArrowLeft, Check, Sparkles, AlertCircle } from 'lucide-react';
 import { formatLocalDateYYYYMMDD } from '@/types';
+import { BRAND_NAME } from '@/lib/brand';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -121,7 +122,7 @@ export default function IntakePage() {
         <div className="mb-6 bg-surface border border-stone-line rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
           <div>
             <p className="text-xs font-semibold text-charcoal">
-              Exploring MoveWell for the first time?
+              Exploring {BRAND_NAME} for the first time?
             </p>
             <p className="text-xs text-muted">
               Pre-fill with Maria Thompson&apos;s demo situation ($8,000 budget, 5-day discharge).
@@ -346,7 +347,7 @@ export default function IntakePage() {
                   Timeline &amp; Available Budget
                 </h2>
                 <p className="mt-1 text-sm text-muted">
-                  MoveWell will compare expected transition expenses against your family budget.
+                  {BRAND_NAME} will compare expected transition expenses against your family budget.
                 </p>
               </div>
 
@@ -485,7 +486,7 @@ export default function IntakePage() {
       </div>
 
       <footer className="border-t border-stone-line py-6 text-center text-xs text-muted">
-        MoveWell &bull; A calmer path forward for senior housing transitions
+        {BRAND_NAME} &bull; A calmer path forward for senior housing transitions
       </footer>
     </div>
   );

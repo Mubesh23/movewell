@@ -193,10 +193,11 @@ function deterministicExtract(
   }
 
   const relMatch = text.match(
-    /\b(?:i'm|i am|as)\s+(?:her|his|their)?\s*(son|daughter|child|spouse|husband|wife|sister|brother|niece|nephew)\b/i
+    /\b(?:(?:i'm|i am|as)\s+(?:her|his|their|the)?\s*|(?:her|his|their)\s+)(son|daughter|child|spouse|husband|wife|sister|brother|niece|nephew)\b/i
   );
   if (relMatch) {
-    const capitalizedRel = relMatch[1].charAt(0).toUpperCase() + relMatch[1].slice(1).toLowerCase();
+    const captured = relMatch[1] || relMatch[2];
+    const capitalizedRel = captured.charAt(0).toUpperCase() + captured.slice(1).toLowerCase();
     updates.coordinatorRelationship = capitalizedRel;
     updates.userRelationship = capitalizedRel;
   }

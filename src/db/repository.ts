@@ -13,6 +13,7 @@ import {
   CaseLocation,
   UserProfile,
   PlanChangeRecord,
+  CaseInvitation,
 } from '../types';
 import { memoryStore } from './memory-store';
 import { supabase } from './client';
@@ -892,6 +893,83 @@ export class Repository {
 
   async getPlanChanges(caseId: string): Promise<PlanChangeRecord[]> {
     return memoryStore.planChanges.get(caseId) || [];
+  }
+
+  // --- Case Invitations ---
+  private ensureInvitations() {
+    if (!memoryStore.invitations) {
+      memoryStore.invitations = new Map();
+    }
+  }
+
+  async saveCaseInvitation(invitation: CaseInvitation): Promise<CaseInvitation> {
+    this.ensureInvitations();
+    memoryStore.invitations.set(invitation.id, { ...invitation });
+
+    if (supabase) {
+      try {
+        await supabase.from('case_invitations').upsert({
+          id: invitation.id,
+          case_id: invitation.caseId,
+          member_id: invitation.memberId,
+          email: invitation.email,
+          token_hash: invitation.tokenHash,
+          status: invitation.status,
+          expires_at: invitation.expiresAt,
+          created_at: invitation.createdAt,
+          accepted_at: invitation.acceptedAt || null,
+        });
+      } catch (err) {
+        console.warn('Supabase case_invitations upsert skipped (table may not exist yet):', err);
+      }
+    }
+
+    return invitation;
+  }
+
+  async getInvitationByTokenHash(tokenHash: string): Promise<CaseInvitation | null> {
+    this.ensureInvitations();
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('case_invitations')
+          .select('*')
+          .eq('token_hash', tokenHash)
+          .maybeSingle();
+
+        if (data && !error) {
+          const inv: CaseInvitation = {
+            id: data.id,
+            caseId: data.case_id,
+            memberId: data.member_id,
+            email: data.email,
+            tokenHash: data.token_hash,
+            status: data.status,
+            expiresAt: data.expires_at,
+            createdAt: data.created_at,
+            acceptedAt: data.accepted_at || undefined,
+          };
+          memoryStore.invitations.set(inv.id, inv);
+          return inv;
+        }
+      } catch {
+        // Fall back to memoryStore
+      }
+    }
+
+    for (const inv of memoryStore.invitations.values()) {
+      if (inv.tokenHash === tokenHash) return { ...inv };
+    }
+    return null;
+  }
+
+  async getInvitationsByMemberId(memberId: string): Promise<CaseInvitation[]> {
+    this.ensureInvitations();
+    const list: CaseInvitation[] = [];
+    for (const inv of memoryStore.invitations.values()) {
+      if (inv.memberId === memberId) list.push({ ...inv });
+    }
+    return list;
   }
 
   // Clear helper for tests

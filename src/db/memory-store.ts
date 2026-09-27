@@ -11,6 +11,7 @@ import {
   Location,
   ResourceVerification,
   CostItem,
+  CaseInvitation,
 } from '../types';
 import { HOUSTON_RESOURCE_SEEDS } from './seeds/resources';
 
@@ -29,6 +30,7 @@ class MemoryStore {
   public caseLocations: Map<string, import('../types').CaseLocation> = new Map();
   public users: Map<string, import('../types').UserProfile> = new Map();
   public planChanges: Map<string, import('../types').PlanChangeRecord[]> = new Map();
+  public invitations: Map<string, CaseInvitation> = new Map();
   public sentEmails: Array<{ to: string; subject: string; html: string; text: string; sentAt: string }> = [];
 
   public organizations: Map<string, Organization> = new Map();
@@ -118,6 +120,7 @@ class MemoryStore {
     this.caseLocations.clear();
     this.users.clear();
     this.planChanges.clear();
+    this.invitations.clear();
   }
 }
 
@@ -128,6 +131,13 @@ const globalForMemory = globalThis as unknown as {
 
 export const memoryStore =
   globalForMemory.moveWellMemoryStore ?? new MemoryStore();
+
+if (!memoryStore.invitations) {
+  memoryStore.invitations = new Map();
+}
+if (!memoryStore.sentEmails) {
+  memoryStore.sentEmails = [];
+}
 
 if (process.env.NODE_ENV !== 'production') {
   globalForMemory.moveWellMemoryStore = memoryStore;

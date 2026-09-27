@@ -9,6 +9,7 @@ export interface CareCircleInviteOptions {
   caseId: string;
   role?: string;
   relationship?: string;
+  inviteUrl?: string;
 }
 
 export class EmailService {
@@ -18,12 +19,12 @@ export class EmailService {
    * Otherwise archives in memoryStore and logs for test/preview.
    */
   public async sendCareCircleInvite(options: CareCircleInviteOptions): Promise<{ success: boolean; id?: string }> {
-    const { toEmail, recipientName, inviterName, seniorName, caseId, relationship } = options;
+    const { toEmail, recipientName, inviterName, seniorName, caseId, relationship, inviteUrl } = options;
 
     const appUrl =
       process.env.NEXT_PUBLIC_APP_URL ||
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-    const inviteLink = `${appUrl}/plan/${caseId}/family`;
+    const inviteLink = inviteUrl || `${appUrl}/plan/${caseId}/family`;
 
     const subject = `${inviterName} invited you to coordinate ${seniorName}'s transition on ${BRAND_NAME}`;
 
@@ -77,6 +78,7 @@ The ${BRAND_NAME} Team`;
 
     // 2. Dispatch via Resend API if API key exists
     const apiKey = process.env.RESEND_API_KEY;
+    const fromAddress = process.env.RESEND_FROM_EMAIL || `${BRAND_NAME} <onboarding@resend.dev>`;
     if (apiKey) {
       try {
         const res = await fetch('https://api.resend.com/emails', {
@@ -86,7 +88,7 @@ The ${BRAND_NAME} Team`;
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            from: process.env.RESEND_FROM_EMAIL || `${BRAND_NAME} <invitations@movewell.org>`,
+            from: fromAddress,
             to: [toEmail],
             subject,
             html: htmlContent,

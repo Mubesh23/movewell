@@ -30,11 +30,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setLoading(true);
     setError(null);
     try {
-      // Session ID creation
-      const mockUserId = 'usr-' + Math.random().toString(36).substring(2, 9);
-      document.cookie = `movewell_user_id=${mockUserId}; path=/; max-age=2592000`;
-      onSuccess?.(mockUserId);
-      onClose();
+      const currentUrl = typeof window !== 'undefined' ? window.location.href : '/';
+      const res = await fetch(`/api/auth/oauth?provider=google&redirectTo=${encodeURIComponent(currentUrl)}`);
+      const data = await res.json();
+
+      if (data.success && data.url) {
+        window.location.href = data.url;
+      } else {
+        setError(data.error || 'Google sign-in could not be initiated.');
+        setLoading(false);
+      }
     } catch (err: any) {
       setError(err.message || 'Google sign-in failed');
       setLoading(false);
@@ -48,14 +53,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setLoading(true);
     setError(null);
     try {
-      // Authenticate with provided email
-      const mockUserId = 'usr-' + btoa(email.trim().toLowerCase()).substring(0, 10);
-      document.cookie = `movewell_user_id=${mockUserId}; path=/; max-age=2592000`;
-      setSubmittedEmail(true);
-      setTimeout(() => {
-        onSuccess?.(mockUserId);
-        onClose();
-      }, 1200);
+      const currentUrl = typeof window !== 'undefined' ? window.location.href : '/';
+      const res = await fetch('/api/auth/send-magic-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          redirectTo: currentUrl,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setSubmittedEmail(true);
+      } else {
+        setError(data.error || 'Failed to dispatch passwordless link');
+      }
     } catch (err: any) {
       setError(err.message || 'Email sign-in failed');
     } finally {
@@ -87,8 +100,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
             <h3 className="text-xl font-bold text-ink mb-2">Check your email</h3>
             <p className="text-sm text-muted-ink leading-relaxed mb-6">
-              We sent a passwordless sign-in link to{' '}
-              <strong className="text-ink">{email}</strong>. Click the link to view your plan.
+              We sent a real passwordless sign-in link to{' '}
+              <strong className="text-ink">{email}</strong>. Click the link in your email to sign in and view your transition plan.
             </p>
             <button
               onClick={onClose}
@@ -101,10 +114,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <>
             <div className="flex items-center gap-2 text-evergreen mb-3">
               <span className="w-6 h-6 rounded-md bg-evergreen text-white flex items-center justify-center text-xs font-bold">
-                M
+                B
               </span>
               <span className="text-xs font-bold tracking-wider uppercase text-muted-ink">
-                MoveWell Account
+                {BRAND_NAME} Account
               </span>
             </div>
 
@@ -142,47 +155,48 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                 />
               </svg>
-              <span>Continue with Google</span>
+              <span>{loading ? 'Connecting...' : 'Continue with Google'}</span>
             </button>
 
-            <div className="flex items-center gap-3 my-4">
-              <div className="flex-1 h-px bg-line" />
-              <span className="text-xs text-muted-ink uppercase tracking-wider font-medium">or</span>
-              <div className="flex-1 h-px bg-line" />
+            <div className="relative flex py-2 items-center mb-4">
+              <div className="flex-grow border-t border-line"></div>
+              <span className="flex-shrink mx-4 text-xs font-semibold text-muted-ink uppercase tracking-wider">
+                Or with Email
+              </span>
+              <div className="flex-grow border-t border-line"></div>
             </div>
 
             {/* Email Magic Link Form */}
-            <form onSubmit={handleEmailSignIn} className="space-y-3">
+            <form onSubmit={handleEmailSignIn} className="space-y-4">
               <div>
-                <label htmlFor="auth-email" className="block text-xs font-semibold text-ink mb-1.5">
-                  Email address
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted-ink mb-1.5">
+                  Email Address
                 </label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-muted-ink absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
-                    id="auth-email"
                     type="email"
+                    required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@example.com"
-                    required
-                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-line rounded-xl text-sm text-ink placeholder:text-muted-ink/60 focus:outline-none focus:border-evergreen transition-colors"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-line bg-cream/40 text-ink text-sm focus:outline-hidden focus:border-evergreen focus:bg-white transition-all"
                   />
                 </div>
               </div>
 
               <button
                 type="submit"
-                disabled={loading || !email.trim()}
-                className="w-full py-3 px-4 bg-evergreen hover:bg-evergreen-dark disabled:opacity-60 text-white font-semibold text-sm rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2"
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-semibold text-sm transition-all shadow-xs disabled:opacity-50"
               >
-                <span>{loading ? 'Sending link...' : 'Send sign-in link'}</span>
+                <span>{loading ? 'Sending link...' : 'Email me a sign-in link'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
 
-            <p className="text-xs text-muted-ink text-center mt-4">
-              Passwordless &amp; secure. No passwords to remember.
+            <p className="mt-5 text-[11px] text-center text-muted-ink leading-relaxed">
+              We protect your privacy. No password needed — we send a secure, direct link to your inbox.
             </p>
           </>
         )}
