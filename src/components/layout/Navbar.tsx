@@ -13,6 +13,7 @@ interface NavbarProps {
   caseId?: string;
   draftId?: string;
   seniorName?: string;
+  familyName?: string;
   daysUntilDischarge?: number;
 }
 
@@ -20,6 +21,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   caseId,
   draftId,
   seniorName = 'Transition Plan',
+  familyName,
   daysUntilDischarge,
 }) => {
   const pathname = usePathname();
@@ -53,8 +55,9 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               {caseId && (
                 <div className="hidden sm:flex items-center gap-1.5 pl-3 border-l border-line text-xs">
+                  <span className="text-[#667572] font-medium">Family workspace &mdash;</span>
                   <span className="font-bold text-ink flex items-center gap-1">
-                    {seniorName}&apos;s transition
+                    {familyName ? `The ${familyName} family / ` : ''}{seniorName}&apos;s transition
                     <ChevronDown className="w-3.5 h-3.5 text-muted-ink" />
                   </span>
                   {daysUntilDischarge !== undefined && (

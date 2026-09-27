@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Navbar } from '@/components/layout/Navbar';
 import {
   Send,
@@ -476,16 +477,23 @@ function GetStartedContent() {
               {/* Structured Checklist Items */}
               <div className="space-y-3">
                 {understoodItems.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className={`p-3 rounded-xl border text-xs transition-colors flex items-start gap-2.5 ${
+                  <motion.div
+                    key={item.label}
+                    layout
+                    initial={{ opacity: 0.8 }}
+                    animate={{
+                      opacity: 1,
+                      scale: item.known ? [1, 1.02, 1] : 1,
+                    }}
+                    transition={{ duration: 0.25, ease: 'easeOut' }}
+                    className={`p-3 rounded-xl border text-xs flex items-start gap-2.5 transition-colors ${
                       item.known
-                        ? 'bg-sage/40 border-evergreen/20 text-ink font-medium'
+                        ? 'bg-sage/40 border-evergreen/20 text-ink font-medium shadow-2xs'
                         : 'bg-cream/40 border-line text-muted-ink/70'
                     }`}
                   >
                     <span
-                      className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[10px] ${
+                      className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[10px] transition-colors ${
                         item.known
                           ? 'bg-evergreen text-white font-bold'
                           : 'border border-line text-muted-ink'
@@ -501,34 +509,49 @@ function GetStartedContent() {
                         {item.text}
                       </span>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
 
               {/* Ready State Action */}
-              {isReady ? (
-                <div className="pt-4 border-t border-line space-y-3">
-                  <div className="flex items-center gap-2 text-xs text-evergreen font-semibold">
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Minimum context ready for proposed plan</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleCreateDraft}
-                    disabled={creatingDraft}
-                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-semibold text-sm shadow-sm hover:shadow transition-all"
+              <AnimatePresence mode="wait">
+                {isReady ? (
+                  <motion.div
+                    key="ready-action-box"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.3 }}
+                    className="pt-4 border-t border-line space-y-3"
                   >
-                    <span>{creatingDraft ? 'Generating proposal...' : 'Review proposed plan →'}</span>
-                  </button>
-                  <p className="text-[11px] text-muted-ink text-center">
-                    AI proposes. You review and adjust everything before activation.
-                  </p>
-                </div>
-              ) : (
-                <div className="pt-3 border-t border-line text-[11px] text-muted-ink leading-relaxed">
-                  ✦ Nora will unlock the proposed plan as soon as timing, safety, and location are established.
-                </div>
-              )}
+                    <div className="flex items-center gap-2 text-xs text-evergreen font-semibold">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Minimum context ready for proposed plan</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCreateDraft}
+                      disabled={creatingDraft}
+                      className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-semibold text-sm shadow-sm hover:shadow transition-all"
+                    >
+                      <span>{creatingDraft ? 'Generating proposal...' : 'Review proposed plan →'}</span>
+                    </button>
+                    <p className="text-[11px] text-muted-ink text-center">
+                      AI proposes. You review and adjust everything before activation.
+                    </p>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="not-ready-notice"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="pt-3 border-t border-line text-[11px] text-muted-ink leading-relaxed"
+                  >
+                    ✦ Nora will unlock the proposed plan as soon as timing, safety, and location are established.
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>

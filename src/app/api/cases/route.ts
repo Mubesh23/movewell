@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { planningEngine } from '@/services/planning-engine';
 import { TransitionCase, SeniorProfile, CaseMember, formatLocalDateYYYYMMDD, CasePreset } from '@/types';
 import { BRAND_NAME } from '@/lib/brand';
+import { resolveSession } from '@/lib/auth-helper';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+    const session = await resolveSession(req);
+    const effectiveUserId = session.kind === 'AUTHENTICATED' ? session.userId : session.guestToken;
 
     // Check if loading Maria's Golden Scenario preset
     if (body.preset === ('MARIA_GOLDEN_SCENARIO' as CasePreset)) {
@@ -24,6 +27,7 @@ export async function POST(req: NextRequest) {
 
       const caseData: TransitionCase = {
         id: caseId,
+        ownerUserId: effectiveUserId,
         seniorProfileId,
         transitionType: 'POST_HOSPITAL',
         urgency: 'URGENT',
@@ -54,6 +58,7 @@ export async function POST(req: NextRequest) {
         {
           id: `mem-sarah-${randomSuffix}`,
           caseId: caseId,
+          userId: effectiveUserId,
           name: 'Sarah',
           relationship: 'Daughter',
           city: 'Chicago, IL',
@@ -118,6 +123,7 @@ export async function POST(req: NextRequest) {
 
     const caseData: TransitionCase = {
       id: caseId,
+      ownerUserId: effectiveUserId,
       seniorProfileId,
       transitionType,
       urgency: 'PLANNED',
@@ -148,12 +154,13 @@ export async function POST(req: NextRequest) {
       {
         id: 'mem-primary-' + Math.random().toString(36).substring(2, 6),
         caseId: caseId,
+        userId: effectiveUserId,
         name: body.userName?.trim() || 'Family Coordinator',
         relationship:
           body.userRelationship?.trim() ||
           (body.userIsRemote ? 'Family Member (Remote)' : 'Family Member'),
         city: body.userCity?.trim() || undefined,
-        isLocal: body.userIsRemote === false,
+        isLocal: body.isLocal !== undefined ? body.isLocal : (body.userIsRemote === true ? false : undefined),
         role: 'OWNER',
       },
     ];

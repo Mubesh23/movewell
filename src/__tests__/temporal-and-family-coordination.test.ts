@@ -51,11 +51,19 @@ describe('Temporal Reasoning, Coordinator Identity & Family Network Coordination
     });
 
     it('extracts specific time when provided', () => {
-      const res = resolveTemporalExpression('discharge is Friday around 2 PM', refDate);
+      const res = resolveTemporalExpression('discharge is Friday at 2 PM', refDate);
       expect(res).not.toBeNull();
       expect(res?.date).toBe('2026-10-02');
       expect(res?.time).toBe('14:00');
       expect(res?.precision).toBe('EXACT');
+    });
+
+    it('identifies approximate time when "around" is stated', () => {
+      const res = resolveTemporalExpression('discharge is Friday around 2 PM', refDate);
+      expect(res).not.toBeNull();
+      expect(res?.date).toBe('2026-10-02');
+      expect(res?.time).toBe('14:00');
+      expect(res?.precision).toBe('APPROXIMATE');
     });
 
     it('resolves today as 0 days from reference', () => {
@@ -79,7 +87,8 @@ describe('Temporal Reasoning, Coordinator Identity & Family Network Coordination
       expect(res).not.toBeNull();
       expect(res?.date).toBe('2026-10-02');
       expect(res?.time).toBe('Afternoon (~2:00 PM)');
-      expect(res?.precision).toBe('EXACT');
+      expect(res?.dayPart).toBe('AFTERNOON');
+      expect(res?.precision).toBe('APPROXIMATE');
     });
 
     it('resolves end-of-day deadline to 17:00', () => {

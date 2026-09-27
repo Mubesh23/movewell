@@ -23,9 +23,9 @@ export function QuoteSummary({ quote, className }: QuoteSummaryProps) {
         <div>
           <div className="flex items-center gap-2">
             <p className="font-semibold text-sm text-charcoal">{quote.providerName || quote.description}</p>
-            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-forest bg-forest/10 px-2 py-0.5 rounded-full">
+            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#1E40AF] bg-[#EFF6FF] border border-[#BFDBFE] px-2 py-0.5 rounded-full">
               <CheckCircle2 className="w-3 h-3" />
-              Applied
+              {quote.stage || 'QUOTED'}
             </span>
           </div>
           <p className="text-xs text-muted mt-0.5 capitalize">

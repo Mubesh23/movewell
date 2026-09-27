@@ -1,5 +1,6 @@
 import { repository } from '../db/repository';
 import { planningEngine } from './planning-engine';
+import { taskService } from './task-service';
 import { resourceService } from './resource-service';
 import { eventService } from './event-service';
 import { emailService } from './email-service';
@@ -349,9 +350,14 @@ export class DraftService {
     for (let i = 0; i < applicableTasks.length; i++) {
       const pt = applicableTasks[i];
       const taskId = 'tsk-' + Math.random().toString(36).substring(2, 9);
-      const matchedAssignee = createdMembers.find(
-        (m) => m.name.toLowerCase() === (pt.assigneeName || '').toLowerCase()
-      ) || createdMembers[0];
+      
+      let matchedAssignee: CaseMember | undefined = undefined;
+      const rawAssignee = (pt.assigneeName || '').trim();
+      if (rawAssignee && rawAssignee.toLowerCase() !== 'unassigned') {
+        matchedAssignee = createdMembers.find(
+          (m) => m.name.toLowerCase() === rawAssignee.toLowerCase()
+        );
+      }
 
       const task: TransitionTask = {
         id: taskId,
@@ -360,7 +366,7 @@ export class DraftService {
         title: pt.title,
         description: pt.description,
         whyItMatters: pt.whyItMatters,
-        status: i === 0 ? 'READY' : 'NOT_STARTED',
+        status: 'NOT_STARTED',
         priority: pt.priority || i + 1,
         phase: pt.phase,
         dueDate: pt.dueDate,
@@ -397,6 +403,9 @@ export class DraftService {
     if (dependenciesToSave.length > 0) {
       await repository.saveTaskDependencies(dependenciesToSave);
     }
+
+    // Accurately recalculate statuses based on dependencies
+    await taskService.recalculateDependencies(caseId);
 
     // 7. Save case locations
     for (const loc of draft.proposedLocations) {

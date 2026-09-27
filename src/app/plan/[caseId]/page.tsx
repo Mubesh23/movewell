@@ -442,12 +442,24 @@ export default function DashboardPage() {
               </div>
             </section>
 
-            {/* Activity Log */}
+            {/* Updates & Decisions Log */}
             {events.length > 0 && (
               <section className="rounded-2xl border border-[#e0e9e2] bg-white p-5 shadow-2xs">
-                <h2 className="font-semibold text-sm text-[#183331] pb-3 border-b border-[#edf2ee]">
-                  Recent activity
-                </h2>
+                <div className="flex items-center justify-between pb-3 border-b border-[#edf2ee]">
+                  <div>
+                    <h2 className="font-semibold text-sm text-[#183331]">
+                      Updates &amp; decisions
+                    </h2>
+                    <p className="text-[11px] text-[#879890]">Recent plan evolution</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowChanges(!showChanges)}
+                    className="text-xs font-semibold text-[#3f6c5c] hover:text-[#1f4d45] transition-colors"
+                  >
+                    {showChanges ? 'Hide changes' : 'What changed'}
+                  </button>
+                </div>
                 <div className="mt-4">
                   <ActivityTimeline events={events} limit={5} />
                 </div>

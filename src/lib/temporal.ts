@@ -15,6 +15,7 @@ export interface TemporalResolution {
   rangeEnd?: string; // YYYY-MM-DD
   daysFromReference?: number;
   precision: DatePrecision;
+  dayPart?: 'MORNING' | 'AFTERNOON' | 'EVENING';
   needsClarification: boolean;
   clarificationPrompt?: string;
   description: string;
@@ -55,6 +56,7 @@ const MONTHS: Record<string, number> = {
 /**
  * Resolves temporal expressions relative to a reference date.
  * Does NOT guess dates blindly when relative language like "next week" is used.
+ * Captures day parts (morning, afternoon, evening) as APPROXIMATE precision rather than fabricating exact hours.
  */
 export function resolveTemporalExpression(
   text: string,
@@ -66,6 +68,9 @@ export function resolveTemporalExpression(
 
   // 1. Time of day extraction (e.g., "2 PM", "around 2pm", "14:00", "morning", "afternoon")
   let extractedTime: string | undefined;
+  let dayPart: 'MORNING' | 'AFTERNOON' | 'EVENING' | undefined;
+  const isApproximate = /\b(?:around|approx|approximately|about|ish)\b/i.test(lower);
+
   const timeRegex = /\b(?:at|around|by)?\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i;
   const timeMatch = text.match(timeRegex);
   if (timeMatch) {
@@ -76,14 +81,23 @@ export function resolveTemporalExpression(
     if (ampm === 'am' && hour === 12) hour = 0;
     extractedTime = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
   } else if (lower.includes('morning')) {
+    dayPart = 'MORNING';
     extractedTime = 'Morning (~10:00 AM)';
   } else if (lower.includes('afternoon')) {
+    dayPart = 'AFTERNOON';
     extractedTime = 'Afternoon (~2:00 PM)';
   } else if (lower.includes('evening')) {
+    dayPart = 'EVENING';
     extractedTime = 'Evening (~6:00 PM)';
   } else if (/\b(?:by\s+)?(?:eod|end of day)\b/i.test(lower)) {
     extractedTime = '17:00';
   }
+
+  const resolvePrecision = (): DatePrecision => {
+    if (dayPart || isApproximate) return 'APPROXIMATE';
+    if (extractedTime) return 'EXACT';
+    return 'DAY';
+  };
 
   // 2. "Now" / "Today"
   if (/\b(today|right now|currently|asap|immediately)\b/i.test(lower)) {
@@ -93,8 +107,9 @@ export function resolveTemporalExpression(
       rawText: text,
       date: dateStr,
       time: extractedTime,
+      dayPart,
       daysFromReference: 0,
-      precision: extractedTime ? 'EXACT' : 'DAY',
+      precision: resolvePrecision(),
       needsClarification: false,
       description: 'Today',
     };
@@ -109,8 +124,9 @@ export function resolveTemporalExpression(
       rawText: text,
       date: dateStr,
       time: extractedTime,
+      dayPart,
       daysFromReference: 1,
-      precision: extractedTime ? 'EXACT' : 'DAY',
+      precision: resolvePrecision(),
       needsClarification: false,
       description: 'Tomorrow',
     };
@@ -127,8 +143,9 @@ export function resolveTemporalExpression(
       rawText: text,
       date: dateStr,
       time: extractedTime,
+      dayPart,
       daysFromReference: days,
-      precision: extractedTime ? 'EXACT' : 'DAY',
+      precision: resolvePrecision(),
       needsClarification: false,
       description: `In ${days} days`,
     };
@@ -181,8 +198,9 @@ export function resolveTemporalExpression(
         rawText: text,
         date: dateStr,
         time: extractedTime,
+        dayPart,
         daysFromReference: diff,
-        precision: extractedTime ? 'EXACT' : 'DAY',
+        precision: resolvePrecision(),
         needsClarification: false,
         description: capitalizedDay,
       };
@@ -210,8 +228,9 @@ export function resolveTemporalExpression(
         rawText: text,
         date: formatLocalDateYYYYMMDD(targetDate),
         time: extractedTime,
+        dayPart,
         daysFromReference: days,
-        precision: extractedTime ? 'EXACT' : 'DAY',
+        precision: resolvePrecision(),
         needsClarification: false,
         description: `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${dayNum}`,
       };
@@ -233,7 +252,8 @@ export function resolveTemporalExpression(
     return {
       rawText: text,
       time: extractedTime,
-      precision: 'EXACT',
+      dayPart,
+      precision: resolvePrecision(),
       needsClarification: false,
       description: extractedTime === '17:00' ? 'By end of day (5:00 PM)' : extractedTime,
     };

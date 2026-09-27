@@ -85,9 +85,26 @@ export function CostLine({
             {amount}
           </p>
           <div className="mt-1">
-            <Badge variant={isQuote ? 'completed' : 'outline'} className="text-[10px] font-semibold">
-              {stage}
-            </Badge>
+            {stage === 'ESTIMATED' && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A]">
+                ESTIMATED
+              </span>
+            )}
+            {stage === 'QUOTED' && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#EFF6FF] text-[#1E40AF] border border-[#BFDBFE]">
+                QUOTED
+              </span>
+            )}
+            {stage === 'COMMITTED' && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#EEF2FF] text-[#3730A3] border border-[#C7D2FE]">
+                COMMITTED
+              </span>
+            )}
+            {stage === 'PAID' && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#ECFDF5] text-[#065F46] border border-[#A7F3D0]">
+                PAID
+              </span>
+            )}
           </div>
         </div>
       </div>

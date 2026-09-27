@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionUserId, resolveUserSession } from '@/lib/auth-helper';
+import { resolveSession, BridgewellSession } from '@/lib/auth-helper';
 import { repository } from '@/db/repository';
 import { draftService } from '@/services/draft-service';
 import { PlanDraft, TransitionCase, CaseMember, CaseMemberRole } from '@/types';
@@ -8,6 +8,7 @@ export interface DraftAccessResult {
   authorized: boolean;
   draft?: PlanDraft;
   userId: string;
+  session?: BridgewellSession;
   error?: string;
   status: number;
 }
@@ -26,39 +27,33 @@ export interface CaseAccessResult {
 
 /**
  * Validates that the current requester has authorization to view or edit a PlanDraft.
- * Strictly verifies that draft.ownerUserId === requester's resolved userId.
+ * Strictly verifies that draft.ownerUserId === requester's resolved userId (or guest token).
  */
 export async function requireDraftAccess(
   req: NextRequest,
   draftId: string
 ): Promise<DraftAccessResult> {
-  const userId = await getSessionUserId(req);
-
-  if (!userId) {
-    return {
-      authorized: false,
-      userId: '',
-      error: 'Authentication or valid session required',
-      status: 401,
-    };
-  }
+  const session = await resolveSession(req);
+  const effectiveId = session.kind === 'AUTHENTICATED' ? session.userId : session.guestToken;
 
   const draft = await draftService.getDraft(draftId);
   if (!draft) {
     return {
       authorized: false,
-      userId,
+      userId: effectiveId,
+      session,
       error: 'Draft not found',
       status: 404,
     };
   }
 
   // Enforce strict ownership: requester must own the draft
-  if (draft.ownerUserId !== userId) {
+  if (draft.ownerUserId !== effectiveId) {
     return {
       authorized: false,
       draft,
-      userId,
+      userId: effectiveId,
+      session,
       error: 'You do not have permission to access this draft',
       status: 403,
     };
@@ -67,7 +62,8 @@ export async function requireDraftAccess(
   return {
     authorized: true,
     draft,
-    userId,
+    userId: effectiveId,
+    session,
     status: 200,
   };
 }
@@ -112,6 +108,7 @@ export async function canAccessCase(
 
 /**
  * Validates that the requester has access to an active TransitionCase.
+ * Strictly requires session.kind === 'AUTHENTICATED'. Guests cannot view or manage active cases.
  * If requireOwner = true, only OWNER role can proceed.
  */
 export async function requireCaseAccess(
@@ -119,17 +116,19 @@ export async function requireCaseAccess(
   caseId: string,
   options?: { requireOwner?: boolean }
 ): Promise<CaseAccessResult> {
-  const userId = await getSessionUserId(req);
+  const session = await resolveSession(req);
 
-  if (!userId) {
+  if (session.kind !== 'AUTHENTICATED') {
     return {
       authorized: false,
       canManage: false,
-      userId: '',
-      error: 'Authentication required',
+      userId: session.guestToken,
+      error: 'Authentication required to access active transition cases',
       status: 401,
     };
   }
+
+  const userId = session.userId;
 
   const caseData = await repository.getCaseById(caseId);
   if (!caseData) {

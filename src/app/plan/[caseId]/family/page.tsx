@@ -298,7 +298,12 @@ export default function FamilyPage() {
                             {member.city && (
                               <span className="inline-flex items-center gap-1">
                                 <MapPin size={12} className="text-[#a0aea8]" />
-                                {member.city} ({member.isLocal ? 'Local' : 'Remote'})
+                                {member.city}
+                                {member.isLocal === true
+                                  ? ' · Local'
+                                  : member.isLocal === false
+                                  ? ' · Remote'
+                                  : ''}
                               </span>
                             )}
                             {member.availability && (

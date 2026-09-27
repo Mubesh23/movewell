@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Navbar } from '@/components/layout/Navbar';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { WhatChanged } from '@/components/movewell/WhatChanged';
@@ -371,16 +372,6 @@ export default function DraftReviewPage() {
   const handleActivatePlan = async (authenticatedUserId?: string) => {
     if (!draft) return;
 
-    const cookieUserId = document.cookie
-      .split('; ')
-      .find((row) => row.startsWith('movewell_user_id='))
-      ?.split('=')[1];
-
-    if (!authenticatedUserId && (!cookieUserId || cookieUserId.startsWith('anon-'))) {
-      setIsAuthOpen(true);
-      return;
-    }
-
     setActivating(true);
     try {
       const res = await fetch(`/api/drafts/${draft.id}/activate`, {
@@ -388,6 +379,11 @@ export default function DraftReviewPage() {
         headers: { 'Content-Type': 'application/json' },
       });
       const data = await res.json();
+      if (res.status === 401 || data.code === 'AUTH_REQUIRED') {
+        setIsAuthOpen(true);
+        setActivating(false);
+        return;
+      }
       if (data.success && data.caseId) {
         router.push(`/plan/${data.caseId}`);
       } else {
@@ -696,37 +692,45 @@ export default function DraftReviewPage() {
             </div>
 
             {/* Multi-Task Change Confirmation Box */}
-            {noraPendingConfirmation && (
-              <div className="my-4 p-4 rounded-2xl bg-amber-bg/60 border border-amber/30 space-y-3">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-amber" />
-                  <strong className="text-xs font-bold text-ink">
-                    {noraPendingConfirmation.previewTitle}
-                  </strong>
-                </div>
-                <div className="text-xs text-ink whitespace-pre-line leading-relaxed">
-                  {noraPendingConfirmation.assistantMessage}
-                </div>
-                <div className="flex items-center gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={handleApplyNoraChanges}
-                    disabled={noraSubmitting}
-                    className="px-4 py-2 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-semibold text-xs transition-colors"
-                  >
-                    Apply changes
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setNoraPendingConfirmation(null)}
-                    disabled={noraSubmitting}
-                    className="px-4 py-2 rounded-xl border border-line bg-white hover:bg-cream text-ink text-xs font-medium transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
+            <AnimatePresence>
+              {noraPendingConfirmation && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.22 }}
+                  className="my-4 p-4 rounded-2xl bg-amber-bg/60 border border-amber/30 space-y-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber" />
+                    <strong className="text-xs font-bold text-ink">
+                      {noraPendingConfirmation.previewTitle}
+                    </strong>
+                  </div>
+                  <div className="text-xs text-ink whitespace-pre-line leading-relaxed">
+                    {noraPendingConfirmation.assistantMessage}
+                  </div>
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleApplyNoraChanges}
+                      disabled={noraSubmitting}
+                      className="px-4 py-2 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-semibold text-xs transition-colors"
+                    >
+                      Apply changes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNoraPendingConfirmation(null)}
+                      disabled={noraSubmitting}
+                      className="px-4 py-2 rounded-xl border border-line bg-white hover:bg-cream text-ink text-xs font-medium transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Input Form */}
             <form

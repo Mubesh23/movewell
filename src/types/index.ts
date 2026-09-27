@@ -460,6 +460,8 @@ export interface CostSummary {
   budgetGap: number;
   disclaimer: string;
   confirmedQuotesTotal?: number;
+  quotesTotal?: number;
+  hasQuotes?: boolean;
 }
 
 export interface CaseOverview {

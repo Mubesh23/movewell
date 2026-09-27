@@ -38,7 +38,13 @@ export async function POST(req: NextRequest) {
         );
       }
     } else {
-      console.warn('Supabase client not configured; simulated email OTP dispatch');
+      if (process.env.NODE_ENV === 'production') {
+        return NextResponse.json(
+          { success: false, error: 'Authentication service is currently unavailable.' },
+          { status: 503 }
+        );
+      }
+      console.warn('Supabase client not configured; simulated email OTP dispatch in development');
     }
 
     return NextResponse.json({

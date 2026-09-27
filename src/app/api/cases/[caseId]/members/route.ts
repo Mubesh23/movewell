@@ -35,8 +35,9 @@ export async function POST(
       email,
     });
 
+    const inviteToken = (member as any).invitation?.rawToken;
     return NextResponse.json(
-      { success: true, data: member, invitation: (member as any).invitation },
+      { success: true, data: member, invitation: (member as any).invitation, inviteToken },
       { status: 201 }
     );
   } catch (error: any) {

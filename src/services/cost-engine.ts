@@ -7,6 +7,8 @@ export interface CostSummary {
   budgetGap: number; // > 0 means over budget, <= 0 means within budget
   disclaimer: string;
   confirmedQuotesTotal?: number;
+  quotesTotal?: number;
+  hasQuotes?: boolean;
   costItems?: CostItem[];
 }
 
@@ -79,6 +81,8 @@ export class CostEngine {
       budgetGap,
       disclaimer: CostEngine.DISCLAIMER,
       confirmedQuotesTotal: confirmedQuotesTotal > 0 ? confirmedQuotesTotal : undefined,
+      quotesTotal: confirmedQuotesTotal > 0 ? confirmedQuotesTotal : undefined,
+      hasQuotes: confirmedQuotesTotal > 0,
       costItems,
     };
   }

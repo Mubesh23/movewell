@@ -48,6 +48,11 @@ export default function InviteAcceptancePage() {
         headers: { 'Content-Type': 'application/json' },
       });
       const data = await res.json();
+      if (res.status === 401 || data.code === 'AUTH_REQUIRED') {
+        setIsAuthOpen(true);
+        setAccepting(false);
+        return;
+      }
       if (data.success && data.caseId) {
         router.push(`/plan/${data.caseId}`);
       } else {
