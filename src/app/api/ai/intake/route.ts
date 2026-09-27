@@ -543,6 +543,11 @@ RULES FOR CONVERSATIONAL REPLY:
       }
     }
 
+    // Enforce 5-digit numeric format for zipCode (avoid hallucinations like "Child")
+    if (updatedDraft.zipCode && !/^\d{5}$/.test(updatedDraft.zipCode.trim())) {
+      delete updatedDraft.zipCode;
+    }
+
     // Sync coordinatorName and userName
     if (updatedDraft.coordinatorName && !updatedDraft.userName) {
       updatedDraft.userName = updatedDraft.coordinatorName;

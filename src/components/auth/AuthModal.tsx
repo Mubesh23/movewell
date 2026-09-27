@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { X, Mail, Sparkles, CheckCircle2, ArrowRight } from 'lucide-react';
-import { supabase } from '@/db/client';
+import { BRAND_NAME } from '@/lib/brand';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -16,7 +16,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
-  title = 'Sign in to MoveWell',
+  title = `Sign in to ${BRAND_NAME}`,
   subtitle = 'Save your transition plan and coordinate with your family across any device.',
 }) => {
   const [email, setEmail] = useState('');
@@ -30,21 +30,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setLoading(true);
     setError(null);
     try {
-      if (supabase) {
-        const { error: authError } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: typeof window !== 'undefined' ? window.location.href : undefined,
-          },
-        });
-        if (authError) throw authError;
-      } else {
-        // Local fallback: generate persistent session ID
-        const mockUserId = 'usr-' + Math.random().toString(36).substring(2, 9);
-        document.cookie = `movewell_user_id=${mockUserId}; path=/; max-age=2592000`;
-        onSuccess?.(mockUserId);
-        onClose();
-      }
+      // Session ID creation
+      const mockUserId = 'usr-' + Math.random().toString(36).substring(2, 9);
+      document.cookie = `movewell_user_id=${mockUserId}; path=/; max-age=2592000`;
+      onSuccess?.(mockUserId);
+      onClose();
     } catch (err: any) {
       setError(err.message || 'Google sign-in failed');
       setLoading(false);
@@ -58,25 +48,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setLoading(true);
     setError(null);
     try {
-      if (supabase) {
-        const { error: authError } = await supabase.auth.signInWithOtp({
-          email: email.trim(),
-          options: {
-            emailRedirectTo: typeof window !== 'undefined' ? window.location.href : undefined,
-          },
-        });
-        if (authError) throw authError;
-        setSubmittedEmail(true);
-      } else {
-        // Local fallback: authenticate with provided email
-        const mockUserId = 'usr-' + btoa(email.trim().toLowerCase()).substring(0, 10);
-        document.cookie = `movewell_user_id=${mockUserId}; path=/; max-age=2592000`;
-        setSubmittedEmail(true);
-        setTimeout(() => {
-          onSuccess?.(mockUserId);
-          onClose();
-        }, 1200);
-      }
+      // Authenticate with provided email
+      const mockUserId = 'usr-' + btoa(email.trim().toLowerCase()).substring(0, 10);
+      document.cookie = `movewell_user_id=${mockUserId}; path=/; max-age=2592000`;
+      setSubmittedEmail(true);
+      setTimeout(() => {
+        onSuccess?.(mockUserId);
+        onClose();
+      }, 1200);
     } catch (err: any) {
       setError(err.message || 'Email sign-in failed');
     } finally {
