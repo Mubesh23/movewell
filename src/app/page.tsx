@@ -119,12 +119,20 @@ export default function LandingPage() {
 
   const handleCreatePlanFromDraft = async () => {
     setCreatingPlan(true);
+    const cleanSeniorName =
+      draft.seniorName &&
+      !['fell', 'had', 'is', 'was', 'went', 'broke', 'needs', 'lives'].includes(
+        draft.seniorName.trim().toLowerCase()
+      )
+        ? draft.seniorName.trim()
+        : 'Mom';
+
     try {
       const res = await fetch('/api/cases', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          seniorName: draft.seniorName || 'Senior Family Member',
+          seniorName: cleanSeniorName,
           ageRange: draft.ageRange,
           transitionType: draft.transitionType || 'POST_HOSPITAL',
           dischargeDate: draft.dischargeDate,
@@ -321,7 +329,15 @@ export default function LandingPage() {
                                 onClick={handleCreatePlanFromDraft}
                                 className="w-full font-semibold shadow-xs"
                               >
-                                <span>Create Transition Plan for {draft.seniorName || 'Family'}</span>
+                                <span>
+                                  Create Transition Plan for{' '}
+                                  {draft.seniorName &&
+                                  !['fell', 'had', 'is', 'was', 'went', 'broke', 'needs', 'lives'].includes(
+                                    draft.seniorName.trim().toLowerCase()
+                                  )
+                                    ? draft.seniorName
+                                    : 'Mom'}
+                                </span>
                                 <ArrowRight className="w-4 h-4 ml-1" />
                               </Button>
                               <p className="text-[10px] text-muted text-center mt-1.5">

@@ -97,7 +97,8 @@ describe('Conversational Intake State Machine & Deterministic Readiness', () => 
 
       expect(t1Res.status).toBe(200);
       expect(t1Json.success).toBe(true);
-      expect(t1Json.draft.seniorName).toBeDefined();
+      expect(t1Json.draft.seniorName).toBe('Mom');
+      expect(t1Json.draft.seniorName).not.toBe('fell');
       expect(t1Json.draft.livesAlone).toBe(true);
       expect(t1Json.draft.userIsRemote).toBe(true);
       expect(t1Json.isReady).toBe(false);

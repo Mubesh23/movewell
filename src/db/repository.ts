@@ -18,16 +18,22 @@ export class Repository {
     memoryStore.cases.set(caseData.id, { ...caseData });
 
     if (supabase) {
+      const dbZip = caseData.zipCode?.trim() || 'UNSET';
+      const dbBudget =
+        caseData.budget !== undefined && caseData.budget !== null && !isNaN(Number(caseData.budget))
+          ? Number(caseData.budget)
+          : 0;
+
       const { error } = await supabase.from('transition_cases').upsert({
         id: caseData.id,
         transition_type: caseData.transitionType,
         urgency: caseData.urgency,
-        zip_code: caseData.zipCode,
+        zip_code: dbZip,
         target_date: caseData.targetDate || null,
         discharge_date: caseData.dischargeDate || null,
         housing_status: caseData.housingStatus || null,
         destination_status: caseData.destinationStatus || null,
-        budget: caseData.budget,
+        budget: dbBudget,
         updated_at: new Date().toISOString(),
       });
       if (error) {
@@ -60,12 +66,12 @@ export class Repository {
           id: data.id,
           transitionType: data.transition_type,
           urgency: data.urgency,
-          zipCode: data.zip_code,
+          zipCode: data.zip_code && data.zip_code !== 'UNSET' && data.zip_code !== '' ? data.zip_code : undefined,
           targetDate: data.target_date || undefined,
           dischargeDate: data.discharge_date || undefined,
           housingStatus: data.housing_status || undefined,
           destinationStatus: data.destination_status || undefined,
-          budget: Number(data.budget),
+          budget: data.budget && Number(data.budget) > 0 ? Number(data.budget) : undefined,
           createdAt: data.created_at,
           updatedAt: data.updated_at,
         };
@@ -89,12 +95,12 @@ export class Repository {
           id: d.id,
           transitionType: d.transition_type,
           urgency: d.urgency,
-          zipCode: d.zip_code,
+          zipCode: d.zip_code && d.zip_code !== 'UNSET' && d.zip_code !== '' ? d.zip_code : undefined,
           targetDate: d.target_date || undefined,
           dischargeDate: d.discharge_date || undefined,
           housingStatus: d.housing_status || undefined,
           destinationStatus: d.destination_status || undefined,
-          budget: Number(d.budget),
+          budget: d.budget && Number(d.budget) > 0 ? Number(d.budget) : undefined,
           createdAt: d.created_at,
           updatedAt: d.updated_at,
         }));

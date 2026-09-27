@@ -13,6 +13,18 @@ interface IntakeRequestBody {
   currentDraft?: IntakeDraft;
 }
 
+const NON_NAME_WORDS = new Set([
+  'fell', 'had', 'is', 'was', 'has', 'went', 'broke', 'needs', 'lives', 'called', 'got',
+  'suffered', 'taken', 'admitted', 'just', 'recently', 'currently', 'and', 'or', 'who',
+  'that', 'can', 'cannot', 'could', 'doesn', 'does', 'will', 'may', 'might', 'in', 'at',
+  'to', 'from', 'with', 'on', 'about', 'over', 'under', 'between', 'out', 'up', 'down',
+  'a', 'an', 'the', 'she', 'he', 'they', 'we', 'i', 'it', 'her', 'his', 'their', 'our',
+  'my', 'its', 'not', 'no', 'never', 'also', 'too', 'very', 'really', 'still', 'always',
+  'suddenly', 'unfortunately', 'now', 'today', 'yesterday', 'tomorrow', 'this', 'that',
+  'there', 'here', 'when', 'where', 'why', 'how', 'which', 'what', 'whom', 'whose',
+  'hospital', 'home', 'rehab', 'facility', 'stairs', 'walker', 'wheelchair', 'bed', 'house'
+]);
+
 /**
  * Deterministic regex & keyword extractor used as fallback or baseline
  */
@@ -21,16 +33,27 @@ function deterministicExtract(text: string, currentDraft: IntakeDraft = {}): Par
   const lower = text.toLowerCase();
 
   // Senior name / reference
-  if (!currentDraft.seniorName) {
-    const momMatch = text.match(/\bmy mom\s+([A-Z][a-z]+)/i);
-    const dadMatch = text.match(/\bmy dad\s+([A-Z][a-z]+)/i);
-    const parentMatch = text.match(/\b(my mom|my dad|my mother|my father|mom|dad)\b/i);
-    if (momMatch) {
-      updates.seniorName = momMatch[1];
-    } else if (dadMatch) {
-      updates.seniorName = dadMatch[1];
-    } else if (parentMatch) {
-      updates.seniorName = parentMatch[1].charAt(0).toUpperCase() + parentMatch[1].slice(1).toLowerCase();
+  if (!currentDraft.seniorName || NON_NAME_WORDS.has(currentDraft.seniorName.toLowerCase())) {
+    const namedMatch = text.match(/\b(?:named|name is)\s+([A-Z][a-z]+)/i);
+    const momNamedMatch = text.match(/\b(?:my mom|my mother)[,\s]+([A-Z][a-z]+)\b/i);
+    const dadNamedMatch = text.match(/\b(?:my dad|my father)[,\s]+([A-Z][a-z]+)\b/i);
+
+    if (namedMatch && !NON_NAME_WORDS.has(namedMatch[1].toLowerCase())) {
+      updates.seniorName = namedMatch[1];
+    } else if (momNamedMatch && !NON_NAME_WORDS.has(momNamedMatch[1].toLowerCase())) {
+      updates.seniorName = momNamedMatch[1];
+    } else if (dadNamedMatch && !NON_NAME_WORDS.has(dadNamedMatch[1].toLowerCase())) {
+      updates.seniorName = dadNamedMatch[1];
+    } else {
+      const parentMatch = text.match(/\b(my mom|my dad|my mother|my father|mom|dad)\b/i);
+      if (parentMatch) {
+        const ref = parentMatch[1].toLowerCase();
+        if (ref.includes('dad') || ref.includes('father')) {
+          updates.seniorName = 'Dad';
+        } else {
+          updates.seniorName = 'Mom';
+        }
+      }
     }
   }
 
@@ -189,6 +212,7 @@ LATEST USER MESSAGE:
 
 RULES FOR EXTRACTION:
 - Extract ONLY facts explicitly stated or strongly implied by the user.
+- seniorName: extract the senior's actual name (e.g. "Maria", "Robert"). If the user refers to them as "my mom" without an explicit personal name, output "Mom". NEVER output an event/action verb like "fell", "had", "broke", or "is" as a senior's name!
 - If the user says "leave it open", "not sure", or "no budget", set budgetStatus: "UNSET" and budget: null.
 - If the user says "no one nearby" or "I'm on my own", set hasLocalHelper: false.
 - If the user gives a day of the week (e.g. "Thursday"), set dischargeTimelineDescription: "Thursday" and estimate dischargeDays.
@@ -279,6 +303,11 @@ RULES FOR CONVERSATIONAL REPLY:
       if (v !== null && v !== undefined) {
         (updatedDraft as any)[k] = v;
       }
+    }
+
+    // Sanitize seniorName to never be a verb or invalid stopword
+    if (updatedDraft.seniorName && NON_NAME_WORDS.has(updatedDraft.seniorName.trim().toLowerCase())) {
+      updatedDraft.seniorName = 'Mom';
     }
 
     // Always preserve POST_HOSPITAL default transitionType unless specified

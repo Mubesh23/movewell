@@ -58,6 +58,13 @@ export class IntakeReadinessService {
       (draft.budget !== undefined || draft.budgetStatus === 'UNSET' || nextTargetField === 'NONE');
 
     // Build concise, human confirmation bullet points
+    const INVALID_NAMES = new Set([
+      'fell', 'had', 'is', 'was', 'has', 'went', 'broke', 'needs', 'lives', 'called', 'got', 'suffered'
+    ]);
+    if (draft.seniorName && INVALID_NAMES.has(draft.seniorName.trim().toLowerCase())) {
+      draft.seniorName = 'Mom';
+    }
+
     const summaryBulletPoints: string[] = [];
     const seniorLabel = draft.seniorName || 'Family member';
     summaryBulletPoints.push(
