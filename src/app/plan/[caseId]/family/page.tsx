@@ -61,6 +61,26 @@ export default function FamilyPage() {
   const [availability, setAvailability] = useState('');
   const [email, setEmail] = useState('');
   const [sendInvite, setSendInvite] = useState(false);
+  const [resendingMemberId, setResendingMemberId] = useState<string | null>(null);
+
+  const handleResendInvite = async (memberId: string) => {
+    setResendingMemberId(memberId);
+    try {
+      const res = await fetch(`/api/cases/${caseId}/members/${memberId}/resend-invite`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(data.message || 'Invitation resent!');
+      } else {
+        alert(data.error || 'Failed to resend invite');
+      }
+    } catch {
+      alert('Error resending invite');
+    } finally {
+      setResendingMemberId(null);
+    }
+  };
 
   const fetchOverview = React.useCallback(async () => {
     try {
@@ -298,6 +318,17 @@ export default function FamilyPage() {
                             <Mail size={11} />
                             Invited via email
                           </span>
+                        )}
+                        {member.email && member.role !== 'OWNER' && (
+                          <button
+                            type="button"
+                            onClick={() => handleResendInvite(member.id)}
+                            disabled={resendingMemberId === member.id}
+                            className="text-[11px] font-semibold text-[#1f4d45] hover:underline disabled:opacity-50 px-1 py-0.5"
+                            title="Resend invitation email"
+                          >
+                            {resendingMemberId === member.id ? 'Resending…' : 'Resend invite'}
+                          </button>
                         )}
                         <span className={`w-fit rounded-full px-2.5 py-1 text-[11px] font-medium ${statusBadgeClass}`}>
                           {statusBadgeText}

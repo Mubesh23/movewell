@@ -2,6 +2,7 @@ import { repository } from '../db/repository';
 import { costEngine } from './cost-engine';
 import { taskService } from './task-service';
 import { eventService } from './event-service';
+import { emailService } from './email-service';
 import { pulseAndChangeService } from './pulse-and-change-service';
 import { CaseMember, CaseOverview } from '../types';
 
@@ -116,6 +117,20 @@ export class CaseService {
         name: saved.name,
         email: saved.email,
         channel: 'EMAIL',
+      });
+
+      const senior = await repository.getSeniorProfileByCaseId(caseId);
+      const allMembers = await repository.getCaseMembers(caseId);
+      const owner = allMembers.find((m) => m.role === 'OWNER') || { name: 'Family Coordinator' };
+
+      await emailService.sendCareCircleInvite({
+        toEmail: saved.email,
+        recipientName: saved.name,
+        inviterName: owner.name,
+        seniorName: senior?.name || 'your loved one',
+        caseId,
+        role: saved.role,
+        relationship: saved.relationship,
       });
     }
     return saved;

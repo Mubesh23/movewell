@@ -185,6 +185,34 @@ export class TaskService {
 
     return task;
   }
+
+  public async updateDueDate(
+    taskId: string,
+    dueDate?: string,
+    expectedCaseId?: string,
+    actorName: string = 'Family Coordinator'
+  ): Promise<TransitionTask> {
+    const task = await repository.getTaskById(taskId);
+    if (!task) throw new Error(`Task ${taskId} not found`);
+    if (expectedCaseId && task.caseId !== expectedCaseId) {
+      throw new Error(`Task ${taskId} does not belong to case ${expectedCaseId}`);
+    }
+
+    const previousDueDate = task.dueDate;
+    task.dueDate = dueDate || undefined;
+    task.updatedAt = new Date().toISOString();
+    await repository.saveTask(task);
+
+    await eventService.recordEvent(task.caseId, 'TARGET_DATE_CHANGED', {
+      taskId: task.id,
+      taskTitle: task.title,
+      previousDueDate,
+      newDueDate: task.dueDate,
+      updatedBy: actorName,
+    });
+
+    return task;
+  }
 }
 
 export const taskService = new TaskService();

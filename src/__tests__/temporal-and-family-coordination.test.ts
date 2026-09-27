@@ -5,7 +5,11 @@ import { POST as intakePost } from '../app/api/ai/intake/route';
 import { POST as draftChatPost } from '../app/api/drafts/[draftId]/chat/route';
 import { draftService } from '../services/draft-service';
 import { caseService } from '../services/case-service';
+import { taskService } from '../services/task-service';
+import { eventService } from '../services/event-service';
+import { POST as resendInvitePost } from '../app/api/cases/[caseId]/members/[memberId]/resend-invite/route';
 import { repository } from '../db/repository';
+import { memoryStore } from '../db/memory-store';
 import { IntakeDraft } from '../types';
 
 describe('Temporal Reasoning, Coordinator Identity & Family Network Coordination', () => {
@@ -246,6 +250,58 @@ describe('Temporal Reasoning, Coordinator Identity & Family Network Coordination
       expect(newMember.invitationStatus).toBe('PENDING');
       expect(newMember.invitationChannel).toBe('EMAIL');
       expect(newMember.email).toBe('david@example.com');
+
+      // Verify email service captured sent emails
+      const jenniferEmail = memoryStore.sentEmails.find((e) => e.to === 'jennifer@example.com');
+      const davidEmail = memoryStore.sentEmails.find((e) => e.to === 'david@example.com');
+      expect(jenniferEmail).toBeDefined();
+      expect(davidEmail).toBeDefined();
+      expect(jenniferEmail?.subject).toContain('Robert');
+
+      // Test Resend invite endpoint
+      const resendReq = new NextRequest(
+        `http://localhost:3000/api/cases/${activation.caseId}/members/${newMember.id}/resend-invite`,
+        { method: 'POST' }
+      );
+      const resendRes = await resendInvitePost(resendReq, {
+        params: { caseId: activation.caseId, memberId: newMember.id },
+      });
+      const resendJson = await resendRes.json();
+      expect(resendRes.status).toBe(200);
+      expect(resendJson.success).toBe(true);
+
+      // Verify second email for David was logged
+      const davidEmails = memoryStore.sentEmails.filter((e) => e.to === 'david@example.com');
+      expect(davidEmails.length).toBe(2);
+    });
+
+    it('allows updating task due dates and records TARGET_DATE_CHANGED event', async () => {
+      const draft = await draftService.createDraftFromIntake(
+        {
+          seniorName: 'Margaret',
+          coordinatorName: 'Mubesh',
+          dischargeDays: 5,
+        },
+        'user-test-coord-4'
+      );
+      const activation = await draftService.activateDraft(draft.id, 'user-test-coord-4');
+      const tasks = await repository.getTasksByCaseId(activation.caseId);
+      const targetTask = tasks[0];
+
+      const updated = await taskService.updateDueDate(
+        targetTask.id,
+        '2026-10-15',
+        activation.caseId,
+        'Mubesh'
+      );
+
+      expect(updated.dueDate).toBe('2026-10-15');
+
+      const events = await eventService.getCaseEvents(activation.caseId);
+      const dateChangeEvent = events.find((e) => e.type === 'TARGET_DATE_CHANGED');
+      expect(dateChangeEvent).toBeDefined();
+      expect(dateChangeEvent?.payload.newDueDate).toBe('2026-10-15');
+      expect(dateChangeEvent?.payload.updatedBy).toBe('Mubesh');
     });
   });
 });

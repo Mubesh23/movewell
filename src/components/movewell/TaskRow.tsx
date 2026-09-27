@@ -29,6 +29,7 @@ export interface TaskRowProps {
   onComplete?: (task: TransitionTask, note?: string) => void;
   onReopen?: (task: TransitionTask) => void;
   onAssign?: (taskId: string, memberId: string) => void;
+  onUpdateDueDate?: (taskId: string, dueDate: string) => void;
   onAskNora?: (task: TransitionTask) => void;
   isUpdating?: boolean;
   className?: string;
@@ -83,6 +84,7 @@ export function TaskRow({
   onComplete,
   onReopen,
   onAssign,
+  onUpdateDueDate,
   onAskNora,
   isUpdating,
   className,
@@ -230,12 +232,27 @@ export function TaskRow({
               ) : (
                 <span>{task.assignee ? task.assignee.name : 'Unassigned'}</span>
               )}
-              {task.dueDate && (
+              {onUpdateDueDate ? (
+                <>
+                  <span className="text-stone-line" aria-hidden="true">&bull;</span>
+                  <div className="inline-flex items-center gap-1">
+                    <span className="text-[11px] text-[#71847d]">Due:</span>
+                    <input
+                      type="date"
+                      value={task.dueDate || ''}
+                      onChange={(e) => onUpdateDueDate(task.id, e.target.value)}
+                      className="text-[11px] font-medium text-[#183331] bg-[#edf3ef] hover:bg-[#e1ece3] rounded px-1.5 py-0.5 border border-[#d2e0d5] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#1f4d45] transition-colors"
+                      title="Click to shift due date"
+                      aria-label={`Due date for ${task.title}`}
+                    />
+                  </div>
+                </>
+              ) : task.dueDate ? (
                 <>
                   <span className="text-stone-line" aria-hidden="true">&bull;</span>
                   <span>Due {formatFriendlyDate(task.dueDate)}</span>
                 </>
-              )}
+              ) : null}
               {isBlocked && (
                 <>
                   <span className="text-stone-line" aria-hidden="true">&bull;</span>

@@ -33,6 +33,16 @@ export async function PATCH(
       return NextResponse.json({ success: true, data: updated });
     }
 
+    if (action === ('SET_DUE_DATE' as any) || body.dueDate !== undefined) {
+      const updated = await taskService.updateDueDate(
+        params.taskId,
+        body.dueDate,
+        params.caseId,
+        actorName || 'Family Coordinator'
+      );
+      return NextResponse.json({ success: true, data: updated });
+    }
+
     return NextResponse.json(
       { success: false, error: 'Invalid action' },
       { status: 400 }

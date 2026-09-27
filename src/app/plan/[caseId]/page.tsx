@@ -119,6 +119,28 @@ export default function DashboardPage() {
     }
   };
 
+  const handleUpdateDueDate = async (taskId: string, dueDate: string) => {
+    setUpdatingTaskId(taskId);
+    try {
+      const res = await fetch(`/api/cases/${caseId}/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'SET_DUE_DATE',
+          dueDate: dueDate || null,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchOverview();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUpdatingTaskId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f7f8f5] flex items-center justify-center">
@@ -301,6 +323,7 @@ export default function DashboardPage() {
                   onComplete={handleCompleteTask}
                   onReopen={handleReopenTask}
                   onAssign={handleAssignTask}
+                  onUpdateDueDate={handleUpdateDueDate}
                   onAskNora={(t) =>
                     openNoraWithPrompt(
                       `Can you help explain the task "${t.title}" and what needs to be done next?`

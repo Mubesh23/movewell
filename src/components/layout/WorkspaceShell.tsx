@@ -13,6 +13,7 @@ import {
   FileText,
   ShieldCheck,
   Printer,
+  FileDown,
   ChevronDown,
   Sparkles,
   MessageSquare,
@@ -134,13 +135,13 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
             </button>
 
             <Link
-              href={`/plan/${caseId}/print`}
+              href={`/plan/${caseId}/print?autoprint=1`}
               target="_blank"
-              className="hidden sm:inline-flex items-center gap-1.5 text-xs text-[#71847d] hover:text-[#183331] px-3 py-2 rounded-lg border border-[#cbdcd0] bg-white hover:bg-[#f1f6f1] transition-colors"
-              title="Printable Care Plan"
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs text-[#71847d] hover:text-[#183331] px-3 py-2 rounded-lg border border-[#cbdcd0] bg-white hover:bg-[#f1f6f1] transition-colors font-semibold shadow-2xs"
+              title="Download PDF or print discharge binder"
             >
-              <Printer size={15} />
-              <span className="font-semibold">Print</span>
+              <FileDown size={14} className="text-[#1f4d45]" />
+              <span>Export PDF / Print</span>
             </Link>
 
             <button

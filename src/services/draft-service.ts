@@ -2,6 +2,7 @@ import { repository } from '../db/repository';
 import { planningEngine } from './planning-engine';
 import { resourceService } from './resource-service';
 import { eventService } from './event-service';
+import { emailService } from './email-service';
 import {
   IntakeDraft,
   PlanDraft,
@@ -392,6 +393,28 @@ export class DraftService {
       membersCount: createdMembers.length,
       budget: caseData.budget,
     });
+
+    // 8b. Dispatch email invitations for staged collaborators
+    const ownerMember = createdMembers.find((m) => m.role === 'OWNER') || createdMembers[0];
+    for (const member of createdMembers) {
+      if (member.invitationStatus === 'PENDING' && member.email) {
+        await emailService.sendCareCircleInvite({
+          toEmail: member.email,
+          recipientName: member.name,
+          inviterName: ownerMember?.name || 'Family Coordinator',
+          seniorName: seniorProfile.name,
+          caseId,
+          role: member.role,
+          relationship: member.relationship,
+        });
+        await eventService.recordEvent(caseId, 'CASE_MEMBER_INVITED', {
+          memberId: member.id,
+          name: member.name,
+          email: member.email,
+          channel: 'EMAIL',
+        });
+      }
+    }
 
     // 9. Mark draft as ACTIVATED
     await repository.updatePlanDraft(draftId, {

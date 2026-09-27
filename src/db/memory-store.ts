@@ -29,6 +29,7 @@ class MemoryStore {
   public caseLocations: Map<string, import('../types').CaseLocation> = new Map();
   public users: Map<string, import('../types').UserProfile> = new Map();
   public planChanges: Map<string, import('../types').PlanChangeRecord[]> = new Map();
+  public sentEmails: Array<{ to: string; subject: string; html: string; text: string; sentAt: string }> = [];
 
   public organizations: Map<string, Organization> = new Map();
   public services: Map<string, ServiceResource> = new Map();
