@@ -356,7 +356,7 @@ export default function DraftReviewPage() {
           state: r.location?.state,
           zipCode: r.location?.zipCode,
           trustLabel: r.verification?.verificationStatus?.includes('Verified')
-            ? 'Bridgewell-reviewed'
+            ? 'BridgeWell-reviewed'
             : 'Nearby option',
           website: r.website,
         }));

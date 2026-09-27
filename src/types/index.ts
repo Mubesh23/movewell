@@ -588,6 +588,7 @@ export interface PlanDraft {
 export type ResourceTrustLabel =
   | 'Public agency'
   | 'Nonprofit'
+  | 'BridgeWell-reviewed'
   | 'Bridgewell-reviewed'
   | 'Directory listing'
   | 'Nearby option'

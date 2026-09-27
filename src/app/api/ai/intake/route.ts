@@ -394,7 +394,7 @@ export async function POST(req: NextRequest) {
     if (apiKey) {
       try {
         const ai = new GoogleGenAI({ apiKey });
-        const systemPrompt = `You are Nora, Bridgewell's empathetic, calm transition coordinator.
+        const systemPrompt = `You are Nora, BridgeWell's empathetic, calm transition coordinator.
 You guide families caring for aging parents through hospital discharge and housing transitions.
 Your job is to talk with the family naturally while quietly gathering minimum viable planning facts.
 The user should NEVER feel like they are filling out a form one field at a time.

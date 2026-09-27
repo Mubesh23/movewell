@@ -176,7 +176,7 @@ export default function BudgetPage() {
                     <div>
                       <h2 className="font-semibold text-base text-[#183331]">Vendor quote intake</h2>
                       <p className="mt-0.5 text-xs text-[#879890]">
-                        Upload or paste vendor estimates. Bridgewell extracts amounts and line items to refine your plan without overwriting your stated budget.
+                        Upload or paste vendor estimates. BridgeWell extracts amounts and line items to refine your plan without overwriting your stated budget.
                       </p>
                     </div>
                     <span className="hidden sm:inline-block rounded-full bg-[#e8f1ea] px-2.5 py-1 text-xs font-semibold text-[#3f6c5c]">
@@ -216,7 +216,7 @@ export default function BudgetPage() {
                 <div>
                   <h2 className="font-semibold text-base text-[#183331]">Transition costs by task</h2>
                   <p className="mt-0.5 text-xs text-[#879890]">
-                    Bridgewell keeps estimates separate from confirmed costs.
+                    BridgeWell keeps estimates separate from confirmed costs.
                   </p>
                 </div>
                 <button

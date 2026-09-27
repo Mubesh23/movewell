@@ -131,7 +131,7 @@ function ResourcesContent() {
                 Location-Aware Provider Notice (ZIP: {caseData.zipCode})
               </p>
               <p className="text-[#71847d] leading-relaxed">
-                Bridgewell connects families with local resources based on case location. In this pilot, curated community providers are active in Greater Houston, with nationwide coverage expanding. You can always use Nora to research providers in your area or add custom vendor quotes directly to your budget ledger.
+                BridgeWell connects families with local resources based on case location. In this pilot, curated community providers are active in Greater Houston, with nationwide coverage expanding. You can always use Nora to research providers in your area or add custom vendor quotes directly to your budget ledger.
               </p>
             </div>
           </div>
@@ -167,7 +167,7 @@ function ResourcesContent() {
               <div>
                 <h2 className="font-semibold text-base text-[#183331]">Recommended for your plan</h2>
                 <p className="mt-0.5 text-xs text-[#879890]">
-                  Bridgewell matched these based on home preparation, mobility, and discharge.
+                  BridgeWell matched these based on home preparation, mobility, and discharge.
                 </p>
               </div>
               <span className="rounded-full bg-[#e8f1ea] px-2.5 py-1 text-xs font-semibold text-[#3f6c5c]">

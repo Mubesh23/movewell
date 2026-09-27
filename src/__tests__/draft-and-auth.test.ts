@@ -280,7 +280,7 @@ describe('Draft Proposal, Idempotent Activation & Auth Boundaries', () => {
 
       expect(candidates.length).toBeGreaterThan(0);
       candidates.forEach((c) => {
-        expect(['Bridgewell-reviewed', 'Public agency', 'Directory listing', 'Nearby option']).toContain(
+        expect(['BridgeWell-reviewed', 'Bridgewell-reviewed', 'Public agency', 'Directory listing', 'Nearby option']).toContain(
           c.trustLabel
         );
         expect(c.trustLabel).not.toBe('Certified');
