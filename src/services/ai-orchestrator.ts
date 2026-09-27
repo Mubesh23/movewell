@@ -121,7 +121,7 @@ ${
           parts: [{ text: m.text }],
         }));
 
-        const response = await ai.models.generateContent({
+        const response = await generateContentWithRetry(ai, {
           model: 'gemini-flash-latest',
           contents: geminiContents.length > 0 ? geminiContents : [{ role: 'user', parts: [{ text: promptText }] }],
           config: {
@@ -196,7 +196,14 @@ ${
           for (const call of functionCalls) {
             const args = (call.args || {}) as Record<string, any>;
             if (call.name === 'update_case_context') {
-              const rawBudget = args.budget ?? args.amount ?? args.value;
+              const rawBudget =
+                args.budget ??
+                args.amount ??
+                args.value ??
+                args.new_budget ??
+                args.budget_limit ??
+                Object.values(args).find((v) => typeof v === 'number' || (typeof v === 'string' && /[0-9]/.test(v)));
+
               let parsedBudget: number | undefined = undefined;
               if (typeof rawBudget === 'number') {
                 parsedBudget = rawBudget;
@@ -241,7 +248,7 @@ ${
         // Pass 2 Gemini grounded synthesis loop when tools returned results
         if (toolResults.length > 0) {
           try {
-            const secondPassResponse = await ai.models.generateContent({
+            const secondPassResponse = await generateContentWithRetry(ai, {
               model: 'gemini-flash-latest',
               contents: [
                 ...geminiContents,
@@ -263,18 +270,24 @@ ${
               textResponse = secondPassResponse.text;
             }
           } catch (pass2Err) {
-            console.warn('Gemini Pass 2 synthesis failed, falling back to tool result text:', pass2Err);
+            console.warn('[AIOrchestrator] Gemini Pass 2 synthesis failed (using tool result text):', pass2Err);
           }
 
           if (!textResponse) {
             textResponse = toolResults.map((tr) => tr.message).join('\n\n');
           }
+
+          return {
+            message: textResponse,
+            toolResults,
+            suggestedNextAction: `Focus on ${overview?.urgentTask?.title || 'next plan priority'}.`,
+          };
         }
 
-        if (textResponse || toolResults.length > 0) {
+        if (textResponse) {
           return {
-            message: textResponse || 'Plan updated successfully.',
-            toolResults,
+            message: textResponse,
+            toolResults: [],
             suggestedNextAction: `Focus on ${overview?.urgentTask?.title || 'next plan priority'}.`,
           };
         }
@@ -298,6 +311,24 @@ ${
       toolResults: [],
       suggestedNextAction: 'Review your transition plan tasks directly from the dashboard.',
     };
+  }
+}
+
+async function generateContentWithRetry(ai: GoogleGenAI, params: any, retries = 2): Promise<any> {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      return await ai.models.generateContent(params);
+    } catch (err: any) {
+      const isTransient =
+        err?.status === 503 ||
+        err?.status === 429 ||
+        (err?.message && (err.message.includes('503') || err.message.includes('429') || err.message.includes('high demand')));
+      if (isTransient && attempt < retries - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 800 * (attempt + 1)));
+        continue;
+      }
+      throw err;
+    }
   }
 }
 
