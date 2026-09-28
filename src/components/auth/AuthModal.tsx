@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { X, Mail, Sparkles, CheckCircle2, ArrowRight } from 'lucide-react';
 import { BRAND_NAME } from '@/lib/brand';
 
@@ -23,10 +23,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const emailInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
-
-  const emailInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
