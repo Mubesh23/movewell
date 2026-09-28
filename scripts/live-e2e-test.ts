@@ -1,16 +1,16 @@
 import { NextRequest } from 'next/server';
-import { repository } from '../db/repository';
-import { intakeReadinessService } from '../services/intake-readiness';
-import { draftService } from '../services/draft-service';
-import { caseService } from '../services/case-service';
-import { taskService } from '../services/task-service';
-import { aiOrchestrator } from '../services/ai-orchestrator';
-import { POST as intakePost } from '../app/api/ai/intake/route';
-import { POST as extractQuotePost } from '../app/api/ai/extract-quote/route';
-import { evidenceService } from '../services/evidence-service';
-import { resourceService } from '../services/resource-service';
-import { costEngine } from '../services/cost-engine';
-import { pulseAndChangeService } from '../services/pulse-and-change-service';
+import { repository } from '@/db/repository';
+import { intakeReadinessService } from '@/services/intake-readiness';
+import { draftService } from '@/services/draft-service';
+import { caseService } from '@/services/case-service';
+import { taskService } from '@/services/task-service';
+import { aiOrchestrator } from '@/services/ai-orchestrator';
+import { POST as intakePost } from '@/app/api/ai/intake/route';
+import { POST as extractQuotePost } from '@/app/api/ai/extract-quote/route';
+import { evidenceService } from '@/services/evidence-service';
+import { resourceService } from '@/services/resource-service';
+import { costEngine } from '@/services/cost-engine';
+import { pulseAndChangeService } from '@/services/pulse-and-change-service';
 
 async function runFullLiveTest() {
   console.log('====================================================');
@@ -141,7 +141,6 @@ async function runFullLiveTest() {
     urgency: overview.caseData.urgency,
     taskCount: overview.tasks.length,
     members: overview.members.map((m) => `${m.name} (${m.role})`),
-    metrics: overview.metrics,
   });
   console.log('✅ STEP 3 PASSED: Workspace activated and overview verified.');
 
