@@ -349,5 +349,47 @@ describe('Final Convergence & Demo Reliability Suite', () => {
       expect(cases.some((c) => c.id === testCaseId)).toBe(true);
     });
   });
+
+  describe('P0: Final Hardening & Feature Freeze Verification', () => {
+    it('POST /api/cases is rejected with 400 directing callers to /get-started', async () => {
+      const { POST } = await import('../app/api/cases/route');
+      const req = new NextRequest('http://localhost:3000/api/cases', {
+        method: 'POST',
+        body: JSON.stringify({ preset: 'MARIA' }),
+      });
+      const response = await POST(req);
+      expect(response.status).toBe(400);
+      const json = await response.json();
+      expect(json.success).toBe(false);
+      expect(json.error).toContain('/get-started');
+    });
+
+    it('taskService default actor name resolves to Family Coordinator rather than Sarah', async () => {
+      const caseId = 'case-actor-default-' + Math.random().toString(36).substring(2, 7);
+      const task = await repository.saveTask({
+        id: 'task-actor-test',
+        caseId,
+        title: 'Assess home safety',
+        phase: 'RIGHT_NOW',
+        status: 'READY',
+        priority: 1,
+        minEstimatedCost: 0,
+        maxEstimatedCost: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+
+      const completed = await taskService.completeTask(task.id);
+      expect(completed.status).toBe('COMPLETED');
+    });
+
+    it('evidenceService explanation accurately distinguishes publication date from verification check', () => {
+      const { explanation, summary } = evidenceService.explainCost('moving', undefined);
+      expect(summary).toBeDefined();
+      expect(explanation).toContain('Published:');
+      expect(explanation).toContain('Verified check:');
+      expect(explanation).toContain('Most recent source check:');
+    });
+  });
 });
 

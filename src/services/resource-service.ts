@@ -29,8 +29,6 @@ export class CuratedDirectoryResourceProvider implements ResourceSearchProvider 
         s.costType === 'sliding_scale'
       ) {
         trustLabel = 'Nonprofit';
-      } else if (s.verification?.verificationStatus?.toLowerCase().includes('verified')) {
-        trustLabel = 'BridgeWell-reviewed';
       } else if (s.organizationName) {
         trustLabel = 'Directory listing';
       }
@@ -51,18 +49,15 @@ export class CuratedDirectoryResourceProvider implements ResourceSearchProvider 
       };
     });
 
-    // Rank: 1. Public agency / Nonprofit / Free help -> 2. BridgeWell-reviewed -> 3. Directory listing -> 4. Nearby option
+    // Rank: 1. Public agency / Nonprofit / Free help -> 2. Directory listing -> 3. Nearby option
     const rankScore = (r: ResourceCandidate) => {
       if (r.trustLabel === 'Public agency' || r.trustLabel === 'Nonprofit' || r.costType === 'free_public_service') {
         return 1;
       }
-      if (r.trustLabel === 'BridgeWell-reviewed' || r.trustLabel === 'Bridgewell-reviewed') {
+      if (r.trustLabel === 'Directory listing') {
         return 2;
       }
-      if (r.trustLabel === 'Directory listing') {
-        return 3;
-      }
-      return 4;
+      return 3;
     };
 
     mapped.sort((a, b) => rankScore(a) - rankScore(b));

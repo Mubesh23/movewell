@@ -15,7 +15,7 @@ interface TaskCompletionModalProps {
 export const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
   isOpen,
   task,
-  currentMemberName = 'Sarah',
+  currentMemberName = 'Family Coordinator',
   onClose,
   onConfirm,
 }) => {

@@ -18,8 +18,8 @@ import {
 import { ResourceCandidate, ResourceTrustLabel } from '@/types';
 
 export default function PublicResourcesPage() {
-  const [zipCode, setZipCode] = useState('77004');
-  const [activeZip, setActiveZip] = useState('77004');
+  const [zipCode, setZipCode] = useState('');
+  const [activeZip, setActiveZip] = useState('');
   const [category, setCategory] = useState<string>('ALL');
   const [resources, setResources] = useState<ResourceCandidate[]>([]);
   const [loading, setLoading] = useState(false);
@@ -65,8 +65,6 @@ export default function PublicResourcesPage() {
             r.costType === 'sliding_scale'
           ) {
             trustLabel = 'Nonprofit';
-          } else if (r.verification?.verificationStatus?.toLowerCase().includes('verified')) {
-            trustLabel = 'BridgeWell-reviewed';
           } else if (r.organizationName) {
             trustLabel = 'Directory listing';
           }
@@ -115,8 +113,6 @@ export default function PublicResourcesPage() {
         return 'bg-[#EAF1F7] text-[#345B73] border-[#CDE0ED]';
       case 'Nonprofit':
         return 'bg-[#F2EDF8] text-[#5E3D82] border-[#DFD3EC]';
-      case 'BridgeWell-reviewed':
-        return 'bg-[#E8F3EA] text-[#366854] border-[#CCE0D1]';
       case 'Directory listing':
         return 'bg-[#F4F5F4] text-[#55635F] border-[#DFE2E0]';
       default:
@@ -147,9 +143,9 @@ export default function PublicResourcesPage() {
             <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-[#183331] font-semibold">
               <MapPin className="w-4 h-4 text-[#1F4D45]" />
               <span>Location:</span>
-              <strong className="text-[#1F4D45]">ZIP {activeZip}</strong>
+              <strong className="text-[#1F4D45]">{activeZip ? `ZIP ${activeZip}` : 'All Regions'}</strong>
               <span className="text-[#879890] font-normal">
-                {activeZip.startsWith('770') || activeZip.startsWith('772') ? '(Greater Houston, TX)' : ''}
+                {activeZip && (activeZip.startsWith('770') || activeZip.startsWith('772')) ? '(Greater Houston, TX)' : ''}
               </span>
             </div>
 
@@ -184,7 +180,7 @@ export default function PublicResourcesPage() {
                 onClick={() => setIsEditingZip(true)}
                 className="text-xs text-[#1F4D45] font-semibold hover:underline px-3 py-1 rounded-lg hover:bg-[#F2F6F3] transition-colors"
               >
-                Change ZIP
+                {activeZip ? 'Change ZIP' : 'Filter by ZIP'}
               </button>
             )}
           </div>
@@ -219,7 +215,7 @@ export default function PublicResourcesPage() {
                 Nearby Providers &amp; Programs
               </h2>
               <p className="text-xs text-[#879890]">
-                Filtered for ZIP {activeZip}
+                {activeZip ? `Filtered for ZIP ${activeZip}` : 'Showing all available community resources'}
               </p>
             </div>
             <span className="rounded-full bg-[#E8F1EA] px-3 py-1 text-xs font-semibold text-[#1F4D45]">

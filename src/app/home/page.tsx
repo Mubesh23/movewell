@@ -72,7 +72,7 @@ export default async function HomePage() {
     const nextTaskTitle = readyTask ? readyTask.title : 'All tasks completed';
 
     const homeLoc = locations.find((l) => l.type === 'HOME') || locations[0];
-    const city = homeLoc?.city || (c.zipCode ? `ZIP ${c.zipCode}` : 'Houston, TX');
+    const city = homeLoc?.city || (c.zipCode && c.zipCode !== 'UNSET' ? `ZIP ${c.zipCode}` : 'Location not set');
 
     return {
       caseId: c.id,

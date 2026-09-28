@@ -41,7 +41,7 @@ function renderAssistantMessage(content: string) {
 
         if (isNumberedList) {
           return (
-            <div key={pIdx} className="space-y-1.5 my-2">
+            <div key={pIdx} className="space-y-1 my-2 pl-0.5">
               {lines.map((line, lIdx) => {
                 const match = line.match(/^(\d+)[\.\)]\s+(.*)$/);
                 const num = match ? match[1] : String(lIdx + 1);
@@ -49,7 +49,7 @@ function renderAssistantMessage(content: string) {
                 return (
                   <div
                     key={lIdx}
-                    className="flex items-start gap-2.5 p-2.5 rounded-xl bg-sand/50 border border-line/60 text-xs text-ink/90"
+                    className="flex items-start gap-2.5 py-1 text-xs text-ink/90"
                   >
                     <span className="w-5 h-5 rounded-full bg-sage text-evergreen font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
                       {num}
@@ -83,13 +83,13 @@ function renderAssistantMessage(content: string) {
           }
 
           return (
-            <div key={pIdx} className="space-y-2">
+            <div key={pIdx} className="space-y-1.5">
               {introLines.length > 0 && (
                 <p className="text-ink/90 leading-relaxed">
                   {renderInlineMarkdown(introLines.join(' '))}
                 </p>
               )}
-              <div className="space-y-1.5 my-2">
+              <div className="space-y-1 my-1.5 pl-0.5">
                 {listLines.map((line, lIdx) => {
                   const match = line.match(/^(\d+)[\.\)]\s+(.*)$/);
                   const num = match ? match[1] : String(lIdx + 1);
@@ -97,7 +97,7 @@ function renderAssistantMessage(content: string) {
                   return (
                     <div
                       key={lIdx}
-                      className="flex items-start gap-2.5 p-2.5 rounded-xl bg-sand/50 border border-line/60 text-xs text-ink/90"
+                      className="flex items-start gap-2.5 py-1 text-xs text-ink/90"
                     >
                       <span className="w-5 h-5 rounded-full bg-sage text-evergreen font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
                         {num}
@@ -450,20 +450,28 @@ function GetStartedContent() {
     return "I'll organize important details here as we talk.";
   };
 
-  // Suggestion prompts
+  const userTurnCount = messages.filter((m) => m.role === 'user').length;
+
+  // Initial Common Situations chips (strictly hidden after the first user message)
   const suggestions =
-    knownCount === 0
+    userTurnCount === 0
       ? [
-          { text: 'My parent is leaving the hospital', prompt: 'My parent is being discharged from the hospital and we need a transition plan.' },
-          { text: 'We need help planning a move', prompt: 'We need help planning a move and making sure their next living space is safe.' },
-          { text: "I'm coordinating from another city", prompt: "I am coordinating from another city and need to get local help organized." },
-          { text: 'Home safety & mobility help', prompt: 'We need home safety modifications and mobility support before discharge.' },
-        ]
-      : !draft.budget && draft.budgetStatus !== 'UNSET'
-      ? [
-          { text: 'Leave the budget open', prompt: 'Let us leave the budget open for now.' },
-          { text: 'Discharge is Friday', prompt: 'Discharge is planned for Friday.' },
-          { text: 'Jennifer is local', prompt: 'Her sister Jennifer is local and can help.' },
+          {
+            text: 'A hospital discharge is coming up',
+            prompt: 'A hospital discharge is coming up and we need a clear transition plan.',
+          },
+          {
+            text: 'We need to make the home safer',
+            prompt: 'We need to make the home safer with accessibility and mobility modifications.',
+          },
+          {
+            text: "We're planning a move",
+            prompt: "We're planning a move to a safer living arrangement.",
+          },
+          {
+            text: "I'm coordinating from another city",
+            prompt: "I am coordinating from another city and need to get local help organized.",
+          },
         ]
       : [];
 
@@ -699,13 +707,13 @@ function GetStartedContent() {
             </div>
           )}
 
-          {/* Suggestions Chips */}
+          {/* Common Situations Chips */}
           {suggestions.length > 0 && !submittingTurn && (
             <div className="pt-2">
               <div className="flex items-center gap-1.5 mb-2.5">
                 <Sparkles className="w-3.5 h-3.5 text-evergreen" />
                 <span className="text-[11px] font-bold text-muted-ink uppercase tracking-wider">
-                  Suggested replies
+                  Common situations
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -735,7 +743,7 @@ function GetStartedContent() {
             >
               <textarea
                 ref={textareaRef}
-                rows={1}
+                rows={2}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={(e) => {
@@ -744,9 +752,9 @@ function GetStartedContent() {
                     handleSendMessage();
                   }
                 }}
-                placeholder="Tell Nora what's happening..."
+                placeholder={userTurnCount === 0 ? "Tell Nora what's happening..." : "Tell Nora more..."}
                 disabled={submittingTurn}
-                className="w-full min-h-[48px] max-h-[160px] py-2 pr-12 text-sm text-ink placeholder:text-muted-ink/60 bg-transparent focus:outline-none resize-none leading-relaxed"
+                className="w-full min-h-[64px] max-h-[180px] py-2 pr-12 text-sm text-ink placeholder:text-muted-ink/60 bg-transparent focus:outline-none resize-none leading-relaxed"
               />
               <button
                 type="submit"

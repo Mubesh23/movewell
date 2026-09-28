@@ -70,7 +70,7 @@ export class TaskService {
 
   public async completeTask(
     taskId: string,
-    actorName: string = 'Sarah',
+    actorName: string = 'Family Coordinator',
     expectedCaseId?: string,
     note?: string
   ): Promise<TransitionTask> {
@@ -134,7 +134,7 @@ export class TaskService {
 
   public async reopenTask(
     taskId: string,
-    actorName: string = 'Sarah',
+    actorName: string = 'Family Coordinator',
     expectedCaseId?: string
   ): Promise<TransitionTask> {
     const task = await repository.getTaskById(taskId);

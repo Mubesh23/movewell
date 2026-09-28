@@ -481,7 +481,7 @@ export default function DashboardPage() {
       <TaskCompletionModal
         isOpen={Boolean(completingTask)}
         task={completingTask}
-        currentMemberName={overview?.members?.find((m) => m.role === 'OWNER')?.name || 'Sarah'}
+        currentMemberName={overview?.members?.find((m) => m.role === 'OWNER')?.name || 'Family Coordinator'}
         onClose={() => setCompletingTask(null)}
         onConfirm={handleCompleteTask}
       />

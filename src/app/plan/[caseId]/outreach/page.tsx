@@ -12,14 +12,35 @@ export default function OutreachPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [seniorName, setSeniorName] = useState('Family Member');
+  const [coordinatorName, setCoordinatorName] = useState('Family Transition Coordinator');
   const [serviceType, setServiceType] = useState('Senior Mover & Downsizing Crew');
-  const [targetZip, setTargetZip] = useState('77004');
+  const [targetZip, setTargetZip] = useState('');
   const [targetDate, setTargetDate] = useState('Within 5–7 days');
   const [logistics, setLogistics] = useState('2-bedroom single-story transition to assisted living apartment; 1 flight of stairs at current home.');
 
+  React.useEffect(() => {
+    if (caseId) {
+      fetch(`/api/cases/${caseId}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.success && data.data) {
+            if (data.data.seniorProfile?.name) setSeniorName(data.data.seniorProfile.name);
+            if (data.data.caseData?.zipCode && data.data.caseData.zipCode !== 'UNSET') {
+              setTargetZip(data.data.caseData.zipCode);
+            }
+            if (data.data.caseData?.targetDate) {
+              setTargetDate(new Date(data.data.caseData.targetDate).toLocaleDateString());
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [caseId]);
+
   const sampleDraftMessage = `Hello,
 
-I am coordinating the post-hospital transition for my mother in Houston, TX (ZIP ${targetZip}). We are seeking availability and binding pricing for: ${serviceType}.
+I am coordinating the transition for ${seniorName}${targetZip ? ` (ZIP ${targetZip})` : ''}. We are seeking availability and binding pricing for: ${serviceType}.
 
 Target Timeline: ${targetDate}
 Logistics: ${logistics}
@@ -31,7 +52,7 @@ Could you please confirm:
 4. Any potential additional fees (stair carry, heavy items, cancellation policy)?
 
 Thank you for your time and guidance,
-Sarah (Family Transition Coordinator)`;
+${coordinatorName}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(sampleDraftMessage);

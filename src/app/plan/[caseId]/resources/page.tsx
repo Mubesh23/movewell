@@ -34,9 +34,9 @@ function ResourcesContent() {
   const [daysUntilDischarge, setDaysUntilDischarge] = useState<number | undefined>(undefined);
 
   // Saved case location vs Temporary search location
-  const [savedZip, setSavedZip] = useState<string>('77004');
-  const [searchZip, setSearchZip] = useState<string>('77004');
-  const [cityState, setCityState] = useState<string>('Houston, TX');
+  const [savedZip, setSavedZip] = useState<string>('');
+  const [searchZip, setSearchZip] = useState<string>('');
+  const [cityState, setCityState] = useState<string>('');
 
   // Search another ZIP dialog state
   const [isSearchingAnotherZip, setIsSearchingAnotherZip] = useState<boolean>(false);
@@ -44,7 +44,7 @@ function ResourcesContent() {
 
   // Permanent saved location edit modal state
   const [isEditingSavedLocation, setIsEditingSavedLocation] = useState<boolean>(false);
-  const [savedZipInput, setSavedZipInput] = useState<string>('77004');
+  const [savedZipInput, setSavedZipInput] = useState<string>('');
   const [savingLocation, setSavingLocation] = useState<boolean>(false);
 
   const categories = [
@@ -57,7 +57,7 @@ function ResourcesContent() {
     { id: 'storage', label: 'Storage' },
   ];
 
-  const loadCase = () => {
+  const loadCase = React.useCallback(() => {
     if (caseId) {
       fetch(`/api/cases/${caseId}`)
         .then((res) => res.json())
@@ -67,7 +67,7 @@ function ResourcesContent() {
               setCaseData(data.data.caseData);
               const z = data.data.caseData.zipCode && data.data.caseData.zipCode !== 'UNSET'
                 ? data.data.caseData.zipCode
-                : '77004';
+                : '';
               setSavedZip(z);
               setSearchZip(z);
               setSavedZipInput(z);
@@ -81,13 +81,19 @@ function ResourcesContent() {
         })
         .catch(() => {});
     }
-  };
+  }, [caseId]);
 
   useEffect(() => {
     loadCase();
-  }, [caseId]);
+  }, [loadCase]);
 
   const fetchResources = async (cat: string, zip: string) => {
+    if (!zip || zip.trim().length < 5) {
+      setResources([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const urlParams = new URLSearchParams();
@@ -173,9 +179,6 @@ function ResourcesContent() {
     ) {
       return 'Nonprofit';
     }
-    if (res.verification?.verificationStatus?.toLowerCase().includes('verified')) {
-      return 'BridgeWell-reviewed';
-    }
     if (res.organizationName) {
       return 'Directory listing';
     }
@@ -188,8 +191,6 @@ function ResourcesContent() {
         return 'bg-[#EAF1F7] text-[#345B73] border-[#CDE0ED]';
       case 'Nonprofit':
         return 'bg-[#F2EDF8] text-[#5E3D82] border-[#DFD3EC]';
-      case 'BridgeWell-reviewed':
-        return 'bg-[#E8F3EA] text-[#366854] border-[#CCE0D1]';
       case 'Directory listing':
         return 'bg-[#F4F5F4] text-[#55635F] border-[#DFE2E0]';
       default:
@@ -197,7 +198,7 @@ function ResourcesContent() {
     }
   };
 
-  const isTemporaryOverride = searchZip !== savedZip;
+  const isTemporaryOverride = Boolean(searchZip && searchZip !== savedZip);
   const isOutsidePilot = searchZip.length >= 5 && !searchZip.startsWith('770') && !searchZip.startsWith('773') && !searchZip.startsWith('774') && !searchZip.startsWith('775');
 
   return (
@@ -226,7 +227,9 @@ function ResourcesContent() {
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <div className="inline-flex flex-wrap items-center gap-2 px-3 py-1.5 rounded-xl bg-[#E8F1EA] border border-[#CCE0D1] text-xs text-[#1F4D45]">
                 <MapPin className="w-3.5 h-3.5 text-[#1F4D45]" />
-                <span className="font-semibold">{seniorName}&apos;s saved location: ZIP {savedZip}</span>
+                <span className="font-semibold">
+                  {savedZip ? `${seniorName}'s saved location: ZIP ${savedZip}` : `${seniorName}'s saved location: Location not set`}
+                </span>
                 {cityState && <span className="text-[#366854]">({cityState})</span>}
 
                 <button
@@ -239,7 +242,7 @@ function ResourcesContent() {
                   title="Permanently update senior's home location in plan"
                 >
                   <Edit2 className="w-3 h-3" />
-                  <span>Edit saved location</span>
+                  <span>{savedZip ? 'Edit saved location' : 'Set location'}</span>
                 </button>
               </div>
 
@@ -340,7 +343,9 @@ function ResourcesContent() {
               <div>
                 <h2 className="font-semibold text-base text-[#183331]">Recommended for your plan</h2>
                 <p className="mt-0.5 text-xs text-[#879890]">
-                  Matched near ZIP {searchZip} based on home preparation, mobility, and discharge.
+                  {searchZip
+                    ? `Matched near ZIP ${searchZip} based on home preparation, mobility, and discharge.`
+                    : 'Showing available resources. Enter a ZIP code to filter by local proximity.'}
                 </p>
               </div>
               <span className="rounded-full bg-[#E8F1EA] px-2.5 py-1 text-xs font-semibold text-[#3F6C5C]">
@@ -442,8 +447,12 @@ function ResourcesContent() {
           {/* Right Sidebar Rail: Nora Guidance & Pilot Scope */}
           <aside className="space-y-5">
             <NoraReadCard
-              headline="Vetted community help"
-              explanation={`Resources shown near ${searchZip} are cross-referenced with public agencies, nonprofit services, and verified providers for senior safety.`}
+              headline="Community & provider support"
+              explanation={
+                searchZip
+                  ? `Resources shown near ${searchZip} are cross-referenced with public agencies, nonprofit services, and verified local providers for senior safety.`
+                  : 'Add or select a ZIP code to see nearby public agency, nonprofit, and provider resources.'
+              }
               actionLabel="Ask Nora about resources"
               onAction={() => openNora({ context: { surface: 'RESOURCES', category: selectedCategory } })}
             />

@@ -203,7 +203,7 @@ export class CaseService {
       throw new Error(`Case ${params.caseId} not found`);
     }
 
-    const actor = params.actor || 'Sarah';
+    const actor = params.actor || 'Family Coordinator';
     const previousDest = caseData.destinationStatus || 'UNDECIDED';
 
     // 1. Snapshot BEFORE state

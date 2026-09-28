@@ -1,7 +1,7 @@
-# MoveWell 🏡✨
+# BridgeWell 🏡✨
 
 > **A calmer path forward.**  
-> MoveWell is a responsive Progressive Web App (PWA) designed to help families coordinate the housing transition of an aging parent.
+> BridgeWell is a collaborative transition workspace designed to help families coordinate the housing, safety, and care transitions of aging parents.
 
 [![Next.js](https://img.shields.io/badge/Next.js-14.2-black?logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-18-blue?logo=react)](https://react.js.org/)
@@ -14,90 +14,80 @@
 
 ## 📖 Overview
 
-When an aging parent faces a sudden health event (such as a fall resulting in hospitalization) or a planned move, families are forced to independently navigate movers, senior move managers, donation services, estate sales, junk removal, home modifications, and elder care. 
+When an aging parent faces a sudden health event (such as a fall resulting in hospitalization) or a planned move, families are forced to navigate movers, senior move managers, donation services, estate sales, home modifications, and elder care across scattered phone calls and spreadsheets.
 
-There is rarely a single place that answers:
+There is rarely a single system that answers:
 1. **What needs to happen first?**
 2. **What depends on something else?**
-3. **What will everything cost?**
+3. **What will everything cost, and what is the basis for those estimates?**
 4. **Who in the family is responsible?**
 
-**MoveWell** turns that fragmented process into a structured, dependency-aware transition plan with an attention-first command center dashboard, local resource matching, deterministic cost models, and a conversational AI transition assistant.
+**BridgeWell** turns that fragmented process into a structured, dependency-aware transition plan with conversational intake led by Nora, an attention-first command center dashboard, external market evidence and quote tracking, Open Referral resource matching, and shared family coordination.
 
 ---
 
-## 🌟 Core Features
+## 🌟 Core Architecture & Flow
 
-### 1. Guided Intake & Golden Scenario
-- Progressive intake flow (`/start`) capturing senior mobility constraints, hospital discharge timelines, stairs hazards, ZIP codes, and family roles.
-- **1-Click Golden Demo Scenario**: Instant load preset for **Maria Thompson** (age 78, Houston TX, hospitalized after a fall, 5 days to discharge, two-story house, $8,000 budget, daughter Sarah coordinating remotely from Chicago, sister Jennifer supporting locally).
+### 1. Conversational Intake with Nora (`/get-started`)
+- Multi-turn conversational consultation guided by **Nora**, an empathetic AI transition planner.
+- Interactive vertical **Nora's Notes** accordion continuously organizes senior profile, discharge timeline, mobility/stairs constraints, coordinator identity, local care circle, and budget preferences.
+- Zero forced synthetic presets — every plan begins from real family context.
 
-### 2. Attention-First Transition Command Center
-- Responsive command center dashboard (`/plan/[caseId]`) showing:
-  - **Urgency Alert Banner** (`URGENT` / `IMMEDIATE` / `PLANNED`)
-  - **Metric Pills**: Days until discharge, overall progress %, cost range vs budget, target transition date.
-  - **"Guided Calm" Focus Hero Card**: Highlights today's single most critical priority task (*Confirm safe discharge destination*) with direct action buttons.
-  - **Family Team Summary**: Assigned task counts for remote coordinators and local helpers.
-  - **Budget Overview Widget**: Cost range vs family budget with clear planning disclaimers.
-  - **Case Activity Log**: Chronological audit trail of user and AI actions.
+### 2. Proposal Review & Draft Activation (`/draft/[draftId]`)
+- Editorial proposal previewing the recommended sequenced transition plan, initial timeline, care circle roles, and cost expectations.
+- Requires authentication (Google OAuth or Magic Link) to review and activate the draft into a shared family workspace.
 
-### 3. Deterministic Task Dependency Engine
-- Workflow templates in code (`src/workflows/post-hospital.ts`) categorized into ordered phases:
-  - **Right now**: Discharge destination, accessibility needs, housing decisions.
-  - **This week**: Return feasibility, belongings inventory, moving estimates.
-  - **Next**: Belongings strategy, booking movers.
-  - **Move week**: Home preparation & move execution.
-  - **After move**: Final cleanout & settling in.
-- **Real-Time Readiness Shifts**: Completing a blocking task automatically shifts downstream tasks from `BLOCKED` to `READY`.
+### 3. Family Workspace Hub (`/home`)
+- Multi-case family dashboard showing active and shared transitions, progress metrics, and outstanding tasks.
 
-### 4. Deterministic Cost Engine & Quote Intelligence
-- Calculates min/max planning cost ranges across transition phases.
-- **Moving Quote Intelligence**: Extracts vendor quotes from PDF/text documents via Gemini without altering the family's total available budget.
-- Confirmed vendor quotes (`CostItem`) cleanly substitute for estimated task ranges in cost calculations to avoid double-counting.
-- Mandatory product disclaimer:
-  > *"Planning estimates, not vendor quotes."*
+### 4. Attention-First Transition Command Center (`/plan/[caseId]`)
+- **Focus Hero Card**: Highlights today's single most critical priority task (*Confirm safe discharge destination*) with direct action buttons.
+- **Transition Pulse**: Real-time metrics tracking decision health, velocity, and budget assessment.
+- **What Changed**: Transparent, chronological audit log capturing every plan mutation, timeline adjustment, task reassignment, and completion note.
+- **Task Sequencer**: Real-time dependency engine recalculating downstream readiness whenever prerequisites are fulfilled.
 
-### 5. Open Referral / HSDS Resource Directory
+### 5. Honest Cost Engine & Evidence Grounding (`/plan/[caseId]/budget`)
+- Clear separation between `WORKFLOW_PLANNING_RANGE`, `EXTERNAL_EVIDENCE`, `VENDOR_QUOTE`, and `USER_ADJUSTED`.
+- Grounded in external public rate sheets, agency tariffs (e.g. TxDMV), and industry benchmarks with explicit source citation and verification dates.
+- Preserves confirmed vendor quotes across location changes and avoids double-counting against workflow planning ranges.
+
+### 6. Open Referral / HSDS Community Resource Directory (`/plan/[caseId]/resources` & `/resources`)
 - Open Referral HSDS schema (`organizations`, `services`, `locations`, `resource_verifications`).
-- Seed data for verified Houston providers (senior move managers, moving services, donation centers, junk removal, home accessibility modifications, climate storage).
-- Directory view (`/plan/[caseId]/resources`) with category filter pills and **Verified listing** trust badges.
+- Curated pilot resources for Harris County / Greater Houston with honest provenance badges (`Public agency`, `Nonprofit`, `Directory listing`, `Nearby option`).
 
-### 6. Conversational AI Assistant (Nora)
-- Multi-turn transition companion powered by Gemini Flash:
-  - Grounded 2-pass architecture (Pass 1 tool calling -> Service execution -> Pass 2 synthesis).
-  - Explicit mutation policies (only mutates case state on explicit user command or confirmed real-world decision).
-  - Strict grounding discipline: Never fabricates partnerships, certifications, or unverified claims.
-  - Understands context, pronouns, and follow-ups.
-  - Proactive next-step proposals and action chips.
+### 7. Team & Care Circle Coordination (`/plan/[caseId]/team`)
+- Staged and live email invitations for family members, local helpers, and professional coordinators.
 
-### 7. Printable Transition Plan
-- Clean `@media print` formatted view (`/plan/[caseId]/print`) for printing or PDF export.
+### 8. Printable Transition Plan (`/plan/[caseId]/print`)
+- High-contrast, clean `@media print` formatted view for offline family sharing and discharge planning.
 
 ---
 
-## 🏗️ Architecture & Stack
-
-MoveWell is built as a clean **Modular Monolith**:
+## 🏗️ Technical Stack & Project Structure
 
 ```text
 src/
 ├── app/                  # Next.js App Router pages & API endpoints
-│   ├── page.tsx          # Landing page & Golden Scenario launcher
-│   ├── start/            # Multi-step Guided Intake wizard
-│   ├── plan/[caseId]/    # Dashboard, Tasks, Resources, Budget, Family, Print
-│   └── api/              # Cases, Tasks, Resources, AI Chat endpoints
-├── components/           # UI components, layout shell, AIAssistant
-├── domain/ & types/      # Pure TypeScript domain models
-├── workflows/            # Deterministic transition templates
-├── services/             # Planning Engine, Task Service, Cost Engine, AI Orchestrator
-├── db/                   # Repositories, memory store fallback, SQL migrations
-└── __tests__/            # Vitest unit test suite
+│   ├── page.tsx          # Landing page
+│   ├── get-started/      # Conversational intake with Nora
+│   ├── draft/[draftId]/  # Proposal review & workspace activation
+│   ├── home/             # Authenticated family case dashboard
+│   ├── plan/[caseId]/    # Command center, budget, team, resources, print
+│   ├── resources/        # Public community directory
+│   └── api/              # Secure endpoints for cases, tasks, drafts, AI
+├── components/           # UI components, layout shells, Nora assistant
+├── domain/ & types/      # Pure TypeScript domain interfaces
+├── db/                   # Repository pattern, Supabase client & in-memory fallback
+├── services/             # Task service, planning engine, cost engine, evidence service
+└── __tests__/            # Comprehensive Vitest test suite
 ```
 
-- **Framework**: Next.js 14+ (App Router), React 18, TypeScript
-- **Styling**: Tailwind CSS (custom Sand & Deep Forest palette)
+- **Framework**: Next.js 14+ (App Router), React 18, TypeScript (Strict)
+- **Styling**: Tailwind CSS (custom Warm Sand, Sage & Evergreen palette)
 - **Database**: Supabase PostgreSQL with SQL migrations & in-memory fallback store
-- **Testing**: Vitest test runner
+- **Authentication**: Supabase Auth (Google OAuth & Email Magic Link)
+- **AI Synthesis**: Google Gemini via `@google/genai`
+- **Testing**: Vitest test runner with unit and integration coverage
 
 ---
 
@@ -120,7 +110,14 @@ src/
    npm install
    ```
 
-3. **Run local development server**:
+3. **Configure environment variables**:
+   Create a `.env.local` file based on `.env.example`:
+   ```bash
+   cp .env.example .env.local
+   ```
+   Add your Supabase and Gemini API credentials.
+
+4. **Run development server**:
    ```bash
    npm run dev
    ```
@@ -140,9 +137,9 @@ Run TypeScript typecheck:
 npm run typecheck
 ```
 
-Run Linter:
+Run ESLint:
 ```bash
-npx eslint src --ext .ts,.tsx
+npm run lint
 ```
 
 Run production build:

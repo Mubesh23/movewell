@@ -221,41 +221,42 @@ describe('Conversational Intake State Machine & Deterministic Readiness', () => 
   });
 
   describe('Case Creation Integrity', () => {
-    it('creates case with unset budget and location without forcing 8000 or 77004', async () => {
-      const req = new NextRequest('http://localhost:3000/api/cases', {
-        method: 'POST',
-        body: JSON.stringify({
+    it('creates case with unset budget without forcing 8000 via draft activation', async () => {
+      const draft = await draftService.createDraftFromIntake(
+        {
           seniorName: 'Robert',
           transitionType: 'POST_HOSPITAL',
           dischargeDays: 4,
           mobilityConstraint: true,
           stairsConstraint: true,
-          userName: 'Michael',
+          city: 'Austin',
+          coordinatorName: 'Michael',
+          coordinatorRelationship: 'Son',
           userIsRemote: true,
-          // budget and zipCode left unset
-        }),
-      });
+          careCircleAddressed: true,
+          budgetStatus: 'UNSET',
+        },
+        'user-michael-101'
+      );
 
-      const res = await casesPost(req);
-      const json = await res.json();
-
-      expect(res.status).toBe(200);
-      expect(json.success).toBe(true);
-      expect(json.caseId).toBeDefined();
+      const activated = await draftService.activateDraft(draft.id, 'user-michael-101');
+      expect(activated.caseId).toBeDefined();
+      const createdCase = await (await import('../db/repository')).repository.getCaseById(activated.caseId);
+      expect(createdCase?.budget).toBeUndefined();
     });
 
-    it('still supports the explicit Maria Thompson golden demo fixture', async () => {
+    it('rejects direct POST /api/cases with 400 directing callers to /get-started', async () => {
       const req = new NextRequest('http://localhost:3000/api/cases', {
         method: 'POST',
-        body: JSON.stringify({ preset: 'MARIA_GOLDEN_SCENARIO' }),
+        body: JSON.stringify({ seniorName: 'Maria' }),
       });
 
       const res = await casesPost(req);
       const json = await res.json();
 
-      expect(res.status).toBe(200);
-      expect(json.success).toBe(true);
-      expect(json.caseId).toContain('case-maria');
+      expect(res.status).toBe(400);
+      expect(json.success).toBe(false);
+      expect(json.error).toContain('/get-started');
     });
   });
 

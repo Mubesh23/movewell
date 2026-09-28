@@ -253,7 +253,7 @@ export class EvidenceService {
    */
   public getEvidenceForCategory(
     categoryInput: string,
-    geographyPreference: string = 'Houston, TX'
+    geographyPreference?: string
   ): EstimateEvidenceSummary | null {
     const cat = categoryInput.toLowerCase().trim();
 
@@ -374,7 +374,7 @@ export class EvidenceService {
    */
   public explainCost(
     categoryInput: string,
-    geographyPreference: string = 'Houston, TX'
+    geographyPreference?: string
   ): {
     explanation: string;
     summary: EstimateEvidenceSummary | null;
@@ -391,7 +391,7 @@ export class EvidenceService {
 
     const primarySource = summary.sources[0];
     const sourceList = summary.sources
-      .map((s) => `• **${s.publisher}**: [${s.title}](${s.url}) (checked ${s.lastCheckedAt})`)
+      .map((s) => `• **${s.publisher}**: [${s.title}](${s.url}) (Published: ${s.publishedDate || 'Current'} · Verified check: ${s.lastCheckedAt})`)
       .join('\n');
 
     const explanation =
@@ -399,8 +399,8 @@ export class EvidenceService {
       `**Evidence details:**\n` +
       `• Geography: ${summary.geography}\n` +
       `• Observed range: $${summary.minAmount.toLocaleString()} to $${summary.maxAmount.toLocaleString()}\n` +
-      `• Observations: ${summary.observationCount} recent public tariff and rate sheet data point${summary.observationCount > 1 ? 's' : ''}\n` +
-      `• Newest verification date: ${summary.newestObservedDate}\n\n` +
+      `• Observations: ${summary.observationCount} recent public rate sheet and benchmark observation${summary.observationCount > 1 ? 's' : ''}\n` +
+      `• Most recent source check: ${summary.newestObservedDate}\n\n` +
       `**Published Sources:**\n${sourceList}\n\n` +
       `*Published pricing is useful for planning, but the final cost depends on the exact job. Confirming with local providers would give you a more reliable current number.*`;
 

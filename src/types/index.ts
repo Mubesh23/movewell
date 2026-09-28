@@ -92,10 +92,6 @@ export type ResourceCostType =
   | 'hourly_or_quote'
   | 'public_transit_fare'
   | 'custom_quote'
-  | 'free_legal_aid';
-
-export type CasePreset = 'MARIA_GOLDEN_SCENARIO';
-
 export type AIToolName =
   | 'get_plan'
   | 'update_case_context'
@@ -342,6 +338,8 @@ export interface TransitionTask {
   assignee?: CaseMember;
   minEstimatedCost: number;
   maxEstimatedCost: number;
+  estimateBasis?: CostEstimateBasis;
+  directEvidenceAllowed?: boolean;
   dependsOnTaskIds?: string[];
   createdAt: string;
   updatedAt: string;
@@ -593,11 +591,15 @@ export interface PlanDraft {
 export type ResourceTrustLabel =
   | 'Public agency'
   | 'Nonprofit'
-  | 'BridgeWell-reviewed'
-  | 'Bridgewell-reviewed'
   | 'Directory listing'
   | 'Nearby option'
   | 'External listing';
+
+export type CostEstimateBasis =
+  | 'EXTERNAL_EVIDENCE'
+  | 'WORKFLOW_PLANNING_RANGE'
+  | 'VENDOR_QUOTE'
+  | 'USER_ADJUSTED';
 
 export interface ResourceSearchInput {
   category: ResourceCategory | string;

@@ -124,7 +124,7 @@ export const AI_TOOLS_REGISTRY = {
       const result = await caseService.confirmDischargeDestination({
         caseId: args.caseId,
         destination: args.destination,
-        actor: args.actor || 'Sarah',
+        actor: args.actor || 'Family Coordinator via Nora',
         note: args.note,
       });
 
@@ -282,13 +282,15 @@ export const AI_TOOLS_REGISTRY = {
     return {
       toolName: 'find_resources',
       success: true,
-      message: `**Local resources near ZIP ${args.zipCode || '77004'}:**\n\n${formattedList}`,
+      message: args.zipCode
+        ? `**Local resources near ZIP ${args.zipCode}:**\n\n${formattedList}`
+        : `**Available resources:**\n\n${formattedList}`,
       data: resources,
     };
   },
 
   explain_cost_estimate: async (args: { category: string; caseId?: string }): Promise<ToolExecutionResult> => {
-    let zipCode = '77004';
+    let zipCode: string | undefined = undefined;
     if (args.caseId) {
       const caseData = await repository.getCaseById(args.caseId);
       if (caseData?.zipCode && caseData.zipCode !== 'UNSET') {

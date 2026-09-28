@@ -136,12 +136,10 @@ export async function requireCaseAccess(
     };
   }
 
-  // Real production cases require permanent AUTHENTICATED user.
-  // Sample demo cases (e.g. Maria golden scenario) allow the session that created them.
-  const isDemoCase = caseId.startsWith('case-maria') || caseData.id.startsWith('case-maria');
+  // Real active transition cases require authenticated user or the owner session that created the case.
   const isOwner = Boolean(caseData.ownerUserId && caseData.ownerUserId === effectiveUserId);
 
-  if (session.kind !== 'AUTHENTICATED' && !isDemoCase && !isOwner) {
+  if (session.kind !== 'AUTHENTICATED' && !isOwner) {
     return {
       authorized: false,
       canManage: false,

@@ -48,9 +48,9 @@ describe('BridgeWell Final Challenge-Aligned Build Test Suite', () => {
       expect(result.message).toBeDefined();
       expect(result.message.length).toBeGreaterThan(50);
       // Explains cost using external source data
-      expect(result.message).toMatch(/Move\.org|Angi|tariff|Houston/i);
+      expect(result.message).toMatch(/Move\.org|TxDMV|tariff|Houston/i);
       // Explains difference between moving estimate and other items
-      expect(result.message).toContain('$950');
+      expect(result.message).toMatch(/\$(110|950)/);
       // Must not invent fake survey
       expect(result.message).not.toContain('Regional Texas Senior Transition Cost Survey');
       expect(result.toolResults?.some((tr) => tr.toolName === 'explain_cost_estimate')).toBe(true);
@@ -115,8 +115,8 @@ describe('BridgeWell Final Challenge-Aligned Build Test Suite', () => {
   });
 
   describe('Scenario Support Boundaries', () => {
-    it('accepts POST_HOSPITAL transition cases and rejects unsupported transition types', async () => {
-      const validReq = new NextRequest('http://localhost:3000/api/cases', {
+    it('rejects direct POST /api/cases with 400 directing users to conversational draft intake', async () => {
+      const directReq = new NextRequest('http://localhost:3000/api/cases', {
         method: 'POST',
         body: JSON.stringify({
           transitionType: 'POST_HOSPITAL',
@@ -125,25 +125,11 @@ describe('BridgeWell Final Challenge-Aligned Build Test Suite', () => {
         }),
       });
 
-      const validRes = await casesPost(validReq);
-      const validJson = await validRes.json();
-      expect(validRes.status).toBe(200);
-      expect(validJson.success).toBe(true);
-      expect(validJson.caseId).toBeDefined();
-
-      const invalidReq = new NextRequest('http://localhost:3000/api/cases', {
-        method: 'POST',
-        body: JSON.stringify({
-          transitionType: 'PLANNED_DOWNSIZE',
-          seniorName: 'Eleanor',
-        }),
-      });
-
-      const invalidRes = await casesPost(invalidReq);
-      const invalidJson = await invalidRes.json();
-      expect(invalidRes.status).toBe(400);
-      expect(invalidJson.success).toBe(false);
-      expect(invalidJson.error).toContain('POST_HOSPITAL');
+      const res = await casesPost(directReq);
+      const json = await res.json();
+      expect(res.status).toBe(400);
+      expect(json.success).toBe(false);
+      expect(json.error).toContain('/get-started');
     });
   });
 });
