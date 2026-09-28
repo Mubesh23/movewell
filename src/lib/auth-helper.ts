@@ -94,7 +94,23 @@ export async function resolveSession(req: NextRequest): Promise<BridgewellSessio
     }
   }
 
-  // 4. Guest session cookie resolution
+  // 4. Authenticated user session cookie resolution
+  const userSessionCookie = req.cookies.get(SESSION_COOKIE_NAME)?.value;
+  if (
+    userSessionCookie &&
+    !userSessionCookie.startsWith('anon_') &&
+    !userSessionCookie.startsWith('anon-') &&
+    !userSessionCookie.startsWith('guest_')
+  ) {
+    const emailCookie = req.cookies.get('bridgewell_email')?.value;
+    return {
+      kind: 'AUTHENTICATED',
+      userId: userSessionCookie.trim(),
+      email: emailCookie || undefined,
+    };
+  }
+
+  // 5. Guest session cookie resolution
   const guestCookie =
     req.cookies.get(GUEST_COOKIE_NAME)?.value ||
     req.cookies.get(SESSION_COOKIE_NAME)?.value ||
