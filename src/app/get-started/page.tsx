@@ -27,6 +27,138 @@ interface ChatMessage {
   isConfirmation?: boolean;
 }
 
+function renderAssistantMessage(content: string) {
+  // Split into paragraphs / blocks
+  const paragraphs = content.split(/\n\n+/);
+
+  return (
+    <div className="space-y-3 text-sm leading-relaxed text-ink/90">
+      {paragraphs.map((para, pIdx) => {
+        const lines = para.split('\n').map((l) => l.trim()).filter(Boolean);
+
+        // Check if this block is a numbered list (e.g. "1. confirming...", "2. making sure...")
+        const isNumberedList = lines.length > 1 && lines.every((l) => /^\d+[\.\)]\s+/.test(l));
+
+        if (isNumberedList) {
+          return (
+            <div key={pIdx} className="space-y-1.5 my-2">
+              {lines.map((line, lIdx) => {
+                const match = line.match(/^(\d+)[\.\)]\s+(.*)$/);
+                const num = match ? match[1] : String(lIdx + 1);
+                const text = match ? match[2] : line;
+                return (
+                  <div
+                    key={lIdx}
+                    className="flex items-start gap-2.5 p-2.5 rounded-xl bg-sand/50 border border-line/60 text-xs text-ink/90"
+                  >
+                    <span className="w-5 h-5 rounded-full bg-sage text-evergreen font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                      {num}
+                    </span>
+                    <div className="flex-1 font-medium leading-relaxed pt-0.5">
+                      {renderInlineMarkdown(text)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        }
+
+        // Check if this block contains an intro line followed by numbered items
+        const hasNumberedItems = lines.some((l) => /^\d+[\.\)]\s+/.test(l));
+        if (hasNumberedItems && lines.length > 1) {
+          const introLines: string[] = [];
+          const listLines: string[] = [];
+          let startedList = false;
+
+          for (const l of lines) {
+            if (/^\d+[\.\)]\s+/.test(l)) {
+              startedList = true;
+              listLines.push(l);
+            } else if (!startedList) {
+              introLines.push(l);
+            } else {
+              listLines.push(l);
+            }
+          }
+
+          return (
+            <div key={pIdx} className="space-y-2">
+              {introLines.length > 0 && (
+                <p className="text-ink/90 leading-relaxed">
+                  {renderInlineMarkdown(introLines.join(' '))}
+                </p>
+              )}
+              <div className="space-y-1.5 my-2">
+                {listLines.map((line, lIdx) => {
+                  const match = line.match(/^(\d+)[\.\)]\s+(.*)$/);
+                  const num = match ? match[1] : String(lIdx + 1);
+                  const text = match ? match[2] : line;
+                  return (
+                    <div
+                      key={lIdx}
+                      className="flex items-start gap-2.5 p-2.5 rounded-xl bg-sand/50 border border-line/60 text-xs text-ink/90"
+                    >
+                      <span className="w-5 h-5 rounded-full bg-sage text-evergreen font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                        {num}
+                      </span>
+                      <div className="flex-1 font-medium leading-relaxed pt-0.5">
+                        {renderInlineMarkdown(text)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        }
+
+        // Check for bullet list
+        const isBulletList = lines.length > 1 && lines.every((l) => /^[\u2022\*\-]\s+/.test(l));
+        if (isBulletList) {
+          return (
+            <ul key={pIdx} className="space-y-1.5 my-2 pl-1">
+              {lines.map((line, lIdx) => (
+                <li key={lIdx} className="flex items-start gap-2 text-xs text-ink/90 font-medium">
+                  <span className="text-evergreen font-bold text-sm leading-none mt-0.5">•</span>
+                  <span>{renderInlineMarkdown(line.replace(/^[\u2022\*\-]\s+/, ''))}</span>
+                </li>
+              ))}
+            </ul>
+          );
+        }
+
+        return (
+          <p key={pIdx} className="text-ink/90 leading-relaxed">
+            {renderInlineMarkdown(para)}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+function renderInlineMarkdown(text: string) {
+  const parts = text.split(/(\*\*[\s\S]+?\*\*|\*[^\*\n]+?\*)/g);
+  return parts.map((part, idx) => {
+    if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+      return (
+        <strong key={idx} className="font-semibold text-ink">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
+      return (
+        <em key={idx} className="italic text-ink/80">
+          {part.slice(1, -1)}
+        </em>
+      );
+    }
+    return part;
+  });
+}
+
 const INITIAL_FIRST_MESSAGE: ChatMessage = {
   id: 'welcome',
   role: 'assistant',
@@ -413,61 +545,83 @@ function GetStartedContent() {
         <div className="flex items-start justify-center gap-8 relative">
           {/* Main Conversation Column */}
           <div
-            className={`flex-1 transition-all duration-200 flex flex-col space-y-5 ${
+            className={`flex-1 transition-all duration-200 flex flex-col space-y-6 ${
               notesOpen ? 'max-w-2xl' : 'max-w-3xl'
             }`}
           >
             {/* Message Thread */}
-            <div className="space-y-4">
+            <div className="space-y-5">
               {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
-                >
-                  <div
-                    className={`max-w-[90%] sm:max-w-[85%] rounded-2xl p-4.5 text-sm leading-relaxed ${
-                      msg.role === 'user'
-                        ? 'bg-evergreen text-white rounded-br-xs font-normal shadow-xs'
-                        : 'bg-white border border-line text-ink rounded-bl-xs shadow-2xs'
-                    }`}
-                  >
-                    <div className="whitespace-pre-line">{msg.content}</div>
+                <div key={msg.id}>
+                  {msg.role === 'assistant' ? (
+                    <div className="flex items-start gap-3">
+                      {/* Nora Avatar */}
+                      <div className="w-8 h-8 rounded-xl bg-sage text-evergreen flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 shadow-2xs border border-evergreen/15">
+                        ✦
+                      </div>
+                      <div className="flex-1 space-y-1.5 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-ink">Nora</span>
+                          <span className="text-[10px] text-muted-ink uppercase tracking-wider font-semibold">
+                            Transition Assistant
+                          </span>
+                        </div>
+                        <div className="bg-white border border-line/80 rounded-2xl rounded-tl-xs p-4 sm:p-5 text-sm shadow-xs space-y-3">
+                          {renderAssistantMessage(msg.content)}
 
-                    {msg.bulletPoints && msg.bulletPoints.length > 0 && (
-                      <div className="mt-4 pt-3.5 border-t border-line/60">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-ink block mb-2">
-                          Key details noted:
+                          {msg.bulletPoints && msg.bulletPoints.length > 0 && (
+                            <div className="mt-4 pt-3.5 border-t border-line/60 bg-sand/30 -mx-4 -mb-4 sm:-mx-5 sm:-mb-5 p-4 sm:p-5 rounded-b-2xl">
+                              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-ink block mb-2.5">
+                                Key details noted:
+                              </span>
+                              <ul className="space-y-2">
+                                {msg.bulletPoints.map((bp, i) => (
+                                  <li key={i} className="flex items-start gap-2.5 text-xs text-ink/90 font-medium">
+                                    <CheckCircle2 className="w-4 h-4 text-evergreen shrink-0 mt-0.5" />
+                                    <span>{bp}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {msg.isConfirmation && (
+                            <div className="mt-4 pt-3.5 border-t border-line/60">
+                              <button
+                                type="button"
+                                onClick={handleCreateDraft}
+                                disabled={creatingDraft}
+                                className="inline-flex items-center gap-2 py-3 px-5 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-semibold text-xs shadow-xs hover:shadow transition-all cursor-pointer active:scale-[0.98]"
+                              >
+                                <span>{creatingDraft ? 'Generating proposal...' : 'Review proposed plan →'}</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* User Message */
+                    <div className="flex items-start justify-end gap-3 ml-auto">
+                      <div className="space-y-1 flex flex-col items-end max-w-[85%]">
+                        <span className="text-[10px] text-muted-ink uppercase tracking-wider font-semibold mr-1">
+                          You
                         </span>
-                        <ul className="space-y-1.5">
-                          {msg.bulletPoints.map((bp, i) => (
-                            <li key={i} className="flex items-start gap-2 text-xs text-ink/90 font-medium">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-evergreen shrink-0 mt-0.5" />
-                              <span>{bp}</span>
-                            </li>
-                          ))}
-                        </ul>
+                        <div className="bg-evergreen text-white rounded-2xl rounded-tr-xs px-4.5 py-3 text-sm font-normal leading-relaxed shadow-xs">
+                          {msg.content}
+                        </div>
                       </div>
-                    )}
-
-                    {msg.isConfirmation && (
-                      <div className="mt-4 pt-3.5 border-t border-line/60">
-                        <button
-                          type="button"
-                          onClick={handleCreateDraft}
-                          disabled={creatingDraft}
-                          className="inline-flex items-center gap-2 py-2.5 px-4 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-semibold text-xs shadow-xs hover:shadow transition-all cursor-pointer"
-                        >
-                          <span>{creatingDraft ? 'Generating proposal...' : 'Review proposed plan →'}</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               ))}
 
               {submittingTurn && (
-                <div className="flex items-start gap-2">
-                  <div className="bg-white border border-line text-muted-ink px-4 py-3 rounded-2xl rounded-bl-xs text-xs flex items-center gap-2 shadow-2xs">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-sage text-evergreen flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 shadow-2xs border border-evergreen/15">
+                    ✦
+                  </div>
+                  <div className="bg-white border border-line text-muted-ink px-4 py-3 rounded-2xl rounded-tl-xs text-xs flex items-center gap-2.5 shadow-2xs">
                     <span className="w-2 h-2 rounded-full bg-evergreen animate-ping" />
                     <span>Nora is organizing details...</span>
                   </div>
@@ -479,7 +633,7 @@ function GetStartedContent() {
 
             {/* Error banner if any */}
             {chatError && (
-              <div className="p-3 bg-amber-bg border border-amber/30 rounded-xl text-xs text-amber font-medium flex items-center gap-2">
+              <div className="p-3.5 bg-amber-bg border border-amber/30 rounded-xl text-xs text-amber font-medium flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{chatError}</span>
               </div>
@@ -487,37 +641,41 @@ function GetStartedContent() {
 
             {/* Suggestions Chips */}
             {suggestions.length > 0 && !submittingTurn && (
-              <div className="pt-1">
-                <span className="text-[11px] font-semibold text-muted-ink block mb-2 uppercase tracking-wider">
-                  Suggested responses:
-                </span>
+              <div className="pt-2">
+                <div className="flex items-center gap-1.5 mb-2.5">
+                  <Sparkles className="w-3.5 h-3.5 text-evergreen" />
+                  <span className="text-[11px] font-bold text-muted-ink uppercase tracking-wider">
+                    Suggested replies
+                  </span>
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {suggestions.map((s, idx) => (
                     <button
                       key={idx}
                       type="button"
                       onClick={() => handleSendMessage(s.prompt)}
-                      className="text-xs font-medium px-3.5 py-2 rounded-xl bg-white hover:bg-cream border border-line text-ink transition-all cursor-pointer shadow-2xs hover:border-evergreen/40 active:scale-[0.99]"
+                      className="group inline-flex items-center gap-2 text-xs font-medium px-3.5 py-2 rounded-xl bg-white hover:bg-cream border border-line hover:border-evergreen/40 text-ink shadow-2xs hover:shadow-xs transition-all cursor-pointer active:scale-[0.98]"
                     >
-                      {s.text}
+                      <span className="text-evergreen group-hover:scale-110 transition-transform">✦</span>
+                      <span>{s.text}</span>
                     </button>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Auto-growing Textarea Composer */}
-            <div className="space-y-1.5 pt-2">
+            {/* Sleek Composer */}
+            <div className="space-y-1.5 pt-2 sticky bottom-4">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
                   handleSendMessage();
                 }}
-                className="relative bg-white border border-line rounded-2xl p-2.5 shadow-sm focus-within:border-evergreen focus-within:ring-1 focus-within:ring-evergreen/30 transition-all"
+                className="relative bg-white border border-line rounded-2xl shadow-sm focus-within:border-evergreen focus-within:ring-2 focus-within:ring-evergreen/10 transition-all p-2 pl-4"
               >
                 <textarea
                   ref={textareaRef}
-                  rows={2}
+                  rows={1}
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={(e) => {
@@ -528,19 +686,19 @@ function GetStartedContent() {
                   }}
                   placeholder="Tell Nora what's happening..."
                   disabled={submittingTurn}
-                  className="w-full min-h-[64px] max-h-[180px] p-2 pr-14 text-sm text-ink placeholder:text-muted-ink/60 bg-transparent focus:outline-none resize-none leading-relaxed"
+                  className="w-full min-h-[48px] max-h-[160px] py-2 pr-12 text-sm text-ink placeholder:text-muted-ink/60 bg-transparent focus:outline-none resize-none leading-relaxed"
                 />
                 <button
                   type="submit"
                   disabled={submittingTurn || !inputValue.trim()}
-                  className="absolute right-3 bottom-3 w-9 h-9 rounded-xl bg-evergreen hover:bg-evergreen-dark disabled:opacity-30 text-white flex items-center justify-center transition-colors shrink-0 shadow-xs cursor-pointer"
+                  className="absolute right-2.5 bottom-2.5 w-9 h-9 rounded-xl bg-evergreen hover:bg-evergreen-dark disabled:opacity-25 disabled:hover:bg-evergreen text-white flex items-center justify-center transition-all shrink-0 shadow-xs cursor-pointer active:scale-95"
                   aria-label="Send message"
                 >
                   <Send className="w-4 h-4" />
                 </button>
               </form>
 
-              <div className="flex items-center justify-between text-[11px] text-muted-ink px-1">
+              <div className="flex items-center justify-between text-[11px] text-muted-ink px-2">
                 <span>Press Enter to send, Shift+Enter for newline</span>
               </div>
             </div>
