@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Upload, FileText, CheckCircle2, AlertCircle, Sparkles, ArrowRight, FileCheck } from 'lucide-react';
+import { FileText, CheckCircle2, AlertCircle, ArrowRight, FileCheck, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
 import { Badge } from '@/components/ui/Badge';
@@ -18,7 +18,6 @@ export function QuoteUploader({ caseId, currentBudget, onBudgetUpdated }: QuoteU
   const [quoteData, setQuoteData] = useState<any | null>(null);
   const [applied, setApplied] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<'sample' | 'text'>('sample');
   const [pastedText, setPastedText] = useState('');
   const [fileName, setFileName] = useState('');
 
@@ -76,32 +75,6 @@ export function QuoteUploader({ caseId, currentBudget, onBudgetUpdated }: QuoteU
     }
   };
 
-  const handleLoadSample = async () => {
-    setAnalyzing(true);
-    setError(null);
-    setApplied(false);
-
-    try {
-      const res = await fetch('/api/ai/extract-quote', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isSample: true }),
-      });
-
-      const data = await res.json();
-      if (data.success && data.quote) {
-        setQuoteData(data.quote);
-        setFileName('Caring_Transitions_Houston_Quote.txt');
-      } else {
-        setError(data.error || 'Failed to load sample quote.');
-      }
-    } catch (err: any) {
-      setError('Error loading sample quote: ' + err.message);
-    } finally {
-      setAnalyzing(false);
-    }
-  };
-
   const handleApplyQuoteToPlan = async () => {
     if (!quoteData) return;
     try {
@@ -110,7 +83,7 @@ export function QuoteUploader({ caseId, currentBudget, onBudgetUpdated }: QuoteU
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           quote: quoteData,
-          documentName: fileName || 'Caring_Transitions_Houston_Quote.txt',
+          documentName: fileName || 'Vendor_Quote.txt',
         }),
       });
       const data = await res.json();
@@ -138,98 +111,46 @@ export function QuoteUploader({ caseId, currentBudget, onBudgetUpdated }: QuoteU
             Substitute confirmed vendor prices for planning estimates without modifying total available budget{currentBudget ? ` ($${currentBudget.toLocaleString()})` : ''}.
           </p>
         </div>
-
-        {/* Mode Selector */}
-        <div className="flex items-center gap-1.5 self-start sm:self-auto shrink-0">
-          <button
-            type="button"
-            onClick={() => { setMode('sample'); setError(null); }}
-            className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
-              mode === 'sample'
-                ? 'bg-forest text-surface font-semibold'
-                : 'text-muted hover:text-charcoal bg-stone-subtle/60'
-            }`}
-          >
-            Try Sample Quote
-          </button>
-          <button
-            type="button"
-            onClick={() => { setMode('text'); setError(null); }}
-            className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
-              mode === 'text'
-                ? 'bg-forest text-surface font-semibold'
-                : 'text-muted hover:text-charcoal bg-stone-subtle/60'
-            }`}
-          >
-            Paste or Upload Text
-          </button>
-        </div>
       </div>
 
       {!quoteData ? (
-        <div className="rounded-lg border border-dashed border-stone-line p-6 text-center bg-canvas/40 space-y-3">
-          {mode === 'sample' ? (
-            <div className="space-y-3 max-w-md mx-auto">
-              <div>
-                <p className="text-sm font-semibold text-charcoal">
-                  Demonstration Quote: Caring Transitions of Greater Houston
-                </p>
-                <p className="text-xs text-muted mt-1 leading-relaxed">
-                  Test how {BRAND_NAME} extracts rightsizing, packing, transport, and supplies itemizations ($2,150) and replaces the estimated moving range ($1,200–$2,400).
-                </p>
-              </div>
+        <div className="rounded-lg border border-dashed border-stone-line p-6 bg-canvas/40 space-y-4 max-w-xl mx-auto text-left">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-1">
+              Upload text document or paste quote text
+            </p>
+            <p className="text-xs text-muted mb-3">
+              Supported formats: Plain text (.txt), Markdown (.md), or CSV documents.
+            </p>
+          </div>
 
-              <Button
-                type="button"
-                variant="default"
-                size="default"
-                isLoading={analyzing}
-                onClick={handleLoadSample}
-              >
-                <Sparkles className="w-4 h-4 mr-1" />
-                Load Sample Moving Quote ($2,150)
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4 max-w-lg mx-auto text-left">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-1">
-                  Upload text document or paste quote text
-                </p>
-                <p className="text-xs text-muted mb-3">
-                  Supported formats: Plain text (.txt), Markdown (.md), or CSV documents.
-                </p>
-              </div>
+          <input
+            type="file"
+            accept=".txt,.md,.csv"
+            onChange={handleFileUpload}
+            className="block w-full text-xs text-muted file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-stone-line file:text-xs file:font-medium file:bg-surface file:text-charcoal hover:file:bg-stone-subtle cursor-pointer"
+          />
 
-              <input
-                type="file"
-                accept=".txt,.md,.csv"
-                onChange={handleFileUpload}
-                className="block w-full text-xs text-muted file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-stone-line file:text-xs file:font-medium file:bg-surface file:text-charcoal hover:file:bg-stone-subtle cursor-pointer"
-              />
+          <Textarea
+            rows={4}
+            value={pastedText}
+            onChange={(e) => setPastedText(e.target.value)}
+            placeholder="Or paste vendor quote text here (e.g. estimate line items, labor, transport, packing, supplies, totals)..."
+            className="text-xs"
+          />
 
-              <Textarea
-                rows={4}
-                value={pastedText}
-                onChange={(e) => setPastedText(e.target.value)}
-                placeholder="Or paste quote text here (e.g. Caring Transitions Estimate #1042: Packing $600, Loading & Transport $1,350, Materials $200. Total: $2,150)..."
-                className="text-xs"
-              />
-
-              <Button
-                type="button"
-                variant="default"
-                size="default"
-                isLoading={analyzing}
-                disabled={!pastedText.trim()}
-                onClick={handleExtractFromText}
-                className="w-full"
-              >
-                <span>Extract Quote Details with Gemini</span>
-                <ArrowRight className="w-4 h-4 ml-1" />
-              </Button>
-            </div>
-          )}
+          <Button
+            type="button"
+            variant="default"
+            size="default"
+            isLoading={analyzing}
+            disabled={!pastedText.trim()}
+            onClick={handleExtractFromText}
+            className="w-full"
+          >
+            <span>Extract Quote Details with Gemini</span>
+            <ArrowRight className="w-4 h-4 ml-1" />
+          </Button>
         </div>
       ) : (
         <div className="rounded-lg border border-forest/20 bg-surface p-5 space-y-4">
@@ -237,7 +158,7 @@ export function QuoteUploader({ caseId, currentBudget, onBudgetUpdated }: QuoteU
             <div className="flex items-center gap-2">
               <FileCheck className="w-4 h-4 text-forest" />
               <span className="font-semibold text-[#183331] text-base tracking-[-0.02em]">
-                {quoteData.providerName}
+                {quoteData.providerName || 'Vendor Quote'}
               </span>
             </div>
             <Badge variant="ready">Parsed Successfully</Badge>

@@ -134,16 +134,10 @@ export default async function HomePage() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link
                 href="/get-started"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-semibold text-sm transition-all shadow-xs"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-semibold text-sm transition-all shadow-xs"
               >
                 <Sparkles className="w-4 h-4" />
-                <span>Talk to Nora</span>
-              </Link>
-              <Link
-                href="/plan/case-sat6lbt"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-white hover:bg-cream border border-line text-ink font-semibold text-sm transition-all"
-              >
-                <span>Explore sample plan</span>
+                <span>Start a new transition with Nora</span>
               </Link>
             </div>
           </div>

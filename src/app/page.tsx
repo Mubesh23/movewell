@@ -19,26 +19,7 @@ import { AuthModal } from '@/components/auth/AuthModal';
 
 export default function LandingPage() {
   const router = useRouter();
-  const [loadingDemo, setLoadingDemo] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
-
-  const handleExploreSamplePlan = async () => {
-    setLoadingDemo(true);
-    try {
-      const res = await fetch('/api/cases', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ preset: 'MARIA_GOLDEN_SCENARIO' }),
-      });
-      const data = await res.json();
-      if (data.success && data.caseId) {
-        router.push(`/plan/${data.caseId}`);
-      }
-    } catch (e) {
-      console.error('Failed to load sample plan:', e);
-      setLoadingDemo(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-[#F7F8F5] text-[#183331] flex flex-col">
@@ -87,15 +68,6 @@ export default function LandingPage() {
                 >
                   See how it works
                 </a>
-
-                <button
-                  type="button"
-                  onClick={handleExploreSamplePlan}
-                  disabled={loadingDemo}
-                  className="inline-flex items-center justify-center text-sm font-semibold text-[#B8D4BA] hover:text-white px-3 py-3 transition-colors text-center"
-                >
-                  {loadingDemo ? 'Loading demo...' : 'Explore sample plan →'}
-                </button>
               </div>
 
               <div className="mt-8 flex items-center gap-6 text-sm text-[#B8D4BA]">

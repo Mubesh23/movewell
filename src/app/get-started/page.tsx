@@ -305,11 +305,7 @@ function GetStartedContent() {
           { text: 'My parent is leaving the hospital', prompt: 'My parent is being discharged from the hospital and we need a transition plan.' },
           { text: 'We need help planning a move', prompt: 'We need help planning a move and making sure their next living space is safe.' },
           { text: "I'm coordinating from another city", prompt: "I am coordinating from another city and need to get local help organized." },
-          {
-            text: 'Fill sample scenario (Maria)',
-            prompt:
-              'My mom Maria (78) fell and broke her hip. Discharge is expected Thursday. House is two-story with bedroom upstairs. Her sister Jennifer is in Houston with her (77004), while I am coordinating from Chicago. Let us leave the budget open for now.',
-          },
+          { text: 'Home safety & mobility help', prompt: 'We need home safety modifications and mobility support before discharge.' },
         ]
       : !draft.budget && draft.budgetStatus !== 'UNSET'
       ? [
