@@ -479,9 +479,9 @@ function GetStartedContent() {
     <div className="min-h-screen bg-sand text-ink flex flex-col font-sans selection:bg-sage selection:text-ink">
       <Navbar />
 
-      <main className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Nora Intake Header */}
-        <div className="flex items-center justify-between pb-5 mb-5 border-b border-line">
+        <div className="flex items-center justify-between pb-5 mb-6 border-b border-line">
           <div className="flex items-center gap-3">
             <span className="w-10 h-10 rounded-xl bg-sage text-evergreen flex items-center justify-center font-bold text-lg shadow-2xs">
               ✦
@@ -510,266 +510,270 @@ function GetStartedContent() {
           </button>
         </div>
 
-        {/* Nora's Notes: Smooth Vertical Accordion (Expands/Collapses Up & Down) */}
-        <div className="mb-6 bg-white border border-line rounded-2xl shadow-2xs overflow-hidden transition-colors">
-          <button
-            type="button"
-            onClick={() => handleToggleNotes(!notesOpen)}
-            className="w-full flex items-center justify-between p-3.5 sm:px-4 text-left hover:bg-cream/40 transition-colors cursor-pointer"
-            aria-expanded={notesOpen}
-          >
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <span className="w-2 h-2 rounded-full bg-evergreen shrink-0" />
-              <span className="text-xs font-bold text-ink uppercase tracking-wider">
-                Nora&apos;s notes
-              </span>
-              <span className="px-2 py-0.5 rounded-full bg-sand text-ink text-[11px] font-semibold border border-line/80">
-                {knownCount} of {understoodItems.length} gathered
-              </span>
-              <span className="text-xs text-muted-ink hidden sm:inline">
-                · {getReadinessHeading()}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-evergreen shrink-0">
-              <span className="hidden sm:inline">{notesOpen ? 'Hide notes' : 'View notes'}</span>
-              <motion.div
-                animate={{ rotate: notesOpen ? 180 : 0 }}
-                transition={{ duration: 0.2 }}
-                className="flex items-center justify-center"
-              >
-                <ChevronDown className="w-4 h-4 text-evergreen" />
-              </motion.div>
-            </div>
-          </button>
-
-          <AnimatePresence initial={false}>
-            {notesOpen && (
-              <motion.div
-                key="notes-content"
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.25, ease: 'easeInOut' }}
-                className="overflow-hidden"
-              >
-                <div className="p-4 sm:p-5 pt-1 border-t border-line/60 bg-sand/20 space-y-4">
-                  {/* Grid of Understood Items */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                    {understoodItems.map((item) => (
-                      <div
-                        key={item.label}
-                        className={`p-2.5 rounded-xl border text-xs flex items-start gap-2.5 transition-colors ${
-                          item.known
-                            ? 'bg-sage/25 border-evergreen/20 text-ink'
-                            : 'bg-white/80 border-line/60 text-muted-ink/70'
-                        }`}
-                      >
-                        <span
-                          className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-bold ${
-                            item.known ? 'bg-evergreen text-white' : 'border border-line text-muted-ink'
-                          }`}
-                        >
-                          {item.known ? '✓' : '○'}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-ink mb-0.5">
-                            {item.label}
-                          </span>
-                          <span
-                            className={`truncate block ${
-                              item.known ? 'text-ink font-semibold' : 'text-muted-ink italic'
-                            }`}
-                          >
-                            {item.text}
+        {/* 2-Column Responsive Layout: Chat on Left, Nora's Notes on Right */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_360px] gap-8 items-start">
+          {/* Main Left Column: Conversation Stream */}
+          <div className="flex flex-col space-y-6 min-w-0">
+            {/* Message Thread */}
+            <div className="space-y-5">
+              {messages.map((msg) => (
+                <div key={msg.id}>
+                  {msg.role === 'assistant' ? (
+                    <div className="flex items-start gap-3">
+                      {/* Nora Avatar */}
+                      <div className="w-8 h-8 rounded-xl bg-sage text-evergreen flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 shadow-2xs border border-evergreen/15">
+                        ✦
+                      </div>
+                      <div className="flex-1 space-y-1.5 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-ink">Nora</span>
+                          <span className="text-[10px] text-muted-ink uppercase tracking-wider font-semibold">
+                            Transition Assistant
                           </span>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                        <div className="bg-white border border-line/80 rounded-2xl rounded-tl-xs p-4 sm:p-5 text-sm shadow-xs space-y-3">
+                          {renderAssistantMessage(msg.content)}
 
-                  {/* Ready Action Banner */}
-                  {isReady && (
-                    <div className="pt-2 border-t border-line/60 flex flex-col sm:flex-row items-center justify-between gap-3 bg-sage/30 p-3.5 rounded-xl border border-evergreen/20">
-                      <div>
-                        <p className="text-xs font-bold text-evergreen">
-                          Ready to review proposed plan
-                        </p>
-                        <p className="text-[11px] text-muted-ink">
-                          You can review and refine everything before activating the shared workspace.
-                        </p>
+                          {msg.bulletPoints && msg.bulletPoints.length > 0 && (
+                            <div className="mt-4 pt-3.5 border-t border-line/60 bg-sand/30 -mx-4 -mb-4 sm:-mx-5 sm:-mb-5 p-4 sm:p-5 rounded-b-2xl">
+                              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-ink block mb-2.5">
+                                Key details noted:
+                              </span>
+                              <ul className="space-y-2">
+                                {msg.bulletPoints.map((bp, i) => (
+                                  <li key={i} className="flex items-start gap-2.5 text-xs text-ink/90 font-medium">
+                                    <CheckCircle2 className="w-4 h-4 text-evergreen shrink-0 mt-0.5" />
+                                    <span>{bp}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {msg.isConfirmation && (
+                            <div className="mt-4 pt-3.5 border-t border-line/60">
+                              <button
+                                type="button"
+                                onClick={handleCreateDraft}
+                                disabled={creatingDraft}
+                                className="inline-flex items-center gap-2 py-3 px-5 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-semibold text-xs shadow-xs hover:shadow transition-all cursor-pointer active:scale-[0.98]"
+                              >
+                                <span>{creatingDraft ? 'Generating proposal...' : 'Review proposed plan →'}</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={handleCreateDraft}
-                        disabled={creatingDraft}
-                        className="w-full sm:w-auto py-2 px-4 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-semibold text-xs shadow-xs transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]"
-                      >
-                        {creatingDraft ? 'Generating proposal...' : 'Review proposed plan →'}
-                      </button>
+                    </div>
+                  ) : (
+                    /* User Message */
+                    <div className="flex items-start justify-end gap-3 ml-auto">
+                      <div className="space-y-1 flex flex-col items-end max-w-[85%] sm:max-w-[75%]">
+                        <span className="text-[10px] text-muted-ink uppercase tracking-wider font-semibold mr-1">
+                          You
+                        </span>
+                        <div className="bg-evergreen text-white rounded-2xl rounded-tr-xs px-4 py-2.5 sm:px-5 sm:py-3 text-sm font-normal leading-relaxed shadow-2xs break-words whitespace-pre-wrap">
+                          {msg.content}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+              ))}
 
-        {/* Main Conversation Stream */}
-        <div className="flex flex-col space-y-6">
-          {/* Message Thread */}
-          <div className="space-y-5">
-            {messages.map((msg) => (
-              <div key={msg.id}>
-                {msg.role === 'assistant' ? (
-                  <div className="flex items-start gap-3">
-                    {/* Nora Avatar */}
-                    <div className="w-8 h-8 rounded-xl bg-sage text-evergreen flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 shadow-2xs border border-evergreen/15">
-                      ✦
-                    </div>
-                    <div className="flex-1 space-y-1.5 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-ink">Nora</span>
-                        <span className="text-[10px] text-muted-ink uppercase tracking-wider font-semibold">
-                          Transition Assistant
-                        </span>
-                      </div>
-                      <div className="bg-white border border-line/80 rounded-2xl rounded-tl-xs p-4 sm:p-5 text-sm shadow-xs space-y-3">
-                        {renderAssistantMessage(msg.content)}
-
-                        {msg.bulletPoints && msg.bulletPoints.length > 0 && (
-                          <div className="mt-4 pt-3.5 border-t border-line/60 bg-sand/30 -mx-4 -mb-4 sm:-mx-5 sm:-mb-5 p-4 sm:p-5 rounded-b-2xl">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-ink block mb-2.5">
-                              Key details noted:
-                            </span>
-                            <ul className="space-y-2">
-                              {msg.bulletPoints.map((bp, i) => (
-                                <li key={i} className="flex items-start gap-2.5 text-xs text-ink/90 font-medium">
-                                  <CheckCircle2 className="w-4 h-4 text-evergreen shrink-0 mt-0.5" />
-                                  <span>{bp}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-
-                        {msg.isConfirmation && (
-                          <div className="mt-4 pt-3.5 border-t border-line/60">
-                            <button
-                              type="button"
-                              onClick={handleCreateDraft}
-                              disabled={creatingDraft}
-                              className="inline-flex items-center gap-2 py-3 px-5 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-semibold text-xs shadow-xs hover:shadow transition-all cursor-pointer active:scale-[0.98]"
-                            >
-                              <span>{creatingDraft ? 'Generating proposal...' : 'Review proposed plan →'}</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+              {submittingTurn && (
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-sage text-evergreen flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 shadow-2xs border border-evergreen/15">
+                    ✦
                   </div>
-                ) : (
-                  /* User Message */
-                  <div className="flex items-start justify-end gap-3 ml-auto">
-                    <div className="space-y-1 flex flex-col items-end max-w-[85%] sm:max-w-[75%]">
-                      <span className="text-[10px] text-muted-ink uppercase tracking-wider font-semibold mr-1">
-                        You
-                      </span>
-                      <div className="bg-evergreen text-white rounded-2xl rounded-tr-xs px-4 py-2.5 sm:px-5 sm:py-3 text-sm font-normal leading-relaxed shadow-2xs break-words whitespace-pre-wrap">
-                        {msg.content}
-                      </div>
-                    </div>
+                  <div className="bg-white border border-line text-muted-ink px-4 py-3 rounded-2xl rounded-tl-xs text-xs flex items-center gap-2.5 shadow-2xs">
+                    <span className="w-2 h-2 rounded-full bg-evergreen animate-ping" />
+                    <span>Nora is organizing details...</span>
                   </div>
-                )}
-              </div>
-            ))}
-
-            {submittingTurn && (
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-xl bg-sage text-evergreen flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 shadow-2xs border border-evergreen/15">
-                  ✦
                 </div>
-                <div className="bg-white border border-line text-muted-ink px-4 py-3 rounded-2xl rounded-tl-xs text-xs flex items-center gap-2.5 shadow-2xs">
-                  <span className="w-2 h-2 rounded-full bg-evergreen animate-ping" />
-                  <span>Nora is organizing details...</span>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Error banner if any */}
+            {chatError && (
+              <div className="p-3.5 bg-amber-bg border border-amber/30 rounded-xl text-xs text-amber font-medium flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{chatError}</span>
+              </div>
+            )}
+
+            {/* Common Situations Chips */}
+            {suggestions.length > 0 && !submittingTurn && (
+              <div className="pt-2">
+                <div className="flex items-center gap-1.5 mb-2.5">
+                  <Sparkles className="w-3.5 h-3.5 text-evergreen" />
+                  <span className="text-[11px] font-bold text-muted-ink uppercase tracking-wider">
+                    Common situations
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {suggestions.map((s, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleSendMessage(s.prompt)}
+                      className="group inline-flex items-center gap-2 text-xs font-medium px-3.5 py-2 rounded-xl bg-white hover:bg-cream border border-line hover:border-evergreen/40 text-ink shadow-2xs hover:shadow-xs transition-all cursor-pointer active:scale-[0.98]"
+                    >
+                      <span className="text-evergreen group-hover:scale-110 transition-transform">✦</span>
+                      <span>{s.text}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
 
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Error banner if any */}
-          {chatError && (
-            <div className="p-3.5 bg-amber-bg border border-amber/30 rounded-xl text-xs text-amber font-medium flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{chatError}</span>
-            </div>
-          )}
-
-          {/* Common Situations Chips */}
-          {suggestions.length > 0 && !submittingTurn && (
-            <div className="pt-2">
-              <div className="flex items-center gap-1.5 mb-2.5">
-                <Sparkles className="w-3.5 h-3.5 text-evergreen" />
-                <span className="text-[11px] font-bold text-muted-ink uppercase tracking-wider">
-                  Common situations
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {suggestions.map((s, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleSendMessage(s.prompt)}
-                    className="group inline-flex items-center gap-2 text-xs font-medium px-3.5 py-2 rounded-xl bg-white hover:bg-cream border border-line hover:border-evergreen/40 text-ink shadow-2xs hover:shadow-xs transition-all cursor-pointer active:scale-[0.98]"
-                  >
-                    <span className="text-evergreen group-hover:scale-110 transition-transform">✦</span>
-                    <span>{s.text}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Sleek Composer */}
-          <div className="space-y-1.5 pt-2 sticky bottom-4">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSendMessage();
-              }}
-              className="relative bg-white border border-line rounded-2xl shadow-sm focus-within:border-evergreen focus-within:ring-2 focus-within:ring-evergreen/10 transition-all p-2 pl-4"
-            >
-              <textarea
-                ref={textareaRef}
-                rows={2}
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
+            {/* Sleek Composer */}
+            <div className="space-y-1.5 pt-2 sticky bottom-4">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSendMessage();
                 }}
-                placeholder={userTurnCount === 0 ? "Tell Nora what's happening..." : "Tell Nora more..."}
-                disabled={submittingTurn}
-                className="w-full min-h-[64px] max-h-[180px] py-2 pr-12 text-sm text-ink placeholder:text-muted-ink/60 bg-transparent focus:outline-none resize-none leading-relaxed"
-              />
-              <button
-                type="submit"
-                disabled={submittingTurn || !inputValue.trim()}
-                className="absolute right-2.5 bottom-2.5 w-9 h-9 rounded-xl bg-evergreen hover:bg-evergreen-dark disabled:opacity-25 disabled:hover:bg-evergreen text-white flex items-center justify-center transition-all shrink-0 shadow-xs cursor-pointer active:scale-95"
-                aria-label="Send message"
+                className="relative bg-white border border-line rounded-2xl shadow-sm focus-within:border-evergreen focus-within:ring-2 focus-within:ring-evergreen/10 transition-all p-2 pl-4"
               >
-                <Send className="w-4 h-4" />
-              </button>
-            </form>
+                <textarea
+                  ref={textareaRef}
+                  rows={2}
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  placeholder={userTurnCount === 0 ? "Tell Nora what's happening..." : "Tell Nora more..."}
+                  disabled={submittingTurn}
+                  className="w-full min-h-[64px] max-h-[180px] py-2 pr-12 text-sm text-ink placeholder:text-muted-ink/60 bg-transparent focus:outline-none resize-none leading-relaxed"
+                />
+                <button
+                  type="submit"
+                  disabled={submittingTurn || !inputValue.trim()}
+                  className="absolute right-2.5 bottom-2.5 w-9 h-9 rounded-xl bg-evergreen hover:bg-evergreen-dark disabled:opacity-25 disabled:hover:bg-evergreen text-white flex items-center justify-center transition-all shrink-0 shadow-xs cursor-pointer active:scale-95"
+                  aria-label="Send message"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </form>
 
-            <div className="flex items-center justify-between text-[11px] text-muted-ink px-2">
-              <span>Press Enter to send, Shift+Enter for newline</span>
+              <div className="flex items-center justify-between text-[11px] text-muted-ink px-2">
+                <span>Press Enter to send, Shift+Enter for newline</span>
+              </div>
             </div>
           </div>
+
+          {/* Right Column: Nora's Notes with Smooth Vertical Collapse */}
+          <aside className="w-full lg:sticky lg:top-24 space-y-4">
+            <div className="bg-white border border-line rounded-2xl shadow-2xs overflow-hidden transition-colors">
+              <button
+                type="button"
+                onClick={() => handleToggleNotes(!notesOpen)}
+                className="w-full flex items-center justify-between p-3.5 sm:px-4 text-left hover:bg-cream/40 transition-colors cursor-pointer"
+                aria-expanded={notesOpen}
+              >
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="w-2 h-2 rounded-full bg-evergreen shrink-0" />
+                  <span className="text-xs font-bold text-ink uppercase tracking-wider">
+                    Nora&apos;s notes
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-sand text-ink text-[11px] font-semibold border border-line/80">
+                    {knownCount}/{understoodItems.length}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-evergreen shrink-0">
+                  <span className="text-[11px]">{notesOpen ? 'Hide' : 'View'}</span>
+                  <motion.div
+                    animate={{ rotate: notesOpen ? 180 : 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex items-center justify-center"
+                  >
+                    <ChevronDown className="w-4 h-4 text-evergreen" />
+                  </motion.div>
+                </div>
+              </button>
+
+              <AnimatePresence initial={false}>
+                {notesOpen && (
+                  <motion.div
+                    key="notes-content"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: 'easeInOut' }}
+                    className="overflow-hidden"
+                  >
+                    <div className="p-4 pt-1 border-t border-line/60 bg-sand/20 space-y-3.5">
+                      <p className="text-[11px] font-medium text-muted-ink">
+                        {getReadinessHeading()}
+                      </p>
+
+                      {/* Vertical Stack of Understood Items */}
+                      <div className="space-y-2">
+                        {understoodItems.map((item) => (
+                          <div
+                            key={item.label}
+                            className={`p-2.5 rounded-xl border text-xs flex items-start gap-2.5 transition-colors ${
+                              item.known
+                                ? 'bg-sage/25 border-evergreen/20 text-ink'
+                                : 'bg-white/80 border-line/60 text-muted-ink/70'
+                            }`}
+                          >
+                            <span
+                              className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-bold ${
+                                item.known ? 'bg-evergreen text-white' : 'border border-line text-muted-ink'
+                              }`}
+                            >
+                              {item.known ? '✓' : '○'}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-ink mb-0.5">
+                                {item.label}
+                              </span>
+                              <span
+                                className={`truncate block ${
+                                  item.known ? 'text-ink font-semibold' : 'text-muted-ink italic'
+                                }`}
+                              >
+                                {item.text}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Ready Action Banner */}
+                      {isReady && (
+                        <div className="pt-2 border-t border-line/60 space-y-2 bg-sage/30 p-3 rounded-xl border border-evergreen/20">
+                          <p className="text-xs font-bold text-evergreen">
+                            Ready to review proposed plan
+                          </p>
+                          <p className="text-[11px] text-muted-ink">
+                            You can review and refine everything before activating the shared workspace.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={handleCreateDraft}
+                            disabled={creatingDraft}
+                            className="w-full py-2.5 px-4 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-semibold text-xs shadow-xs transition-all cursor-pointer whitespace-nowrap active:scale-[0.98] text-center"
+                          >
+                            {creatingDraft ? 'Generating proposal...' : 'Review proposed plan →'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </aside>
         </div>
       </main>
 
