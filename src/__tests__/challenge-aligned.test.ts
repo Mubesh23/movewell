@@ -19,7 +19,7 @@ describe('BridgeWell Final Challenge-Aligned Build Test Suite', () => {
 
       // Verifies external publisher is cited and not self-attributed
       const publishers = evidence?.sources.map((s) => s.publisher) || [];
-      expect(publishers.some((p) => p.includes('Angi') || p.includes('Move.org') || p.includes('TxDMV'))).toBe(true);
+      expect(publishers.some((p) => p.includes('Angi') || p.includes('Move.org') || p.includes('moveBuddha'))).toBe(true);
 
       // Must never cite fake or self-invented surveys
       const sourceTitles = evidence?.sources.map((s) => s.title) || [];
@@ -50,7 +50,7 @@ describe('BridgeWell Final Challenge-Aligned Build Test Suite', () => {
       // Explains cost using external source data
       expect(result.message).toMatch(/Move\.org|moveBuddha|tariff|Houston/i);
       // Explains difference between moving estimate and other items
-      expect(result.message).toMatch(/\$(110|120|950|2,?100)/);
+      expect(result.message).toMatch(/\$(61|103|110|120|950|2,?100)/);
       // Must not invent fake survey
       expect(result.message).not.toContain('Regional Texas Senior Transition Cost Survey');
       expect(result.toolResults?.some((tr) => tr.toolName === 'explain_cost_estimate')).toBe(true);

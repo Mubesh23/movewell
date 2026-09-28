@@ -529,9 +529,9 @@ function GetStartedContent() {
                   transition={{ duration: 0.25, ease: 'easeOut' }}
                 >
                   {msg.role === 'assistant' ? (
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-3.5">
                       {/* Nora Avatar */}
-                      <div className="w-8 h-8 rounded-xl bg-sage text-evergreen flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 shadow-2xs border border-evergreen/15">
+                      <div className="w-8 h-8 rounded-full bg-evergreen/10 text-evergreen flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 border border-evergreen/15 shadow-2xs">
                         ✦
                       </div>
                       <div className="flex-1 space-y-1.5 min-w-0">
@@ -541,11 +541,11 @@ function GetStartedContent() {
                             Transition Assistant
                           </span>
                         </div>
-                        <div className="bg-white border border-line/80 rounded-2xl rounded-tl-xs p-4 sm:p-5 text-sm shadow-xs space-y-3">
+                        <div className="text-sm text-ink leading-relaxed space-y-3 pt-0.5">
                           {renderAssistantMessage(msg.content)}
 
                           {msg.bulletPoints && msg.bulletPoints.length > 0 && (
-                            <div className="mt-4 pt-3.5 border-t border-line/60 bg-sand/30 -mx-4 -mb-4 sm:-mx-5 sm:-mb-5 p-4 sm:p-5 rounded-b-2xl">
+                            <div className="mt-3.5 p-4 rounded-xl bg-sand/50 border border-line/70">
                               <span className="text-[11px] font-bold uppercase tracking-wider text-muted-ink block mb-2.5">
                                 Key details noted:
                               </span>
@@ -561,12 +561,12 @@ function GetStartedContent() {
                           )}
 
                           {msg.isConfirmation && (
-                            <div className="mt-4 pt-3.5 border-t border-line/60">
+                            <div className="pt-2">
                               <button
                                 type="button"
                                 onClick={handleCreateDraft}
                                 disabled={creatingDraft}
-                                className="inline-flex items-center gap-2 py-3 px-5 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-semibold text-xs shadow-xs hover:shadow transition-all cursor-pointer active:scale-[0.98]"
+                                className="inline-flex items-center gap-2 py-2.5 px-5 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-semibold text-xs shadow-xs hover:shadow transition-all cursor-pointer active:scale-[0.98]"
                               >
                                 <span>{creatingDraft ? 'Generating proposal...' : 'Review proposed plan →'}</span>
                               </button>
@@ -592,11 +592,11 @@ function GetStartedContent() {
               ))}
 
               {submittingTurn && (
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-sage text-evergreen flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 shadow-2xs border border-evergreen/15">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-8 h-8 rounded-full bg-evergreen/10 text-evergreen flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 border border-evergreen/15 shadow-2xs">
                     ✦
                   </div>
-                  <div className="bg-white border border-line text-muted-ink px-4 py-3 rounded-2xl rounded-tl-xs text-xs flex items-center gap-2.5 shadow-2xs">
+                  <div className="flex items-center gap-2.5 text-xs text-muted-ink font-medium py-1.5">
                     <span className="w-2 h-2 rounded-full bg-evergreen animate-ping" />
                     <span>Nora is organizing details...</span>
                   </div>
