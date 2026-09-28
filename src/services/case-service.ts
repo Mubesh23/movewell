@@ -5,7 +5,15 @@ import { eventService } from './event-service';
 import { emailService } from './email-service';
 import { invitationService } from './invitation-service';
 import { pulseAndChangeService } from './pulse-and-change-service';
-import { CaseMember, CaseOverview } from '../types';
+import {
+  CaseMember,
+  CaseOverview,
+  TransitionCase,
+  TransitionTask,
+  PlanChangeRecord,
+  PlanChangeDiff,
+  TransitionPulseMetrics,
+} from '../types';
 
 export class CaseService {
   public async getCaseOverview(caseId: string): Promise<CaseOverview | null> {
@@ -171,6 +179,140 @@ export class CaseService {
       });
     }
     return success;
+  }
+
+  /**
+   * P0 Signature Deterministic Transition Operation:
+   * Confirms discharge destination, completes relevant decision task with audit notes,
+   * reevaluates dependencies, updates Transition Pulse, and records real before/after diffs.
+   */
+  public async confirmDischargeDestination(params: {
+    caseId: string;
+    destination: 'REHAB_FIRST' | 'RETURN_HOME';
+    actor?: string;
+    note?: string;
+  }): Promise<{
+    caseData: TransitionCase;
+    completedTask?: TransitionTask;
+    newlyReadyTasks: TransitionTask[];
+    planChange: PlanChangeRecord;
+    pulse: TransitionPulseMetrics;
+  }> {
+    const caseData = await repository.getCaseById(params.caseId);
+    if (!caseData) {
+      throw new Error(`Case ${params.caseId} not found`);
+    }
+
+    const actor = params.actor || 'Sarah';
+    const previousDest = caseData.destinationStatus || 'UNDECIDED';
+
+    // 1. Snapshot BEFORE state
+    const beforeTasks = await repository.getTasksByCaseId(params.caseId);
+    const beforeBlockedIds = new Set(
+      beforeTasks.filter((t) => t.status === 'BLOCKED').map((t) => t.id)
+    );
+
+    // 2. Persist destinationStatus
+    caseData.destinationStatus = params.destination;
+    caseData.updatedAt = new Date().toISOString();
+    await repository.saveCase(caseData);
+
+    await eventService.recordEvent(
+      params.caseId,
+      'DESTINATION_CONFIRMED',
+      {
+        destinationStatus: params.destination,
+        confirmedBy: `${actor} via Nora`,
+        previousStatus: previousDest,
+        note: params.note || null,
+      },
+      'AI'
+    );
+
+    // 3. Find and complete the relevant destination-decision task if not completed
+    let completedDecisionTask: TransitionTask | undefined = undefined;
+    const decisionTask = beforeTasks.find(
+      (t) =>
+        (t.templateId === 'confirm-discharge-destination' ||
+          t.title.toLowerCase().includes('destination') ||
+          t.title.toLowerCase().includes('rehab')) &&
+        t.status !== 'COMPLETED'
+    );
+
+    if (decisionTask) {
+      const completionNote =
+        params.note ||
+        (params.destination === 'REHAB_FIRST'
+          ? 'Social worker confirmed short-term rehabilitation facility placement.'
+          : 'Confirmed direct discharge to home.');
+
+      completedDecisionTask = await taskService.completeTask(
+        decisionTask.id,
+        `${actor} via Nora`,
+        params.caseId,
+        completionNote
+      );
+    }
+
+    // 4. Recalculate downstream task dependencies
+    const afterTasks = await taskService.recalculateDependencies(params.caseId);
+    const newlyReadyTasks = afterTasks.filter(
+      (at) => at.status === 'READY' && beforeBlockedIds.has(at.id)
+    );
+
+    // 5. Recalculate Transition Pulse & next milestone
+    const costItems = await repository.getCostItemsByCaseId(params.caseId);
+    const costSummary = costEngine.calculatePlanCosts(afterTasks, caseData.budget, costItems);
+    const pulse = pulseAndChangeService.calculateTransitionPulse(caseData, afterTasks, costSummary);
+
+    // 6. Generate PlanChangeRecord from actual before/after diffs
+    const destLabel =
+      params.destination === 'REHAB_FIRST' ? 'Short-term rehab first' : 'Direct return home';
+    const diffItems: string[] = [
+      `✓ Destination confirmed: ${destLabel}`,
+    ];
+
+    if (completedDecisionTask) {
+      diffItems.push(`✓ Completed decision: "${completedDecisionTask.title}"`);
+    }
+
+    if (newlyReadyTasks.length > 0) {
+      diffItems.push(
+        `✓ ${newlyReadyTasks.length} downstream ${
+          newlyReadyTasks.length === 1 ? 'task' : 'tasks'
+        } unlocked: ${newlyReadyTasks.map((t) => `"${t.title}"`).join(', ')}`
+      );
+    }
+
+    diffItems.push(`✓ Transition Pulse updated: ${pulse.criticalDecisions.label}`);
+
+    const diffs: PlanChangeDiff[] = [
+      {
+        label: 'Discharge Destination',
+        before:
+          previousDest === 'REHAB_FIRST'
+            ? 'Short-term rehab first'
+            : previousDest === 'RETURN_HOME'
+            ? 'Direct return home'
+            : 'Undecided',
+        after: destLabel,
+      },
+    ];
+
+    const planChange = await pulseAndChangeService.recordPlanChange(
+      params.caseId,
+      'Discharge destination confirmed',
+      diffItems,
+      diffs
+    );
+
+    return {
+      caseData,
+      completedTask: completedDecisionTask,
+      newlyReadyTasks,
+      planChange,
+      pulse,
+    };
   }
 }
 

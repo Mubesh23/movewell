@@ -64,6 +64,10 @@ export class TaskService {
     return updatedTasks;
   }
 
+  public async getTaskById(taskId: string): Promise<TransitionTask | null> {
+    return repository.getTaskById(taskId);
+  }
+
   public async completeTask(
     taskId: string,
     actorName: string = 'Sarah',
@@ -90,8 +94,10 @@ export class TaskService {
     await eventService.recordEvent(task.caseId, 'TASK_COMPLETED', {
       taskId: task.id,
       taskTitle: task.title,
+      assignedTo: task.assignee?.name || null,
       completedBy: actorName,
       completionNotes: task.completionNotes || null,
+      completedAt: task.updatedAt,
     });
 
     // Recalculate downstream task dependencies

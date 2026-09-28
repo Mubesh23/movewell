@@ -10,6 +10,7 @@ import { TaskRow } from '@/components/movewell/TaskRow';
 import { ActivityTimeline } from '@/components/movewell/ActivityTimeline';
 import { openNoraWithPrompt } from '@/components/assistant/AIAssistant';
 import { CaseEvent, CaseOverview, TransitionTask } from '@/types';
+import { TaskCompletionModal } from '@/components/movewell/TaskCompletionModal';
 import {
   AlertCircle,
   ArrowUpRight,
@@ -36,6 +37,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
   const [showChanges, setShowChanges] = useState(false);
+  const [completingTask, setCompletingTask] = useState<TransitionTask | null>(null);
 
   const fetchOverview = React.useCallback(async () => {
     try {
@@ -329,7 +331,7 @@ export default function DashboardPage() {
                   task={task}
                   allTasks={tasks}
                   members={members}
-                  onComplete={handleCompleteTask}
+                  onComplete={(task) => setCompletingTask(task)}
                   onReopen={handleReopenTask}
                   onAssign={handleAssignTask}
                   onUpdateDueDate={handleUpdateDueDate}
@@ -475,6 +477,14 @@ export default function DashboardPage() {
           daysUntilDischarge={daysUntilDischarge}
         />
       </div>
+
+      <TaskCompletionModal
+        isOpen={Boolean(completingTask)}
+        task={completingTask}
+        currentMemberName={overview?.members?.find((m) => m.role === 'OWNER')?.name || 'Sarah'}
+        onClose={() => setCompletingTask(null)}
+        onConfirm={handleCompleteTask}
+      />
     </WorkspaceShell>
   );
 }

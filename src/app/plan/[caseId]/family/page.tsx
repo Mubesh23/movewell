@@ -250,7 +250,7 @@ export default function FamilyPage() {
                 const initials = getInitials(member.name);
                 const isExpanded = expandedMemberId === member.id;
 
-                let statusBadgeText = 'Available';
+                let statusBadgeText = 'No active tasks';
                 let statusBadgeClass = 'bg-[#f0f2f1] text-[#71847d]';
 
                 if (member.role === 'OWNER') {
@@ -295,17 +295,16 @@ export default function FamilyPage() {
                                 {member.email}
                               </span>
                             )}
-                            {member.city && (
-                              <span className="inline-flex items-center gap-1">
-                                <MapPin size={12} className="text-[#a0aea8]" />
-                                {member.city}
-                                {member.isLocal === true
+                            <span className="inline-flex items-center gap-1">
+                              <MapPin size={12} className="text-[#a0aea8]" />
+                              {member.city || 'Location Unset'}
+                              {member.city &&
+                                (member.isLocal === true
                                   ? ' · Local'
                                   : member.isLocal === false
                                   ? ' · Remote'
-                                  : ''}
-                              </span>
-                            )}
+                                  : ' · Location Unset')}
+                            </span>
                             {member.availability && (
                               <span className="inline-flex items-center gap-1">
                                 <Clock size={12} className="text-[#a0aea8]" />

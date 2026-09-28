@@ -138,6 +138,45 @@ export const AI_TOOLS_REGISTRY = {
     };
   },
 
+  confirm_discharge_destination: async (args: {
+    caseId: string;
+    destination: 'REHAB_FIRST' | 'RETURN_HOME';
+    actor?: string;
+    note?: string;
+  }): Promise<ToolExecutionResult> => {
+    try {
+      const result = await caseService.confirmDischargeDestination({
+        caseId: args.caseId,
+        destination: args.destination,
+        actor: args.actor || 'Sarah',
+        note: args.note,
+      });
+
+      const destLabel =
+        args.destination === 'REHAB_FIRST' ? 'Short-term rehab first' : 'Direct return home';
+
+      return {
+        toolName: 'confirm_discharge_destination',
+        success: true,
+        message:
+          `Discharge destination confirmed as **${destLabel}**.\n\n` +
+          (result.completedTask ? `✓ Marked decision task **"${result.completedTask.title}"** complete.\n` : '') +
+          (result.newlyReadyTasks.length > 0
+            ? `✓ Unlocked ${result.newlyReadyTasks.length} downstream ${result.newlyReadyTasks.length === 1 ? 'task' : 'tasks'}: ${result.newlyReadyTasks.map((t) => `*${t.title}*`).join(', ')}.\n`
+            : '') +
+          `✓ Transition Pulse updated: **${result.pulse.criticalDecisions.label}** (${result.pulse.budgetAssessment}).\n` +
+          `✓ Plan change recorded in family activity history.`,
+        data: result,
+      };
+    } catch (err: any) {
+      return {
+        toolName: 'confirm_discharge_destination',
+        success: false,
+        message: err.message || 'Failed to confirm discharge destination',
+      };
+    }
+  },
+
   assign_task: async (args: {
     caseId: string;
     taskId?: string;

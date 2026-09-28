@@ -15,10 +15,12 @@ import {
   Clock3,
 } from 'lucide-react';
 import { BRAND_NAME } from '@/lib/brand';
+import { AuthModal } from '@/components/auth/AuthModal';
 
 export default function LandingPage() {
   const router = useRouter();
   const [loadingDemo, setLoadingDemo] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
 
   const handleExploreSamplePlan = async () => {
     setLoadingDemo(true);
@@ -123,7 +125,7 @@ export default function LandingPage() {
                   Your AI transition assistant
                 </h2>
                 <p className="mt-4 text-base sm:text-lg text-[#667572] leading-relaxed max-w-lg">
-                  Nora is {BRAND_NAME}&apos;s conversational AI assistant trained on senior care coordination, hospital discharge timelines, and family dynamics. Tell her what&apos;s happening in plain language, and she turns it into a clear, editable plan.
+                  Nora is {BRAND_NAME}&apos;s AI transition planning guide. Tell Nora what&apos;s happening in plain language. She helps turn it into a structured, editable transition plan.
                 </p>
 
                 <div className="mt-8 space-y-5">
@@ -134,7 +136,7 @@ export default function LandingPage() {
                     <div>
                       <h3 className="font-semibold text-sm text-[#183331]">Talk in plain language</h3>
                       <p className="mt-1 text-xs text-[#667572] leading-relaxed">
-                        Share what&apos;s happening with your aging parent—Nora understands the medical, emotional, and logistical complexity.
+                        Share what&apos;s happening with your aging parent—Nora can organize the timing, safety, family, housing, cost, and logistical details you share.
                       </p>
                     </div>
                   </div>
@@ -370,11 +372,134 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
+
+        {/* For Families Section */}
+        <section id="for-families" className="py-20 md:py-28 border-b border-[#E3E9E5] bg-[#FBFAF7]">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center max-w-2xl mx-auto mb-16">
+              <span className="text-xs font-bold uppercase tracking-widest text-[#1F4D45] block mb-2">
+                Family Care Circle
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-bold text-[#183331] tracking-tight mb-4">
+                Built for families coordinating together, even when they are not in the same place.
+              </h2>
+              <p className="text-base text-[#667572] leading-relaxed">
+                Senior transitions are rarely handled by one person in one room. {BRAND_NAME} gives your care circle a single source of truth without overwhelming text threads.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+              <div className="p-7 bg-white rounded-2xl border border-[#E3E9E5] shadow-2xs">
+                <div className="w-10 h-10 rounded-xl bg-[#E8F3EA] text-[#4D775F] flex items-center justify-center font-bold text-base mb-5">
+                  <Users className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-[#183331] mb-2">Coordinate from different cities</h3>
+                <p className="text-sm text-[#667572] leading-relaxed">
+                  Whether one sibling lives down the street and another lives across the country, {BRAND_NAME} distinguishes in-person vs. remote tasks so everyone contributes effectively.
+                </p>
+              </div>
+
+              <div className="p-7 bg-white rounded-2xl border border-[#E3E9E5] shadow-2xs">
+                <div className="w-10 h-10 rounded-xl bg-[#E8F3EA] text-[#4D775F] flex items-center justify-center font-bold text-base mb-5">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-[#183331] mb-2">Know who owns each next step</h3>
+                <p className="text-sm text-[#667572] leading-relaxed">
+                  Eliminate ambiguous family group chats. Every critical decision, mover estimate, and home safety check has a named family owner and a clear deadline.
+                </p>
+              </div>
+
+              <div className="p-7 bg-white rounded-2xl border border-[#E3E9E5] shadow-2xs">
+                <div className="w-10 h-10 rounded-xl bg-[#E8F3EA] text-[#4D775F] flex items-center justify-center font-bold text-base mb-5">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-[#183331] mb-2">Keep everyone aligned when the plan changes</h3>
+                <p className="text-sm text-[#667572] leading-relaxed">
+                  When a doctor extends discharge by three days or rehab confirms placement, {BRAND_NAME} automatically updates downstream dates and notifies the circle with what changed.
+                </p>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <Link
+                href="/get-started"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#1F4D45] px-7 py-3.5 text-sm font-semibold text-white hover:bg-[#163D37] shadow-xs transition-colors"
+              >
+                <span>Talk to Nora</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+        </section>
       </main>
 
-      <footer className="bg-white border-t border-[#E3E9E5] py-12 text-center text-xs text-[#667572]">
-        <p>&copy; {new Date().getFullYear()} {BRAND_NAME}. Thoughtful transition coordination for families.</p>
+      {/* Upgraded Footer */}
+      <footer className="bg-white border-t border-[#E3E9E5] py-14">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-10 border-b border-[#E3E9E5]">
+            <div className="md:col-span-1">
+              <span className="text-xl font-bold tracking-tight text-[#183331] block mb-2">
+                {BRAND_NAME}
+              </span>
+              <p className="text-xs text-[#71847D] leading-relaxed">
+                A calmer way through what comes next. Thoughtful transition coordination for families.
+              </p>
+            </div>
+
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#183331] mb-3">Product</h4>
+              <ul className="space-y-2 text-xs text-[#71847D]">
+                <li>
+                  <a href="/#how-it-works" className="hover:text-[#183331] transition-colors">How it works</a>
+                </li>
+                <li>
+                  <a href="/#for-families" className="hover:text-[#183331] transition-colors">For families</a>
+                </li>
+                <li>
+                  <Link href="/resources" className="hover:text-[#183331] transition-colors">Resources</Link>
+                </li>
+                <li>
+                  <Link href="/get-started" className="hover:text-[#183331] transition-colors">Get started</Link>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#183331] mb-3">Account</h4>
+              <ul className="space-y-2 text-xs text-[#71847D]">
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setAuthOpen(true)}
+                    className="hover:text-[#183331] transition-colors cursor-pointer text-left"
+                  >
+                    Sign in
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#183331] mb-3">Trust</h4>
+              <ul className="space-y-2 text-xs text-[#71847D]">
+                <li>
+                  <Link href="/privacy" className="hover:text-[#183331] transition-colors">Privacy</Link>
+                </li>
+                <li>
+                  <Link href="/security" className="hover:text-[#183331] transition-colors">Security</Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#879890]">
+            <p>&copy; {new Date().getFullYear()} {BRAND_NAME}. All rights reserved.</p>
+            <p>Built with care for families everywhere.</p>
+          </div>
+        </div>
       </footer>
+
+      <AuthModal isOpen={authOpen} onClose={() => setAuthOpen(false)} />
     </div>
   );
 }

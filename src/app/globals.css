@@ -37,6 +37,16 @@
     --foreground: 75 5% 15%;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
   body {
     background-color: #F7F8F5;
     color: #183331;

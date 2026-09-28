@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { draftService, IntakeNotReadyError } from '@/services/draft-service';
-import { getSessionUserId, SESSION_COOKIE_NAME, LEGACY_COOKIE_NAME } from '@/lib/auth-helper';
+import { getSessionUserId, GUEST_COOKIE_NAME } from '@/lib/auth-helper';
 import { IntakeDraft } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -23,20 +23,13 @@ export async function POST(req: NextRequest) {
       { status: 201 }
     );
 
-    // Set cookies if not already present
-    if (!req.cookies.get(SESSION_COOKIE_NAME)) {
-      response.cookies.set(SESSION_COOKIE_NAME, userId, {
+    // Set only bridgewell_guest_session for guest draft ownership
+    if (!req.cookies.get(GUEST_COOKIE_NAME) || req.cookies.get(GUEST_COOKIE_NAME)?.value !== userId) {
+      response.cookies.set(GUEST_COOKIE_NAME, userId, {
         path: '/',
-        httpOnly: false,
+        httpOnly: true,
         sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 30, // 30 days
-      });
-    }
-    if (!req.cookies.get(LEGACY_COOKIE_NAME)) {
-      response.cookies.set(LEGACY_COOKIE_NAME, userId, {
-        path: '/',
-        httpOnly: false,
-        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
         maxAge: 60 * 60 * 24 * 30, // 30 days
       });
     }

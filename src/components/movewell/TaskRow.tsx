@@ -21,6 +21,7 @@ import {
   Home,
   ShieldAlert,
   FileText,
+  MapPin,
 } from 'lucide-react';
 
 export interface TaskRowProps {
@@ -55,7 +56,7 @@ function getMatchingResourceLink(task: TransitionTask): { label: string; href: s
     return { label: 'Explore senior move managers', href: `/plan/${task.caseId}/resources?category=senior_move_management` };
   }
   if (tStr.includes('mover') || tStr.includes('moving')) {
-    return { label: 'Find verified movers', href: `/plan/${task.caseId}/resources?category=moving` };
+    return { label: 'View nearby moving options', href: `/plan/${task.caseId}/resources?category=moving` };
   }
   if (
     tStr.includes('accessibility') ||
@@ -67,13 +68,13 @@ function getMatchingResourceLink(task: TransitionTask): { label: string; href: s
     return { label: 'Explore home modifications & safety', href: `/plan/${task.caseId}/resources?category=home_modification` };
   }
   if (tStr.includes('donation') || tStr.includes('donate')) {
-    return { label: 'Find donation pickup', href: `/plan/${task.caseId}/resources?category=donation` };
+    return { label: 'Find donation pickup & decluttering', href: `/plan/${task.caseId}/resources?category=donation` };
   }
-  if (tStr.includes('junk') || tStr.includes('haul')) {
-    return { label: 'Explore junk removal', href: `/plan/${task.caseId}/resources?category=junk_removal` };
+  if (tStr.includes('transport') || tStr.includes('ride')) {
+    return { label: 'View transportation options', href: `/plan/${task.caseId}/resources?category=transportation` };
   }
   if (tStr.includes('storage')) {
-    return { label: 'Explore storage options', href: `/plan/${task.caseId}/resources?category=storage` };
+    return { label: 'Explore storage facilities', href: `/plan/${task.caseId}/resources?category=storage` };
   }
   return null;
 }
@@ -362,14 +363,20 @@ export function TaskRow({
                 const resourceLink = getMatchingResourceLink(task);
                 if (!resourceLink) return null;
                 return (
-                  <div className="pt-0.5">
-                    <Link
-                      href={resourceLink.href}
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#1f4d45] hover:text-[#153c36] hover:underline transition-colors"
-                    >
-                      <FileText className="w-3.5 h-3.5 text-[#3f6c5c]" />
-                      <span>{resourceLink.label} &rarr;</span>
-                    </Link>
+                  <div className="pt-1">
+                    <div className="p-2.5 rounded-xl bg-[#EFF7F0] border border-[#CCE0D1] flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-xs">
+                        <MapPin className="w-3.5 h-3.5 text-[#1F4D45] shrink-0" />
+                        <span className="font-semibold text-[#183331]">Help near case location</span>
+                        <span className="text-[#56816D]">&bull; {resourceLink.label}</span>
+                      </div>
+                      <Link
+                        href={resourceLink.href}
+                        className="text-xs font-semibold text-[#1F4D45] hover:text-[#153C36] hover:underline transition-colors shrink-0"
+                      >
+                        View nearby help &rarr;
+                      </Link>
+                    </div>
                   </div>
                 );
               })()}

@@ -35,51 +35,101 @@ export function ActivityTimeline({ events, limit = 5, className }: ActivityTimel
     }
   };
 
-  const getEventDescription = (event: CaseEvent) => {
+  const renderEventDescription = (event: CaseEvent) => {
     const p = event.payload || {};
     switch (event.type) {
-      case 'TASK_COMPLETED':
-        return `Completed "${p.taskTitle || 'Task'}"${p.note ? ` — "${p.note}"` : ''}`;
+      case 'TASK_COMPLETED': {
+        const note = p.completionNotes || p.note;
+        const assignedTo = p.assignedTo;
+        const completedBy = p.completedBy;
+        const completedOnBehalf =
+          assignedTo &&
+          completedBy &&
+          assignedTo.toLowerCase().trim() !== completedBy.toLowerCase().trim();
+
+        return (
+          <div className="space-y-1">
+            <span className="font-semibold text-[#183331]">
+              Completed &ldquo;{p.taskTitle || 'Task'}&rdquo;
+            </span>
+            {completedOnBehalf && (
+              <div className="text-[11px] text-[#71847D]">
+                Completed by <strong className="text-[#183331]">{completedBy}</strong> &bull; Assigned to <strong className="text-[#183331]">{assignedTo}</strong>
+              </div>
+            )}
+            {note && (
+              <div className="text-[11px] text-[#4F635B] italic bg-[#F4F7F5] px-2.5 py-1 rounded-lg border border-[#E3E9E5]">
+                &ldquo;{note}&rdquo;
+              </div>
+            )}
+          </div>
+        );
+      }
+      case 'TASK_REOPENED':
+        return <span>Reopened &ldquo;{p.taskTitle || 'Task'}&rdquo;</span>;
       case 'BUDGET_UPDATED':
-        return `Case budget updated to $${p.budget?.toLocaleString()}`;
+        return <span>Case budget updated to ${p.budget?.toLocaleString()}</span>;
       case 'DESTINATION_CONFIRMED':
-        return `Discharge destination confirmed: ${p.destinationStatus}`;
+        return (
+          <span>
+            Discharge destination confirmed:{' '}
+            <strong className="text-[#183331]">
+              {p.destinationStatus === 'REHAB_FIRST'
+                ? 'Short-term rehab first'
+                : p.destinationStatus === 'RETURN_HOME'
+                ? 'Direct return home'
+                : p.destinationStatus}
+            </strong>
+          </span>
+        );
       case 'TARGET_DATE_CHANGED':
-        return `Target dates updated to ${p.targetDate || p.dischargeDate}`;
+        return <span>Target dates updated to {p.targetDate || p.dischargeDate}</span>;
       case 'TASK_ASSIGNED':
-        return `Assigned task to ${p.assigneeName || 'team member'}`;
+        return <span>Assigned task to <strong className="text-[#183331]">{p.assigneeName || 'team member'}</strong></span>;
       case 'QUOTE_APPLIED':
-        return `Applied $${p.amount?.toLocaleString()} ${p.category || 'vendor'} quote from ${p.providerName || 'vendor'}`;
+        return (
+          <span>
+            Applied ${p.amount?.toLocaleString()} {p.category || 'vendor'} quote from{' '}
+            <strong className="text-[#183331]">{p.providerName || 'vendor'}</strong>
+          </span>
+        );
       case 'PLAN_GENERATED':
-        return 'Transition plan generated with ordered priorities';
+        return <span>Transition plan generated with ordered priorities</span>;
       default:
-        return event.type.replace(/_/g, ' ').toLowerCase();
+        return <span>{event.type.replace(/_/g, ' ').toLowerCase()}</span>;
     }
   };
 
   return (
     <div className={cn('space-y-3', className)}>
-      {displayEvents.map((evt) => (
-        <div key={evt.id} className="flex items-start gap-3 text-xs">
-          <div className="w-6 h-6 rounded-full bg-stone-subtle flex items-center justify-center shrink-0 mt-0.5">
-            {getEventIcon(evt.type)}
+      {displayEvents.map((evt) => {
+        const actorLabel =
+          evt.payload?.completedBy ||
+          evt.payload?.updatedBy ||
+          (evt.actorType === 'AI' ? 'Nora' : 'Family Care Circle');
+
+        return (
+          <div key={evt.id} className="flex items-start gap-3 text-xs">
+            <div className="w-6 h-6 rounded-full bg-stone-subtle flex items-center justify-center shrink-0 mt-0.5">
+              {getEventIcon(evt.type)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-charcoal leading-snug">
+                {renderEventDescription(evt)}
+              </div>
+              <p className="text-[11px] text-muted mt-1">
+                {actorLabel} &bull;{' '}
+                {new Date(evt.createdAt).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                })}
+              </p>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-charcoal font-medium leading-snug">
-              {getEventDescription(evt)}
-            </p>
-            <p className="text-[11px] text-muted mt-0.5">
-              {evt.actorType === 'AI' ? 'Nora (AI)' : 'Family coordinator'} &bull;{' '}
-              {new Date(evt.createdAt).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-              })}
-            </p>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

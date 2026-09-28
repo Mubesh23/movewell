@@ -16,7 +16,7 @@ import {
   CaseInvitation,
 } from '../types';
 import { memoryStore } from './memory-store';
-import { supabase } from './client';
+import { supabaseAdmin as supabase } from '../lib/supabase/admin';
 
 export class Repository {
   // --- Transition Cases ---

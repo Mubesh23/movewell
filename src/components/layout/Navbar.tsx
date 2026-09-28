@@ -118,7 +118,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     For families
                   </a>
                   <Link
-                    href="/plan/case-maria-golden/resources"
+                    href="/resources"
                     className="text-sm font-medium text-muted-ink hover:text-ink transition-colors"
                   >
                     Resources

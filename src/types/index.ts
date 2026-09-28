@@ -312,7 +312,7 @@ export interface CaseMember {
   name: string;
   relationship?: MemberRelationship;
   city?: string;
-  isLocal: boolean;
+  isLocal?: boolean;
   availability?: MemberAvailability;
   role: CaseMemberRole;
   email?: string;
@@ -537,7 +537,7 @@ export interface ProposedMember {
   name: string;
   relationship?: string;
   city?: string;
-  isLocal: boolean;
+  isLocal?: boolean;
   role: CaseMemberRole;
   availability?: string;
   email?: string;

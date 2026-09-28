@@ -18,13 +18,35 @@ export async function PATCH(
     }
 
     const body = await req.json();
+    const { note, completionNotes, assigneeId, memberId, assigneeName, dueDate } = body;
     const action = (body.action || (body.status === 'COMPLETED' ? 'COMPLETE' : body.status === 'READY' ? 'REOPEN' : undefined)) as TaskAction;
-    const { assigneeId, memberId, assigneeName, actorName, note, completionNotes, dueDate } = body;
-    const effectiveActorName = actorName || access.currentMember?.name || (access.role === 'OWNER' ? 'Family Coordinator' : 'Care Circle Member');
+    // Resolve real actor name from authenticated member or case owner, not untrusted client payload
+    const effectiveActorName = access.currentMember?.name || (access.role === 'OWNER' ? 'Sarah' : 'Care Circle Member');
 
     if (action === 'COMPLETE') {
-      const noteToSave = note || completionNotes;
-      const updated = await taskService.completeTask(params.taskId, effectiveActorName, params.caseId, noteToSave);
+      const task = await taskService.getTaskById(params.taskId);
+      if (!task) {
+        return NextResponse.json({ success: false, error: 'Task not found' }, { status: 404 });
+      }
+
+      const noteToSave = (note || completionNotes || '').trim();
+      const taskAssigneeName = task.assignee?.name;
+      const isAssignedToOther =
+        Boolean(taskAssigneeName) &&
+        taskAssigneeName !== 'Unassigned' &&
+        taskAssigneeName!.toLowerCase().trim() !== effectiveActorName.toLowerCase().trim();
+
+      if (isAssignedToOther && !noteToSave) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `This task is assigned to ${taskAssigneeName}. Add a note so the family knows what happened.`,
+          },
+          { status: 400 }
+        );
+      }
+
+      const updated = await taskService.completeTask(params.taskId, effectiveActorName, params.caseId, noteToSave || undefined);
       return NextResponse.json({ success: true, data: updated });
     }
 

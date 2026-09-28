@@ -70,7 +70,7 @@ export class DraftService {
         name: coordinatorName,
         relationship: coordinatorRel,
         city: intakeDraft.userCity,
-        isLocal: !intakeDraft.userIsRemote,
+        isLocal: intakeDraft.userIsRemote === undefined ? undefined : !intakeDraft.userIsRemote,
         role: 'OWNER',
       },
     ];
@@ -86,7 +86,7 @@ export class DraftService {
             name: dm.name,
             relationship: dm.relationshipToSenior || 'Family Support',
             city: dm.city,
-            isLocal: dm.isLocal ?? true,
+            isLocal: dm.isLocal,
             availability: dm.availability,
             role: dm.role || 'FAMILY',
             email: dm.email,
@@ -113,7 +113,7 @@ export class DraftService {
             name: fm.name,
             relationship: fm.relationship || 'Local Support',
             city: fm.city,
-            isLocal: fm.isLocal ?? true,
+            isLocal: fm.isLocal,
             availability: fm.availability,
             role: fm.role || 'FAMILY',
             email: fm.email,
@@ -134,7 +134,7 @@ export class DraftService {
         name: intakeDraft.localHelperName,
         relationship: 'Local Support',
         city: intakeDraft.localHelperCity,
-        isLocal: true,
+        isLocal: intakeDraft.hasLocalHelper === true ? true : undefined,
         role: 'FAMILY',
       });
     }

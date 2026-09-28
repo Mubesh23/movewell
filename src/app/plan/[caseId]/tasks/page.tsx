@@ -7,10 +7,9 @@ import { NoraReadCard } from '@/components/movewell/NoraReadCard';
 import { openNoraWithPrompt } from '@/components/assistant/AIAssistant';
 import { CaseOverview, TaskPhase, TransitionTask } from '@/types';
 import { TaskRow } from '@/components/movewell/TaskRow';
+import { TaskCompletionModal } from '@/components/movewell/TaskCompletionModal';
 import { Tabs } from '@/components/ui/Tabs';
-import { Dialog } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
-import { Textarea } from '@/components/ui/Textarea';
 import { CheckCircle2, Plus, Sparkles } from 'lucide-react';
 
 export default function TasksPage() {
@@ -247,13 +246,7 @@ export default function TasksPage() {
                           task={task}
                           allTasks={tasks}
                           members={members}
-                          onComplete={(t, note) => {
-                            if (note) {
-                              handleTaskAction(t.id, 'COMPLETE', note);
-                            } else {
-                              setCompletingTask(t);
-                            }
-                          }}
+                          onComplete={(t) => setCompletingTask(t)}
                           onReopen={(t) => handleTaskAction(t.id, 'REOPEN')}
                           onAssign={handleAssignTask}
                           onUpdateDueDate={handleUpdateDueDate}
@@ -311,48 +304,16 @@ export default function TasksPage() {
         </div>
       </div>
 
-      {/* Completion Dialog */}
-      <Dialog
-        open={Boolean(completingTask)}
+      {/* Unified Task Completion Modal */}
+      <TaskCompletionModal
+        isOpen={Boolean(completingTask)}
+        task={completingTask}
+        currentMemberName={overview?.members?.find((m) => m.role === 'OWNER')?.name || 'Sarah'}
         onClose={() => setCompletingTask(null)}
-        title="Mark Task as Completed"
-        description={completingTask?.title || ''}
-      >
-        <div className="space-y-4 pt-2">
-          <p className="text-xs text-[#71847d]">
-            Add an optional note for your family so everyone stays informed of the outcome.
-          </p>
-          <Textarea
-            value={completionNote}
-            onChange={(e) => setCompletionNote(e.target.value)}
-            placeholder="e.g., Confirmed with Dr. Patel — discharge set for Friday morning."
-            rows={3}
-            autoFocus
-          />
-          <div className="flex justify-end gap-2 pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCompletingTask(null)}
-              disabled={Boolean(updatingTaskId)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => {
-                if (completingTask) {
-                  handleTaskAction(completingTask.id, 'COMPLETE', completionNote.trim() || undefined);
-                }
-              }}
-              isLoading={Boolean(updatingTaskId)}
-            >
-              Complete Task
-            </Button>
-          </div>
-        </div>
-      </Dialog>
+        onConfirm={async (task, note) => {
+          await handleTaskAction(task.id, 'COMPLETE', note);
+        }}
+      />
     </WorkspaceShell>
   );
 }

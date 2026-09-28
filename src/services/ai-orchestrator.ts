@@ -213,6 +213,24 @@ ${
                     },
                   },
                   {
+                    name: 'confirm_discharge_destination',
+                    description: 'Confirm senior discharge destination (e.g. REHAB_FIRST or RETURN_HOME) and mark discharge decision complete in one deterministic action. Call when social worker, doctor, or family confirms rehab vs home placement.',
+                    parameters: {
+                      type: Type.OBJECT,
+                      properties: {
+                        destination: {
+                          type: Type.STRING,
+                          description: 'REHAB_FIRST or RETURN_HOME',
+                        },
+                        note: {
+                          type: Type.STRING,
+                          description: 'Optional confirmation note or context (e.g. "Social worker confirmed rehab first")',
+                        },
+                      },
+                      required: ['destination'],
+                    },
+                  },
+                  {
                     name: 'get_plan',
                     description: 'Fetch the full active transition plan summary and remaining tasks.',
                     parameters: {
@@ -295,6 +313,16 @@ ${
                   note: args.note || args.completionNotes,
                 })
               );
+            } else if (call.name === 'confirm_discharge_destination') {
+              const dest = args.destination === 'RETURN_HOME' ? 'RETURN_HOME' : 'REHAB_FIRST';
+              toolResults.push(
+                await AI_TOOLS_REGISTRY.confirm_discharge_destination({
+                  caseId,
+                  destination: dest,
+                  actor: 'Sarah',
+                  note: args.note || 'Confirmed by social worker',
+                })
+              );
             } else if (call.name === 'get_plan') {
               toolResults.push(await AI_TOOLS_REGISTRY.get_plan({ caseId }));
             }
@@ -370,6 +398,25 @@ ${
   }
 
   public async processUserIntentLocal(caseId: string, prompt?: string): Promise<AIResponse> {
+    const pLower = (prompt || '').toLowerCase();
+    if (
+      (pLower.includes('rehab') || pLower.includes('return home')) &&
+      (pLower.includes('confirm') || pLower.includes('social worker') || pLower.includes('complete') || pLower.includes('decision'))
+    ) {
+      const dest = pLower.includes('rehab') ? 'REHAB_FIRST' : 'RETURN_HOME';
+      const tr = await AI_TOOLS_REGISTRY.confirm_discharge_destination({
+        caseId,
+        destination: dest,
+        actor: 'Sarah',
+        note: prompt,
+      });
+      return {
+        message: tr.message,
+        toolResults: [tr],
+        suggestedNextAction: 'Review the updated transition pulse and unlocked downstream tasks.',
+      };
+    }
+
     return {
       message:
         `I'm having trouble processing conversational requests right now. Your plan has not been changed. You can still manage tasks, family members, budget, and resources directly from ${BRAND_NAME}.`,

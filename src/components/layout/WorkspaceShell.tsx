@@ -17,6 +17,8 @@ import {
   ChevronDown,
   Sparkles,
   MessageSquare,
+  Send,
+  Building2,
 } from 'lucide-react';
 import { BRAND_NAME } from '@/lib/brand';
 import { AIAssistant, openNoraWithPrompt } from '@/components/assistant/AIAssistant';
@@ -87,6 +89,41 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
               >
                 <Icon size={17} className={active ? 'text-[#1f4d45]' : 'text-[#71847d]'} />
                 <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="mt-6 px-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#91a39c]">
+          Coming soon
+        </div>
+
+        <nav className="mt-2 flex flex-col gap-1" aria-label="Upcoming features">
+          {[
+            { href: `/plan/${caseId}/outreach`, label: 'Outreach', icon: Send },
+            { href: `/plan/${caseId}/inbox`, label: 'Inbox', icon: MessageSquare },
+            { href: `/plan/${caseId}/providers`, label: 'Providers', icon: Building2 },
+          ].map((item) => {
+            const Icon = item.icon;
+            const active = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  'flex items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition',
+                  active
+                    ? 'bg-[#e8f1ea] text-[#1f4d45] font-semibold'
+                    : 'text-[#859891] hover:bg-[#f2f6f2] hover:text-[#183331]'
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <Icon size={16} className={active ? 'text-[#1f4d45]' : 'text-[#9cb0a8]'} />
+                  <span>{item.label}</span>
+                </div>
+                <span className="text-[10px] font-semibold tracking-wider text-[#9aa9a3] uppercase bg-[#edf2ee] px-1.5 py-0.5 rounded">
+                  Soon
+                </span>
               </Link>
             );
           })}
