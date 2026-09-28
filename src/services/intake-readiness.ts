@@ -1,5 +1,90 @@
 import { IntakeDraft, IntakeTargetField, IntakeReadinessResult } from '../types';
 
+export function isExplicitOpenBudgetReply(
+  text: string,
+  expectedField: IntakeTargetField
+): boolean {
+  if (expectedField !== 'BUDGET') return false;
+
+  const normalized = text
+    .trim()
+    .toLowerCase()
+    .replace(/[.!?]/g, '');
+
+  const openBudgetKeywords = [
+    'no',
+    'nope',
+    'none',
+    'not yet',
+    'not now',
+    'no budget',
+    'not sure',
+    'leave it open',
+    'leave open',
+    'keep it open',
+    'keep open',
+    'open',
+    'open for now',
+    'not really',
+    'no idea',
+    'dont know',
+    "don't know",
+    'flexible',
+    'tbd',
+    'undecided',
+    "i don't have one",
+    "i dont have one",
+    "we don't have one",
+    "we dont have one",
+    "i don't have one yet",
+    "i dont have one yet",
+    "we don't have one yet",
+    "we dont have one yet",
+    "dont have one",
+    "don't have one",
+    "dont have one yet",
+    "don't have one yet",
+    "i haven't decided",
+    "i havent decided",
+    "we haven't decided",
+    "we havent decided",
+    "haven't decided",
+    "havent decided",
+    "haven't decided yet",
+    "havent decided yet",
+  ];
+
+  return (
+    openBudgetKeywords.includes(normalized) ||
+    openBudgetKeywords.some(
+      (kw) =>
+        normalized === kw ||
+        normalized.startsWith(kw + ' ') ||
+        normalized.endsWith(' ' + kw)
+    )
+  );
+}
+
+export function isGlobalOpenBudgetPhrase(text: string): boolean {
+  const lower = text.toLowerCase();
+  return (
+    lower.includes('leave it open') ||
+    lower.includes('leave open') ||
+    lower.includes('live it open') ||
+    lower.includes('live open') ||
+    lower.includes('keep it open') ||
+    lower.includes('keep open') ||
+    lower.includes('no budget') ||
+    lower.includes('open budget') ||
+    lower.includes('no set budget') ||
+    lower.includes('open for now') ||
+    lower.includes('leave that open') ||
+    lower.includes('leave it for now') ||
+    lower.includes("don't have a budget") ||
+    lower.includes("dont have a budget")
+  );
+}
+
 export class IntakeReadinessService {
   /**
    * Deterministically evaluates if an intake draft contains minimum viable case data

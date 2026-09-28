@@ -459,7 +459,7 @@ describe('Conversational Intake State Machine & Deterministic Readiness', () => 
         new NextRequest('http://localhost:3000/api/ai/intake', {
           method: 'POST',
           body: JSON.stringify({
-            message: "I'm Mubesh, Eleonor is my mom",
+            message: "I'm Mubesh, Eleanor is my mom",
             currentDraft: t2.draft,
           }),
         })
@@ -486,8 +486,151 @@ describe('Conversational Intake State Machine & Deterministic Readiness', () => 
       expect(t4.draft.budgetStatus).toBe('UNSET');
       expect(t4.draft.budget).toBeUndefined();
       expect(t4.isReady).toBe(true);
+      expect(t4.nextTargetField).toBe('NONE');
       expect(t4.nextAction).toBe('CREATE_PLAN');
-      expect(t4.assistantMessage).toContain('Understood');
+      expect(t4.assistantMessage).not.toMatch(/Do you already have a budget/i);
+    });
+
+    describe('Contextual Negative Budget Invariants & Reconciliations', () => {
+      const baseReadyExceptBudget: IntakeDraft = {
+        seniorName: 'Eleanor',
+        seniorRelationship: 'Mother',
+        transitionType: 'POST_HOSPITAL',
+        dischargeDays: 5,
+        dischargeTimelineDescription: 'in 5 days',
+        mobilityConstraint: true,
+        stairsConstraint: true,
+        zipCode: '77004',
+        city: 'Houston, TX',
+        hasLocalHelper: true,
+        localHelperName: 'Elena',
+        careCircleAddressed: true,
+        coordinatorName: 'Mubesh',
+        coordinatorRelationship: 'Child',
+        userName: 'Mubesh',
+        userRelationship: 'Child',
+      };
+
+      it('Case A: Expected field: BUDGET, user says "not yet"', async () => {
+        const res = await intakePost(
+          new NextRequest('http://localhost:3000/api/ai/intake', {
+            method: 'POST',
+            body: JSON.stringify({
+              message: 'not yet',
+              currentDraft: baseReadyExceptBudget,
+            }),
+          })
+        );
+        const data = await res.json();
+        expect(data.success).toBe(true);
+        expect(data.draft.budgetStatus).toBe('UNSET');
+        expect(data.draft.budget).toBeUndefined();
+        expect(data.isReady).toBe(true);
+        expect(data.nextTargetField).toBe('NONE');
+        expect(data.assistantMessage).not.toMatch(/Do you already have a budget/i);
+      });
+
+      it('Case B: Expected field: BUDGET, user says "no"', async () => {
+        const res = await intakePost(
+          new NextRequest('http://localhost:3000/api/ai/intake', {
+            method: 'POST',
+            body: JSON.stringify({
+              message: 'no',
+              currentDraft: baseReadyExceptBudget,
+            }),
+          })
+        );
+        const data = await res.json();
+        expect(data.success).toBe(true);
+        expect(data.draft.budgetStatus).toBe('UNSET');
+        expect(data.draft.budget).toBeUndefined();
+        expect(data.isReady).toBe(true);
+        expect(data.nextTargetField).toBe('NONE');
+        expect(data.assistantMessage).not.toMatch(/Do you already have a budget/i);
+      });
+
+      it('Case C: Expected field: BUDGET, user says "nope"', async () => {
+        const res = await intakePost(
+          new NextRequest('http://localhost:3000/api/ai/intake', {
+            method: 'POST',
+            body: JSON.stringify({
+              message: 'nope',
+              currentDraft: baseReadyExceptBudget,
+            }),
+          })
+        );
+        const data = await res.json();
+        expect(data.success).toBe(true);
+        expect(data.draft.budgetStatus).toBe('UNSET');
+        expect(data.draft.budget).toBeUndefined();
+        expect(data.isReady).toBe(true);
+        expect(data.nextTargetField).toBe('NONE');
+        expect(data.assistantMessage).not.toMatch(/Do you already have a budget/i);
+      });
+
+      it('Case D: Expected field: BUDGET, user says "I don\'t have one yet"', async () => {
+        const res = await intakePost(
+          new NextRequest('http://localhost:3000/api/ai/intake', {
+            method: 'POST',
+            body: JSON.stringify({
+              message: "I don't have one yet",
+              currentDraft: baseReadyExceptBudget,
+            }),
+          })
+        );
+        const data = await res.json();
+        expect(data.success).toBe(true);
+        expect(data.draft.budgetStatus).toBe('UNSET');
+        expect(data.draft.budget).toBeUndefined();
+        expect(data.isReady).toBe(true);
+        expect(data.nextTargetField).toBe('NONE');
+        expect(data.assistantMessage).not.toMatch(/Do you already have a budget/i);
+      });
+
+      it('Case E: Prevent false contextual interpretation when expectedField is SAFETY_MOBILITY', async () => {
+        const mobilityPendingDraft: IntakeDraft = {
+          seniorName: 'Eleanor',
+          dischargeDays: 5,
+        };
+        const res = await intakePost(
+          new NextRequest('http://localhost:3000/api/ai/intake', {
+            method: 'POST',
+            body: JSON.stringify({
+              message: 'no',
+              currentDraft: mobilityPendingDraft,
+            }),
+          })
+        );
+        const data = await res.json();
+        expect(data.success).toBe(true);
+        expect(data.draft.mobilityConstraint).toBe(false);
+        expect(data.draft.stairsConstraint).toBe(false);
+        expect(data.draft.budgetStatus).toBeUndefined();
+        expect(data.draft.budget).toBeUndefined();
+        expect(data.isReady).toBe(false);
+      });
+
+      it('Case F: Change an existing budget to open', async () => {
+        const existingBudgetDraft: IntakeDraft = {
+          ...baseReadyExceptBudget,
+          budget: 8000,
+          budgetStatus: 'SET',
+        };
+        const res = await intakePost(
+          new NextRequest('http://localhost:3000/api/ai/intake', {
+            method: 'POST',
+            body: JSON.stringify({
+              message: 'Actually leave it open for now.',
+              currentDraft: existingBudgetDraft,
+            }),
+          })
+        );
+        const data = await res.json();
+        expect(data.success).toBe(true);
+        expect(data.draft.budgetStatus).toBe('UNSET');
+        expect(data.draft.budget).toBeUndefined();
+        expect(data.isReady).toBe(true);
+      });
     });
   });
 });

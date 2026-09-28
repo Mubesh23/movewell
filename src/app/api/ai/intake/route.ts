@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI, Type } from '@google/genai';
 import { IntakeDraft, IntakeTargetField } from '@/types';
-import { intakeReadinessService } from '@/services/intake-readiness';
+import {
+  intakeReadinessService,
+  isExplicitOpenBudgetReply,
+  isGlobalOpenBudgetPhrase,
+} from '@/services/intake-readiness';
 import { resolveTemporalExpression } from '@/lib/temporal';
 
 export const dynamic = 'force-dynamic';
@@ -597,6 +601,15 @@ RULES FOR CONVERSATIONAL REPLY:
       ...extractedUpdates,
     };
 
+    // Apply deterministic safety/state-machine invariants after merging
+    if (
+      isExplicitOpenBudgetReply(userMessage, initialEvaluation.nextTargetField) ||
+      isGlobalOpenBudgetPhrase(userMessage)
+    ) {
+      combinedExtracted.budgetStatus = 'UNSET';
+      combinedExtracted.budget = undefined;
+    }
+
     // Construct updated draft
     const updatedDraft: IntakeDraft = {
       ...currentDraft,
@@ -606,6 +619,12 @@ RULES FOR CONVERSATIONAL REPLY:
       if (v !== null && v !== undefined) {
         (updatedDraft as any)[k] = v;
       }
+    }
+
+    // Explicitly clear old budget when budgetStatus is UNSET
+    if (combinedExtracted.budgetStatus === 'UNSET') {
+      updatedDraft.budgetStatus = 'UNSET';
+      delete updatedDraft.budget;
     }
 
     // Enforce 5-digit numeric format for zipCode (avoid hallucinations like "Child")
@@ -658,40 +677,65 @@ RULES FOR CONVERSATIONAL REPLY:
     // Deterministic readiness evaluation
     const readiness = intakeReadinessService.evaluate(updatedDraft);
 
-    // If Gemini reply wasn't generated or was blank, build deterministic reply
+    // Reconcile conversational reply with deterministic readiness
     const isFirstTurn = history.length <= 1;
     const guidancePrefix =
       "Based on what you've shared, I'd focus first on:\n1. confirming discharge timing and destination;\n2. making sure the next location is safe;\n3. identifying who can help locally.\n\nI'll build the rest into a shared plan as we fill in the missing details.";
 
-    if (!conversationalReply) {
-      if (readiness.isReady) {
-        const sName = updatedDraft.seniorName || 'your family member';
-        conversationalReply = `Understood. I have enough details to build ${sName}'s initial transition plan.\n\nHere is what I've noted:\n• ${readiness.summaryBulletPoints.join('\n• ')}\n\nThe immediate priority will be confirming a safe discharge destination.`;
-      } else {
-        const question = intakeReadinessService.getFallbackQuestion(
-          readiness.nextTargetField,
-          updatedDraft.seniorName
+    if (readiness.isReady) {
+      // INTAKE IS READY: Under NO circumstances ask another question!
+      const sName = updatedDraft.seniorName || 'your family member';
+      const budgetWasOpen =
+        isExplicitOpenBudgetReply(userMessage, initialEvaluation.nextTargetField) ||
+        isGlobalOpenBudgetPhrase(userMessage);
+
+      const budgetNote = budgetWasOpen
+        ? 'Got it — we can leave the budget open for now. '
+        : 'Understood. ';
+
+      conversationalReply =
+        `${budgetNote}I have enough to build ${sName}'s initial transition plan.\n\n` +
+        `Here’s what I’ve noted:\n• ${readiness.summaryBulletPoints.join('\n• ')}\n\n` +
+        `The immediate priority is making sure her discharge and move into a safe, accessible home are coordinated.`;
+    } else {
+      // INTAKE IS NOT READY: Ensure the follow-up question corresponds to readiness.nextTargetField
+      const fallbackQ = intakeReadinessService.getFallbackQuestion(
+        readiness.nextTargetField,
+        updatedDraft.seniorName
+      );
+
+      // Check if Gemini repeated a stale question for an already satisfied field
+      const geminiRepeatsStale =
+        initialEvaluation.nextTargetField !== readiness.nextTargetField &&
+        conversationalReply &&
+        (
+          (initialEvaluation.nextTargetField === 'BUDGET' && conversationalReply.toLowerCase().includes('budget')) ||
+          (initialEvaluation.nextTargetField === 'LOCAL_SUPPORT' && conversationalReply.toLowerCase().includes('anyone nearby')) ||
+          (initialEvaluation.nextTargetField === 'COORDINATOR_NAME' && (conversationalReply.toLowerCase().includes('call you') || conversationalReply.toLowerCase().includes('your name')))
         );
+
+      if (!conversationalReply || geminiRepeatsStale) {
         if (isFirstTurn) {
-          conversationalReply = `${guidancePrefix}\n\n${question}`;
+          conversationalReply = `${guidancePrefix}\n\n${fallbackQ}`;
         } else {
-          let ack = "I can help with this.";
+          // Contextual short acknowledgment without canned repetition
+          let ack = 'Got it.';
           const uLower = userMessage.toLowerCase();
           if (uLower.includes('sister') || uLower.includes('brother') || uLower.includes('helper') || uLower.includes('local')) {
-            ack = "Got it, I've noted that local family support.";
+            const helper = updatedDraft.localHelperName || 'your family member';
+            ack = `Perfect — I'll note ${helper} as local support.`;
           } else if (updatedDraft.coordinatorName && uLower.includes(updatedDraft.coordinatorName.toLowerCase())) {
             ack = `Thank you, ${updatedDraft.coordinatorName}.`;
-          } else if (updatedDraft.budgetStatus === 'UNSET' || updatedDraft.budget) {
-            ack = "Got it, I've noted your budget preference.";
-          } else if (userMessage.length < 20) {
-            ack = "Understood.";
+          } else if (uLower.includes('methodist') || uLower.includes('hospital')) {
+            ack = 'That helps.';
+          } else if (userMessage.length < 25) {
+            ack = 'That helps.';
           }
-          conversationalReply = `${ack} ${question}`;
+          conversationalReply = `${ack} ${fallbackQ}`;
         }
+      } else if (isFirstTurn && !conversationalReply.includes('focus first on')) {
+        conversationalReply = `${guidancePrefix}\n\n${conversationalReply}`;
       }
-    } else if (isFirstTurn && !readiness.isReady && !conversationalReply.includes("focus first on")) {
-      // Prepend guidance prefix if model didn't include the 3 points on first turn
-      conversationalReply = `${guidancePrefix}\n\n${conversationalReply}`;
     }
 
     return NextResponse.json({
