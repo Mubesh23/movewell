@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { Navbar } from '@/components/layout/Navbar';
 import { BRAND_NAME } from '@/lib/brand';
 import {
@@ -195,13 +196,20 @@ export default function PublicResourcesPage() {
                 key={cat.id}
                 type="button"
                 onClick={() => setCategory(cat.id)}
-                className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all cursor-pointer ${
+                className={`relative shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-colors cursor-pointer z-10 ${
                   active
-                    ? 'bg-[#1F4D45] text-white shadow-xs'
+                    ? 'text-white'
                     : 'bg-white border border-[#DCE5DF] text-[#667572] hover:text-[#183331] hover:bg-[#F2F6F3]'
                 }`}
               >
-                {cat.label}
+                {active && (
+                  <motion.div
+                    layoutId="public-resource-active-cat"
+                    className="absolute inset-0 rounded-full bg-[#1F4D45] -z-10 shadow-xs"
+                    transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                  />
+                )}
+                <span>{cat.label}</span>
               </button>
             );
           })}

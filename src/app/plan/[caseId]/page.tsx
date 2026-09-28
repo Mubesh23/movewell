@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import { WorkspaceShell } from '@/components/layout/WorkspaceShell';
 import { MilestoneTimelineStrip } from '@/components/movewell/MilestoneTimelineStrip';
 import { WhatChanged } from '@/components/movewell/WhatChanged';
@@ -245,12 +246,23 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* What Changed Highlight Banner (collapsible or toggleable) */}
-        {latestChange && showChanges && (
-          <div className="transition-all animate-fadeIn">
-            <WhatChanged change={latestChange} />
-          </div>
-        )}
+        {/* What Changed Highlight Banner (collapsible with smooth height motion) */}
+        <AnimatePresence>
+          {latestChange && showChanges && (
+            <motion.div
+              key="what-changed-banner"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: 'easeInOut' }}
+              className="overflow-hidden"
+            >
+              <div className="pb-1">
+                <WhatChanged change={latestChange} />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* 3 Summary Stat Cards */}
         <section className="grid gap-4 sm:grid-cols-2 md:grid-cols-3" aria-label="Key transition metrics">

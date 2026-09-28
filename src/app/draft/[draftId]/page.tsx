@@ -431,7 +431,12 @@ export default function DraftReviewPage() {
     <div className="min-h-screen bg-cream text-ink flex flex-col">
       <Navbar draftId={draft.id} seniorName={draft.seniorProfile.name} />
 
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <motion.main
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: 'easeOut' }}
+        className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8"
+      >
         {/* Top Header Banner */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 mb-8 border-b border-line">
           <div>
@@ -1243,7 +1248,45 @@ export default function DraftReviewPage() {
           title="Save & start your plan"
           subtitle={`Continue with Google to activate your plan and invite your family care circle.`}
         />
-      </main>
+
+        {/* Plan Activation Loading Transition Overlay */}
+        <AnimatePresence>
+          {activating && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-sm flex items-center justify-center p-4"
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0, y: 10 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+                className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border border-line space-y-4"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-sage text-evergreen flex items-center justify-center mx-auto shadow-xs">
+                  <Sparkles className="w-6 h-6 animate-pulse text-evergreen" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-ink">Activating family workspace</h3>
+                  <p className="text-xs text-muted-ink mt-1 leading-relaxed">
+                    Sequencing dependencies, family roles, and budget tracking for {draft.seniorProfile.name}...
+                  </p>
+                </div>
+                <div className="w-full bg-cream rounded-full h-1.5 overflow-hidden">
+                  <motion.div
+                    initial={{ width: '0%' }}
+                    animate={{ width: '100%' }}
+                    transition={{ duration: 1.2, ease: 'easeInOut' }}
+                    className="h-full bg-evergreen rounded-full"
+                  />
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.main>
     </div>
   );
 }

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, X, Trash2, CheckCircle2, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Send, X, Trash2, CheckCircle2, ChevronRight, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import { BRAND_NAME } from '@/lib/brand';
@@ -270,158 +271,185 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
     await executePrompt(userText);
   };
 
-  if (!isOpen) {
-    return (
-      <button
-        onClick={() => openNora()}
-        aria-label="Open Nora assistant"
-        className="fixed bottom-18 md:bottom-6 right-5 z-40 flex items-center gap-2.5 px-4 py-3 rounded-full bg-forest text-surface shadow-lg hover:bg-forest-deep transition-all duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest cursor-pointer"
-      >
-        <span className="w-5 h-5 rounded-full bg-surface/20 text-surface text-xs font-bold flex items-center justify-center">
-          N
-        </span>
-        <span className="text-sm font-medium pr-0.5">Ask Nora</span>
-      </button>
-    );
-  }
-
   return (
-    <aside
-      aria-label="Nora transition assistant panel"
-      className="fixed inset-y-0 right-0 z-50 w-full sm:w-[420px] bg-surface shadow-2xl border-l border-stone-line flex flex-col animate-in slide-in-from-right duration-200"
-    >
-      {/* Editorial Assistant Header */}
-      <header className="px-5 py-4 border-b border-stone-line bg-surface/90 backdrop-blur-xs flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <span className="w-7 h-7 rounded-xl bg-forest text-surface font-semibold text-sm flex items-center justify-center tracking-tight">
+    <AnimatePresence>
+      {!isOpen ? (
+        <motion.button
+          key="nora-trigger-button"
+          onClick={() => openNora()}
+          aria-label="Open Nora assistant"
+          initial={{ opacity: 0, scale: 0.85, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.85, y: 10 }}
+          transition={{ duration: 0.2 }}
+          className="fixed bottom-18 md:bottom-6 right-5 z-40 flex items-center gap-2.5 px-4 py-3 rounded-full bg-forest text-surface shadow-lg hover:bg-forest-deep transition-all duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest cursor-pointer"
+        >
+          <span className="w-5 h-5 rounded-full bg-surface/20 text-surface text-xs font-bold flex items-center justify-center">
             N
           </span>
-          <div>
-            <h3 className="font-semibold text-sm text-[#183331] leading-tight">
-              Nora
-            </h3>
-            <p className="text-[11px] text-muted">
-              {BRAND_NAME} Transition Coordinator
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1">
-          <button
-            onClick={handleClearHistory}
-            title="Reset conversation"
-            className="p-1.5 text-muted hover:text-charcoal rounded-md hover:bg-stone-subtle transition-colors cursor-pointer"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-          <button
+          <span className="text-sm font-medium pr-0.5">Ask Nora</span>
+        </motion.button>
+      ) : (
+        <React.Fragment key="nora-drawer-wrapper">
+          {/* Mobile Backdrop Overlay */}
+          <motion.div
+            key="nora-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
             onClick={() => setIsOpen(false)}
-            aria-label="Close assistant"
-            className="p-1.5 text-muted hover:text-charcoal rounded-md hover:bg-stone-subtle transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      </header>
+            className="fixed inset-0 bg-ink/30 backdrop-blur-2xs z-40 lg:hidden"
+            aria-hidden="true"
+          />
 
-      {/* Messages Feed */}
-      <div className="p-5 flex-1 overflow-y-auto space-y-4 bg-canvas/40 text-sm">
-        {messages.map((m, idx) => (
-          <div
-            key={idx}
-            className={cn('flex flex-col', m.sender === 'user' ? 'items-end' : 'items-start')}
+          <motion.aside
+            key="nora-drawer-panel"
+            aria-label="Nora transition assistant panel"
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 30, stiffness: 320 }}
+            className="fixed inset-y-0 right-0 z-50 w-full sm:w-[420px] bg-surface shadow-2xl border-l border-stone-line flex flex-col"
           >
-            {m.sender === 'user' ? (
-              <div className="max-w-[85%] px-4 py-2.5 rounded-xl bg-forest text-surface text-xs sm:text-sm font-medium leading-relaxed">
-                {m.text}
-              </div>
-            ) : (
-              <div className="max-w-[95%] text-xs sm:text-sm leading-relaxed space-y-1">
-                <div className="text-charcoal">
-                  {renderFormattedText(m.text)}
+            {/* Editorial Assistant Header */}
+            <header className="px-5 py-4 border-b border-stone-line bg-surface/90 backdrop-blur-xs flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className="w-7 h-7 rounded-xl bg-forest text-surface font-semibold text-sm flex items-center justify-center tracking-tight">
+                  N
+                </span>
+                <div>
+                  <h3 className="font-semibold text-sm text-[#183331] leading-tight">
+                    Nora
+                  </h3>
+                  <p className="text-[11px] text-muted">
+                    {BRAND_NAME} Transition Coordinator
+                  </p>
                 </div>
-
-                {/* Grounded Tool Confirmations */}
-                {m.toolConfirmations && m.toolConfirmations.length > 0 && (
-                  <div className="mt-2 space-y-1.5">
-                    {m.toolConfirmations.map((tc, tcIdx) => (
-                      <div
-                        key={tcIdx}
-                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-sage-subtle text-forest text-xs font-medium border border-sage-border/40"
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                        <span>{tc}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Explicit Suggestion Chip */}
-                {m.suggestionChip && (
-                  <div className="pt-2">
-                    <span className="text-[11px] font-medium text-muted block mb-1">Try asking</span>
-                    <button
-                      type="button"
-                      onClick={() => executePrompt(m.suggestionChip!)}
-                      disabled={loading}
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-forest bg-surface hover:bg-forest/5 border border-forest/20 px-3 py-1.5 rounded-lg transition-colors text-left cursor-pointer shadow-2xs"
-                    >
-                      <span>{m.suggestionChip}</span>
-                      <ChevronRight className="w-3 h-3" />
-                    </button>
-                  </div>
-                )}
               </div>
-            )}
-          </div>
-        ))}
 
-        {loading && (
-          <div className="flex items-center gap-2 text-xs text-muted pt-1">
-            <span className="w-3.5 h-3.5 border-2 border-forest border-t-transparent rounded-full animate-spin shrink-0" />
-            <span>Checking the plan…</span>
-          </div>
-        )}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handleClearHistory}
+                  title="Reset conversation"
+                  className="p-1.5 text-muted hover:text-charcoal rounded-md hover:bg-stone-subtle transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  aria-label="Close assistant"
+                  className="p-1.5 text-muted hover:text-charcoal rounded-md hover:bg-stone-subtle transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </header>
 
-        <div ref={messagesEndRef} />
-      </div>
+            {/* Messages Feed */}
+            <div className="p-5 flex-1 overflow-y-auto space-y-4 bg-canvas/40 text-sm">
+              {messages.map((m, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className={cn('flex flex-col', m.sender === 'user' ? 'items-end' : 'items-start')}
+                >
+                  {m.sender === 'user' ? (
+                    <div className="max-w-[85%] px-4 py-2.5 rounded-xl bg-forest text-surface text-xs sm:text-sm font-medium leading-relaxed shadow-2xs">
+                      {m.text}
+                    </div>
+                  ) : (
+                    <div className="max-w-[95%] text-xs sm:text-sm leading-relaxed space-y-1">
+                      <div className="text-charcoal">
+                        {renderFormattedText(m.text)}
+                      </div>
 
-      {/* Multiline Composer Form */}
-      <footer className="p-4 border-t border-stone-line bg-surface">
-        <form onSubmit={handleSend} className="space-y-2">
-          <div className="relative">
-            <textarea
-              ref={textareaRef}
-              rows={2}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  if (input.trim() && !loading) {
-                    handleSend(e);
-                  }
-                }
-              }}
-              placeholder="Ask about the plan or tell Nora something changed..."
-              className="w-full min-h-[68px] max-h-[160px] p-3 pr-12 text-xs sm:text-sm rounded-xl border border-stone-line bg-surface text-charcoal placeholder:text-muted/60 focus:outline-none focus:border-forest focus:ring-1 focus:ring-forest transition-colors resize-none leading-relaxed"
-            />
-            <Button
-              type="submit"
-              variant="default"
-              size="default"
-              disabled={loading || !input.trim()}
-              className="absolute right-2.5 bottom-3 h-8 w-8 p-0 rounded-lg shrink-0 flex items-center justify-center cursor-pointer"
-              aria-label="Send message to Nora"
-            >
-              <Send className="w-4 h-4" />
-            </Button>
-          </div>
-          <div className="flex items-center justify-between text-[11px] text-muted px-1">
-            <span>Press Enter to send, Shift+Enter for newline</span>
-          </div>
-        </form>
-      </footer>
-    </aside>
+                      {/* Grounded Tool Confirmations */}
+                      {m.toolConfirmations && m.toolConfirmations.length > 0 && (
+                        <div className="mt-2 space-y-1.5">
+                          {m.toolConfirmations.map((tc, tcIdx) => (
+                            <div
+                              key={tcIdx}
+                              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-sage-subtle text-forest text-xs font-medium border border-sage-border/40"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                              <span>{tc}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Explicit Suggestion Chip */}
+                      {m.suggestionChip && (
+                        <div className="pt-2">
+                          <span className="text-[11px] font-medium text-muted block mb-1">Try asking</span>
+                          <button
+                            type="button"
+                            onClick={() => executePrompt(m.suggestionChip!)}
+                            disabled={loading}
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-forest bg-surface hover:bg-forest/5 border border-forest/20 px-3 py-1.5 rounded-lg transition-colors text-left cursor-pointer shadow-2xs"
+                          >
+                            <span>{m.suggestionChip}</span>
+                            <ChevronRight className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+
+              {loading && (
+                <div className="flex items-center gap-2 text-xs text-muted pt-1">
+                  <span className="w-3.5 h-3.5 border-2 border-forest border-t-transparent rounded-full animate-spin shrink-0" />
+                  <span>Checking the plan…</span>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Multiline Composer Form */}
+            <footer className="p-4 border-t border-stone-line bg-surface">
+              <form onSubmit={handleSend} className="space-y-2">
+                <div className="relative">
+                  <textarea
+                    ref={textareaRef}
+                    rows={2}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        if (input.trim() && !loading) {
+                          handleSend(e);
+                        }
+                      }
+                    }}
+                    placeholder="Ask about the plan or tell Nora something changed..."
+                    className="w-full min-h-[68px] max-h-[160px] p-3 pr-12 text-xs sm:text-sm rounded-xl border border-stone-line bg-surface text-charcoal placeholder:text-muted/60 focus:outline-none focus:border-forest focus:ring-1 focus:ring-forest transition-colors resize-none leading-relaxed"
+                  />
+                  <Button
+                    type="submit"
+                    variant="default"
+                    size="default"
+                    disabled={loading || !input.trim()}
+                    className="absolute right-2.5 bottom-3 h-8 w-8 p-0 rounded-lg shrink-0 flex items-center justify-center cursor-pointer"
+                    aria-label="Send message to Nora"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-muted px-1">
+                  <span>Press Enter to send, Shift+Enter for newline</span>
+                </div>
+              </form>
+            </footer>
+          </motion.aside>
+        </React.Fragment>
+      )}
+    </AnimatePresence>
   );
 };

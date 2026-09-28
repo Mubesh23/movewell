@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { X } from 'lucide-react';
 
@@ -110,53 +111,63 @@ export function Dialog({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [open, handleClose]);
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-cocoa/40 backdrop-blur-xs transition-opacity animate-in fade-in"
-        onClick={handleClose}
-        aria-hidden="true"
-      />
+    <AnimatePresence>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-cocoa/40 backdrop-blur-xs"
+            onClick={handleClose}
+            aria-hidden="true"
+          />
 
-      {/* Surface */}
-      <div
-        ref={dialogRef}
-        role="dialog"
-        tabIndex={-1}
-        aria-modal="true"
-        aria-labelledby={title ? 'dialog-title' : undefined}
-        aria-describedby={description ? 'dialog-description' : undefined}
-        className={cn(
-          'relative w-full max-w-lg rounded-2xl bg-surface border border-stone-line p-6 shadow-xl transition-all z-10 animate-in zoom-in-95 focus:outline-none',
-          className
-        )}
-      >
-        <button
-          onClick={handleClose}
-          className="absolute right-4 top-4 p-1.5 rounded-lg text-muted hover:text-charcoal hover:bg-stone-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
-          aria-label="Close dialog"
-        >
-          <X className="w-4 h-4" />
-        </button>
-
-        {title && (
-          <div className="mb-4 pr-6">
-            <h3 id="dialog-title" className="text-xl font-semibold text-[#183331] tracking-[-0.03em]">
-              {title}
-            </h3>
-            {description && (
-              <p id="dialog-description" className="mt-1 text-sm text-muted">
-                {description}
-              </p>
+          {/* Surface */}
+          <motion.div
+            ref={dialogRef}
+            role="dialog"
+            tabIndex={-1}
+            aria-modal="true"
+            aria-labelledby={title ? 'dialog-title' : undefined}
+            aria-describedby={description ? 'dialog-description' : undefined}
+            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 8 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            className={cn(
+              'relative w-full max-w-lg rounded-2xl bg-surface border border-stone-line p-6 shadow-2xl transition-all z-10 focus:outline-none',
+              className
             )}
-          </div>
-        )}
+          >
+            <button
+              onClick={handleClose}
+              className="absolute right-4 top-4 p-1.5 rounded-lg text-muted hover:text-charcoal hover:bg-stone-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest cursor-pointer"
+              aria-label="Close dialog"
+            >
+              <X className="w-4 h-4" />
+            </button>
 
-        {children}
-      </div>
-    </div>
+            {title && (
+              <div className="mb-4 pr-6">
+                <h3 id="dialog-title" className="text-xl font-semibold text-[#183331] tracking-[-0.03em]">
+                  {title}
+                </h3>
+                {description && (
+                  <p id="dialog-description" className="mt-1 text-sm text-muted">
+                    {description}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {children}
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 }

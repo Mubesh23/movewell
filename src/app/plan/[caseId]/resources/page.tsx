@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
+import { motion } from 'framer-motion';
 import { WorkspaceShell } from '@/components/layout/WorkspaceShell';
 import { NoraReadCard } from '@/components/movewell/NoraReadCard';
 import { openNora } from '@/components/assistant/AIAssistant';
@@ -323,13 +324,20 @@ function ResourcesContent() {
                 key={cat.id}
                 type="button"
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all cursor-pointer ${
+                className={`relative shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-colors cursor-pointer z-10 ${
                   active
-                    ? 'bg-[#1F4D45] text-white shadow-xs'
+                    ? 'text-white'
                     : 'bg-white border border-[#CBDCD0] text-[#71847D] hover:text-[#183331] hover:bg-[#F1F6F1]'
                 }`}
               >
-                {cat.label}
+                {active && (
+                  <motion.div
+                    layoutId="workspace-resource-active-cat"
+                    className="absolute inset-0 rounded-full bg-[#1F4D45] -z-10 shadow-xs"
+                    transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                  />
+                )}
+                <span>{cat.label}</span>
               </button>
             );
           })}
