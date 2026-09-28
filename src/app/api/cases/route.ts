@@ -105,26 +105,35 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!body.seniorName) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'Direct case creation requires a senior name (seniorName). Please start your plan with Nora or activate a reviewed draft.',
+        },
+        { status: 400 }
+      );
+    }
+
     const caseId = 'case-' + Math.random().toString(36).substring(2, 9);
     const seniorProfileId = 'prof-' + Math.random().toString(36).substring(2, 9);
 
     const nowCustom = new Date();
-    const dDischarge = new Date(nowCustom);
-    dDischarge.setDate(dDischarge.getDate() + 5);
-    const defaultDischarge = formatLocalDateYYYYMMDD(dDischarge);
-
-    const dTarget = new Date(nowCustom);
-    dTarget.setDate(dTarget.getDate() + 12);
-    const defaultTarget = formatLocalDateYYYYMMDD(dTarget);
-
-    let calculatedDischarge = defaultDischarge;
+    let calculatedDischarge: string;
     if (body.dischargeDate) {
       calculatedDischarge = body.dischargeDate;
     } else if (body.dischargeDays && typeof body.dischargeDays === 'number') {
       const d = new Date(nowCustom);
       d.setDate(d.getDate() + body.dischargeDays);
       calculatedDischarge = formatLocalDateYYYYMMDD(d);
+    } else {
+      const d = new Date(nowCustom);
+      d.setDate(d.getDate() + 5);
+      calculatedDischarge = formatLocalDateYYYYMMDD(d);
     }
+
+    const targetDateVal = body.targetDate || calculatedDischarge;
 
     const budgetValue =
       body.budget && !isNaN(Number(body.budget)) && Number(body.budget) > 0
@@ -136,9 +145,9 @@ export async function POST(req: NextRequest) {
       ownerUserId: effectiveUserId,
       seniorProfileId,
       transitionType,
-      urgency: 'PLANNED',
+      urgency: 'URGENT',
       zipCode: body.zipCode?.trim() || undefined,
-      targetDate: body.targetDate || defaultTarget,
+      targetDate: targetDateVal,
       dischargeDate: calculatedDischarge,
       housingStatus: body.housingStatus || 'UNDECIDED',
       destinationStatus: body.destinationStatus || 'UNDECIDED',

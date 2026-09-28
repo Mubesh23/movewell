@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { BRAND_NAME } from '@/lib/brand';
 import { AuthModal } from '@/components/auth/AuthModal';
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button';
 export default function InviteAcceptancePage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const token = params?.token as string;
 
   const [loading, setLoading] = useState(true);
@@ -121,6 +122,13 @@ export default function InviteAcceptancePage() {
                 </p>
               </div>
 
+              {searchParams?.get('mismatch') === 'true' && (
+                <div className="p-4 rounded-xl bg-amber-bg border border-amber/30 text-xs text-amber font-medium text-left leading-relaxed">
+                  <p className="font-bold text-ink mb-1">Account Email Mismatch</p>
+                  This invitation was sent to <strong>{searchParams.get('invited')}</strong>. You&apos;re currently signed in as <strong>{searchParams.get('current')}</strong>. Please sign in using the invited Google account to accept.
+                </div>
+              )}
+
               <div className="p-4 rounded-xl bg-[#F7F8F5] border border-[#E3E9E5] text-left text-xs space-y-2">
                 <div className="flex justify-between">
                   <span className="text-[#667572]">Invited Member:</span>
@@ -163,12 +171,10 @@ export default function InviteAcceptancePage() {
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
-        onSuccess={(userId) => {
-          setIsAuthOpen(false);
-          handleAccept(userId);
-        }}
+        intent="accept_invite"
+        token={token}
         title={`Sign in to join ${invitation?.seniorName || 'Care Circle'}`}
-        subtitle="Sign in with your email or Google account to join this family care circle."
+        subtitle="Continue with Google to verify your identity and join this family care circle."
       />
     </div>
   );

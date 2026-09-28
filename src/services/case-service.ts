@@ -314,6 +314,78 @@ export class CaseService {
       pulse,
     };
   }
+
+  public async updateCase(
+    caseId: string,
+    updates: {
+      zipCode?: string;
+      budget?: number;
+      targetDate?: string;
+      dischargeDate?: string;
+    },
+    actorName: string = 'Family Coordinator',
+    actorUserId?: string
+  ): Promise<{ caseData: TransitionCase; planChange?: PlanChangeRecord }> {
+    const caseData = await repository.getCaseById(caseId);
+    if (!caseData) throw new Error('Case not found');
+
+    const previousZip = caseData.zipCode;
+    const previousBudget = caseData.budget;
+    const diffs: PlanChangeDiff[] = [];
+    const diffItems: string[] = [];
+
+    if (updates.zipCode !== undefined && updates.zipCode.trim() !== previousZip) {
+      const cleanZip = updates.zipCode.trim();
+      caseData.zipCode = cleanZip;
+      diffs.push({
+        label: 'Saved Home Location (ZIP)',
+        before: previousZip || 'Unset',
+        after: cleanZip,
+      });
+      diffItems.push(`✓ Saved location updated to ZIP ${cleanZip}`);
+
+      // Update HOME CaseLocation if present
+      const locations = await repository.getLocationsForCase(caseId);
+      const homeLoc = locations.find((l) => l.type === 'HOME');
+      if (homeLoc) {
+        homeLoc.zipCode = cleanZip;
+        await repository.saveCaseLocation(homeLoc);
+      }
+
+      await eventService.recordEvent(
+        caseId,
+        'LOCATION_CHANGED',
+        { previousZip, newZip: cleanZip },
+        'USER',
+        actorUserId
+      );
+    }
+
+    if (updates.budget !== undefined && updates.budget !== previousBudget) {
+      caseData.budget = updates.budget > 0 ? updates.budget : undefined;
+      diffs.push({
+        label: 'Budget Target',
+        before: previousBudget ? `$${previousBudget.toLocaleString()}` : 'Open',
+        after: caseData.budget ? `$${caseData.budget.toLocaleString()}` : 'Open',
+      });
+      diffItems.push(`✓ Budget target updated`);
+    }
+
+    caseData.updatedAt = new Date().toISOString();
+    await repository.saveCase(caseData);
+
+    let planChange: PlanChangeRecord | undefined = undefined;
+    if (diffs.length > 0) {
+      planChange = await pulseAndChangeService.recordPlanChange(
+        caseId,
+        'Saved family plan details updated',
+        diffItems,
+        diffs
+      );
+    }
+
+    return { caseData, planChange };
+  }
 }
 
 export const caseService = new CaseService();

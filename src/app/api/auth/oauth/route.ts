@@ -13,17 +13,35 @@ export async function GET(req: NextRequest) {
       process.env.APP_URL ||
       'http://localhost:3000';
 
-    let redirectTo = `${appUrl}/auth/callback`;
+    const callbackUrl = new URL(`${appUrl}/auth/callback`);
     const targetRedirect = searchParams.get('redirectTo');
+    const intent = searchParams.get('intent');
+    const draftId = searchParams.get('draftId');
+    const token = searchParams.get('token') || searchParams.get('inviteToken');
+
+    if (intent) {
+      callbackUrl.searchParams.set('intent', intent);
+    }
+    if (draftId) {
+      callbackUrl.searchParams.set('draftId', draftId);
+    }
+    if (token) {
+      callbackUrl.searchParams.set('inviteToken', token);
+    }
+
     if (targetRedirect) {
       try {
         const u = new URL(targetRedirect, appUrl);
         const nextParam = `${u.pathname}${u.search}`;
-        redirectTo = `${appUrl}/auth/callback?next=${encodeURIComponent(nextParam)}`;
+        callbackUrl.searchParams.set('next', nextParam);
       } catch {
-        // Fallback to default
+        // Fallback
       }
+    } else if (!intent) {
+      callbackUrl.searchParams.set('next', '/home');
     }
+
+    const redirectTo = callbackUrl.toString();
 
     const supabase = createServerClientFromRequest(req);
     if (!supabase) {

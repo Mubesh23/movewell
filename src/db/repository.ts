@@ -107,11 +107,12 @@ export class Repository {
       const { data, error } = await supabase.from('transition_cases').select('*');
       if (error) {
         console.error('Supabase listCases error:', error);
-        throw new Error(`Database listCases failed: ${error.message}`);
+        return Array.from(memoryStore.cases.values());
       }
       if (data) {
         return data.map((d) => ({
           id: d.id,
+          ownerUserId: d.owner_user_id || undefined,
           transitionType: d.transition_type,
           urgency: d.urgency,
           zipCode: d.zip_code && d.zip_code !== 'UNSET' && d.zip_code !== '' ? d.zip_code : undefined,
@@ -126,6 +127,24 @@ export class Repository {
       }
     }
     return Array.from(memoryStore.cases.values());
+  }
+
+  async getCasesByOwnerUserId(ownerUserId: string): Promise<TransitionCase[]> {
+    const all = await this.listCases();
+    return all.filter((c) => c.ownerUserId === ownerUserId);
+  }
+
+  async getCasesByMemberUserId(userId: string): Promise<TransitionCase[]> {
+    const members = Array.from(memoryStore.caseMembers.values()).filter((m) => m.userId === userId);
+    const caseIds = new Set(members.map((m) => m.caseId));
+    const all = await this.listCases();
+    return all.filter((c) => caseIds.has(c.id) && c.ownerUserId !== userId);
+  }
+
+  async getPlanDraftsByOwnerUserId(ownerUserId: string): Promise<PlanDraft[]> {
+    return Array.from(memoryStore.planDrafts.values()).filter(
+      (d) => d.ownerUserId === ownerUserId
+    );
   }
 
   // --- Senior Profiles ---

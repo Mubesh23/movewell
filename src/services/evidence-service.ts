@@ -16,7 +16,7 @@ export const REAL_EVIDENCE_SOURCES: EvidenceSource[] = [
   {
     id: 'src-move-org-houston',
     title: 'Houston Local Moving Rates & Cost Guide (2025–2026)',
-    publisher: 'Move.org & Angi Houston Cost Research',
+    publisher: 'Move.org',
     url: 'https://www.move.org/moving-cost-calculator/',
     geography: 'Houston, TX',
     publishedDate: '2025-11-15',
@@ -36,7 +36,7 @@ export const REAL_EVIDENCE_SOURCES: EvidenceSource[] = [
   {
     id: 'src-homeadvisor-packing-houston',
     title: 'Cost to Hire Professional Packers in Houston, TX',
-    publisher: 'HomeAdvisor / Angi Houston Directory',
+    publisher: 'HomeAdvisor',
     url: 'https://www.homeadvisor.com/cost/cleaning-and-maid-services/hire-packers/',
     geography: 'Houston, TX',
     publishedDate: '2026-01-10',
@@ -46,7 +46,7 @@ export const REAL_EVIDENCE_SOURCES: EvidenceSource[] = [
   {
     id: 'src-naipc-packing',
     title: 'Senior Downsizing & Packing Cost Benchmarks',
-    publisher: 'National Aging in Place Council (NAIPC)',
+    publisher: 'National Aging in Place Council',
     url: 'https://ageinplace.org',
     geography: 'National',
     publishedDate: '2025-09-12',
@@ -56,7 +56,7 @@ export const REAL_EVIDENCE_SOURCES: EvidenceSource[] = [
   {
     id: 'src-angi-grab-bars-houston',
     title: 'Grab Bar & Handrail Installation Costs in Greater Houston',
-    publisher: 'Angi Houston Handyman & Accessibility Guide',
+    publisher: 'Angi',
     url: 'https://www.angi.com/companylist/houston/handyman-service.htm',
     geography: 'Houston, TX',
     publishedDate: '2026-02-01',
@@ -66,7 +66,7 @@ export const REAL_EVIDENCE_SOURCES: EvidenceSource[] = [
   {
     id: 'src-homemods-fall-prevention',
     title: 'Home Accessibility Modifications - Bathroom Safety Costs',
-    publisher: 'Fall Prevention Center of Excellence / HomeMods.org',
+    publisher: 'Fall Prevention Center of Excellence',
     url: 'https://homemods.org',
     geography: 'National',
     publishedDate: '2025-10-01',
@@ -76,7 +76,7 @@ export const REAL_EVIDENCE_SOURCES: EvidenceSource[] = [
   {
     id: 'src-homeadvisor-ramp-houston',
     title: 'Modular & Threshold Wheelchair Ramp Installation Costs',
-    publisher: 'HomeAdvisor Houston Accessibility Report',
+    publisher: 'HomeAdvisor',
     url: 'https://www.homeadvisor.com/cost/disability-accommodation/build-a-wheelchair-ramp/',
     geography: 'Houston, TX',
     publishedDate: '2025-12-05',

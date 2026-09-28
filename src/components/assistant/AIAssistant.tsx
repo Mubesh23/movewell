@@ -18,6 +18,36 @@ interface ChatMessage {
   suggestionChip?: string;
 }
 
+export interface OpenNoraOptions {
+  context?: {
+    surface?: string;
+    taskId?: string;
+    resourceCategory?: string;
+    [key: string]: any;
+  };
+  draftPrompt?: string;
+}
+
+export function openNora(options?: OpenNoraOptions) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('open-nora', { detail: options }));
+  }
+}
+
+export function sendNoraPrompt(prompt: string) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('send-nora-prompt', { detail: { prompt } }));
+  }
+}
+
+/**
+ * Backwards-compatible helper that opens Nora with an editable prefilled draft prompt.
+ * DOES NOT auto-send.
+ */
+export function openNoraWithPrompt(prompt?: string) {
+  openNora({ draftPrompt: prompt });
+}
+
 function renderFormattedText(text: string) {
   const lines = text.split('\n');
   return lines.map((line, lineIdx) => {
@@ -27,12 +57,10 @@ function renderFormattedText(text: string) {
       return <div key={lineIdx} className="h-2" />;
     }
 
-    // Horizontal Rule
     if (trimmed === '---' || trimmed === '***') {
       return <hr key={lineIdx} className="my-3 border-stone-line" />;
     }
 
-    // Markdown Headings
     if (trimmed.startsWith('#')) {
       const headingText = trimmed.replace(/^#+\s*/, '');
       return (
@@ -45,7 +73,6 @@ function renderFormattedText(text: string) {
       );
     }
 
-    // Bullet points
     if (/^[\u2022\*\-]\s+/.test(trimmed)) {
       const bulletContent = trimmed.replace(/^[\u2022\*\-]\s+/, '');
       return (
@@ -85,22 +112,16 @@ function renderInlineFormatting(text: string) {
   });
 }
 
-export function openNoraWithPrompt(prompt?: string) {
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('open-nora', { detail: { prompt } }));
-  }
-}
-
 export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const initialWelcomeMessage: ChatMessage = {
     sender: 'ai',
-    text: "Hi, I'm Nora.\n\nI can help you understand the plan, coordinate tasks, work through changes, and find relevant resources.\n\nWhat would you like help with?",
-    suggestionChip: "What needs attention today?",
+    text: "Hi, I'm Nora. I have the current family plan. What can I help you with?",
   };
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
@@ -132,6 +153,12 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
     }
   }, [messages, isOpen, loading]);
 
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => textareaRef.current?.focus(), 150);
+    }
+  }, [isOpen]);
+
   const handleClearHistory = () => {
     const defaultList = [initialWelcomeMessage];
     setMessages(defaultList);
@@ -139,8 +166,6 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
       localStorage.removeItem(`movewell_chat_${caseId}`);
     }
   };
-
-  const executePromptRef = useRef<(text: string) => Promise<void>>();
 
   const executePrompt = async (promptText: string) => {
     if (!promptText.trim() || loading) return;
@@ -178,6 +203,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
             sender: 'ai',
             text: data.data.message,
             toolConfirmations: confirmations.length > 0 ? confirmations : undefined,
+            suggestionChip: data.data.suggestedAction || undefined,
           },
         ]);
 
@@ -193,7 +219,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
           },
         ]);
       }
-    } catch (err) {
+    } catch {
       setMessages((prev) => [
         ...prev,
         { sender: 'ai', text: 'I had trouble reaching the coordination service. Please try again.' },
@@ -203,17 +229,32 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
     }
   };
 
+  const executePromptRef = useRef(executePrompt);
   executePromptRef.current = executePrompt;
 
   useEffect(() => {
     const handleOpenNora = (e: any) => {
       setIsOpen(true);
+      if (e?.detail?.draftPrompt) {
+        setInput(e.detail.draftPrompt);
+      }
+      setTimeout(() => textareaRef.current?.focus(), 150);
+    };
+
+    const handleSendNoraPrompt = (e: any) => {
+      setIsOpen(true);
       if (e?.detail?.prompt && executePromptRef.current) {
         executePromptRef.current(e.detail.prompt);
       }
     };
+
     window.addEventListener('open-nora', handleOpenNora);
-    return () => window.removeEventListener('open-nora', handleOpenNora);
+    window.addEventListener('send-nora-prompt', handleSendNoraPrompt);
+
+    return () => {
+      window.removeEventListener('open-nora', handleOpenNora);
+      window.removeEventListener('send-nora-prompt', handleSendNoraPrompt);
+    };
   }, []);
 
   const handleSend = async (e: React.FormEvent) => {
@@ -226,9 +267,9 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
   if (!isOpen) {
     return (
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={() => openNora()}
         aria-label="Open Nora assistant"
-        className="fixed bottom-18 md:bottom-6 right-5 z-40 flex items-center gap-2.5 px-4 py-3 rounded-full bg-forest text-surface shadow-lg hover:bg-forest-deep transition-all duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
+        className="fixed bottom-18 md:bottom-6 right-5 z-40 flex items-center gap-2.5 px-4 py-3 rounded-full bg-forest text-surface shadow-lg hover:bg-forest-deep transition-all duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest cursor-pointer"
       >
         <span className="w-5 h-5 rounded-full bg-surface/20 text-surface text-xs font-bold flex items-center justify-center">
           N
@@ -263,14 +304,14 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
           <button
             onClick={handleClearHistory}
             title="Reset conversation"
-            className="p-1.5 text-muted hover:text-charcoal rounded-md hover:bg-stone-subtle transition-colors"
+            className="p-1.5 text-muted hover:text-charcoal rounded-md hover:bg-stone-subtle transition-colors cursor-pointer"
           >
             <Trash2 className="w-4 h-4" />
           </button>
           <button
             onClick={() => setIsOpen(false)}
             aria-label="Close assistant"
-            className="p-1.5 text-muted hover:text-charcoal rounded-md hover:bg-stone-subtle transition-colors"
+            className="p-1.5 text-muted hover:text-charcoal rounded-md hover:bg-stone-subtle transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -309,16 +350,17 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
                   </div>
                 )}
 
-                {/* Suggested Action Chip */}
+                {/* Explicit Suggestion Chip */}
                 {m.suggestionChip && (
                   <div className="pt-2">
+                    <span className="text-[11px] font-medium text-muted block mb-1">Try asking</span>
                     <button
                       type="button"
                       onClick={() => executePrompt(m.suggestionChip!)}
                       disabled={loading}
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-forest bg-surface hover:bg-forest/5 border border-forest/20 px-3 py-1.5 rounded-lg transition-colors text-left"
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-forest bg-surface hover:bg-forest/5 border border-forest/20 px-3 py-1.5 rounded-lg transition-colors text-left cursor-pointer shadow-2xs"
                     >
-                      <span>Suggested action: {m.suggestionChip}</span>
+                      <span>{m.suggestionChip}</span>
                       <ChevronRight className="w-3 h-3" />
                     </button>
                   </div>
@@ -338,25 +380,40 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Form */}
+      {/* Multiline Composer Form */}
       <footer className="p-4 border-t border-stone-line bg-surface">
-        <form onSubmit={handleSend} className="flex items-center gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask Nora or give an instruction..."
-            className="flex-1 px-3.5 py-2.5 text-sm rounded-lg border border-stone-line bg-surface text-charcoal placeholder:text-muted/60 focus:outline-none focus:border-forest focus:ring-1 focus:ring-forest transition-colors"
-          />
-          <Button
-            type="submit"
-            variant="default"
-            size="default"
-            disabled={loading || !input.trim()}
-            className="h-10 px-3 shrink-0"
-          >
-            <Send className="w-4 h-4" />
-          </Button>
+        <form onSubmit={handleSend} className="space-y-2">
+          <div className="relative">
+            <textarea
+              ref={textareaRef}
+              rows={2}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  if (input.trim() && !loading) {
+                    handleSend(e);
+                  }
+                }
+              }}
+              placeholder="Ask about the plan or tell Nora something changed..."
+              className="w-full min-h-[68px] max-h-[160px] p-3 pr-12 text-xs sm:text-sm rounded-xl border border-stone-line bg-surface text-charcoal placeholder:text-muted/60 focus:outline-none focus:border-forest focus:ring-1 focus:ring-forest transition-colors resize-none leading-relaxed"
+            />
+            <Button
+              type="submit"
+              variant="default"
+              size="default"
+              disabled={loading || !input.trim()}
+              className="absolute right-2.5 bottom-3 h-8 w-8 p-0 rounded-lg shrink-0 flex items-center justify-center cursor-pointer"
+              aria-label="Send message to Nora"
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          </div>
+          <div className="flex items-center justify-between text-[11px] text-muted px-1">
+            <span>Press Enter to send, Shift+Enter for newline</span>
+          </div>
         </form>
       </footer>
     </aside>

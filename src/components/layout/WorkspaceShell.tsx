@@ -21,7 +21,7 @@ import {
   Building2,
 } from 'lucide-react';
 import { BRAND_NAME } from '@/lib/brand';
-import { AIAssistant, openNoraWithPrompt } from '@/components/assistant/AIAssistant';
+import { AIAssistant, openNora, openNoraWithPrompt } from '@/components/assistant/AIAssistant';
 import { AuthModal } from '@/components/auth/AuthModal';
 
 interface WorkspaceShellProps {
@@ -164,8 +164,8 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
           <div className="flex items-center gap-2.5">
             <button
               type="button"
-              onClick={() => openNoraWithPrompt(`What should our family focus on right now for ${seniorName}?`)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#1f4d45] hover:bg-[#153c36] px-3.5 py-2 text-xs sm:text-sm font-semibold text-white shadow-xs transition-colors"
+              onClick={() => openNora()}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#1f4d45] hover:bg-[#153c36] px-3.5 py-2 text-xs sm:text-sm font-semibold text-white shadow-xs transition-colors cursor-pointer"
             >
               <Sparkles size={15} className="text-[#c8e1ce]" />
               <span>Ask Nora</span>
@@ -184,10 +184,10 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
             <button
               type="button"
               onClick={() => setAuthOpen(true)}
-              className="grid size-9 place-items-center rounded-full bg-[#d7e6d9] text-xs font-bold text-[#356553] hover:opacity-90 transition-opacity"
-              title="Account & Team"
+              className="grid size-9 place-items-center rounded-full bg-[#d7e6d9] text-xs font-bold text-[#356553] hover:opacity-90 transition-opacity cursor-pointer"
+              title="Account"
             >
-              FM
+              <Users size={16} />
             </button>
           </div>
         </header>

@@ -35,3 +35,33 @@ export async function GET(
     );
   }
 }
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { caseId: string } }
+) {
+  try {
+    const access = await requireCaseAccess(req, params.caseId);
+    if (!access.authorized) {
+      return NextResponse.json(
+        { success: false, error: access.error || 'Access denied' },
+        { status: access.status }
+      );
+    }
+
+    const body = await req.json();
+    const result = await caseService.updateCase(
+      params.caseId,
+      body,
+      'Family Coordinator',
+      access.userId
+    );
+
+    return NextResponse.json({ success: true, data: result });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
+  }
+}

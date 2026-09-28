@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { WorkspaceShell } from '@/components/layout/WorkspaceShell';
 import { NoraReadCard } from '@/components/movewell/NoraReadCard';
-import { openNoraWithPrompt } from '@/components/assistant/AIAssistant';
+import { openNora } from '@/components/assistant/AIAssistant';
 import { ServiceResource, TransitionCase, ResourceTrustLabel } from '@/types';
 import {
   MapPin,
@@ -15,6 +15,9 @@ import {
   Sparkles,
   HeartHandshake,
   Building,
+  Edit2,
+  Info,
+  RotateCcw,
 } from 'lucide-react';
 
 function ResourcesContent() {
@@ -29,10 +32,20 @@ function ResourcesContent() {
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
   const [seniorName, setSeniorName] = useState<string>('Family Member');
   const [daysUntilDischarge, setDaysUntilDischarge] = useState<number | undefined>(undefined);
+
+  // Saved case location vs Temporary search location
+  const [savedZip, setSavedZip] = useState<string>('77004');
   const [searchZip, setSearchZip] = useState<string>('77004');
-  const [editZipInput, setEditZipInput] = useState<string>('77004');
-  const [isEditingZip, setIsEditingZip] = useState<boolean>(false);
   const [cityState, setCityState] = useState<string>('Houston, TX');
+
+  // Search another ZIP dialog state
+  const [isSearchingAnotherZip, setIsSearchingAnotherZip] = useState<boolean>(false);
+  const [anotherZipInput, setAnotherZipInput] = useState<string>('');
+
+  // Permanent saved location edit modal state
+  const [isEditingSavedLocation, setIsEditingSavedLocation] = useState<boolean>(false);
+  const [savedZipInput, setSavedZipInput] = useState<string>('77004');
+  const [savingLocation, setSavingLocation] = useState<boolean>(false);
 
   const categories = [
     { id: 'ALL', label: 'All Services' },
@@ -44,7 +57,7 @@ function ResourcesContent() {
     { id: 'storage', label: 'Storage' },
   ];
 
-  useEffect(() => {
+  const loadCase = () => {
     if (caseId) {
       fetch(`/api/cases/${caseId}`)
         .then((res) => res.json())
@@ -52,10 +65,12 @@ function ResourcesContent() {
           if (data.success && data.data) {
             if (data.data.caseData) {
               setCaseData(data.data.caseData);
-              if (data.data.caseData.zipCode) {
-                setSearchZip(data.data.caseData.zipCode);
-                setEditZipInput(data.data.caseData.zipCode);
-              }
+              const z = data.data.caseData.zipCode && data.data.caseData.zipCode !== 'UNSET'
+                ? data.data.caseData.zipCode
+                : '77004';
+              setSavedZip(z);
+              setSearchZip(z);
+              setSavedZipInput(z);
             }
             if (data.data.seniorProfile?.name) setSeniorName(data.data.seniorProfile.name);
             if (data.data.daysUntilDischarge !== undefined) setDaysUntilDischarge(data.data.daysUntilDischarge);
@@ -66,6 +81,10 @@ function ResourcesContent() {
         })
         .catch(() => {});
     }
+  };
+
+  useEffect(() => {
+    loadCase();
   }, [caseId]);
 
   const fetchResources = async (cat: string, zip: string) => {
@@ -91,11 +110,44 @@ function ResourcesContent() {
     fetchResources(selectedCategory, searchZip);
   }, [selectedCategory, searchZip]);
 
-  const handleZipSubmit = (e: React.FormEvent) => {
+  // Handle temporary search override
+  const handleApplyAnotherZip = (e: React.FormEvent) => {
     e.preventDefault();
-    if (editZipInput.trim().length >= 5) {
-      setSearchZip(editZipInput.trim());
-      setIsEditingZip(false);
+    if (anotherZipInput.trim().length >= 5) {
+      setSearchZip(anotherZipInput.trim());
+      setIsSearchingAnotherZip(false);
+    }
+  };
+
+  const handleResetToSavedLocation = () => {
+    setSearchZip(savedZip);
+    setIsSearchingAnotherZip(false);
+  };
+
+  // Handle permanent saved case location update
+  const handleSaveLocation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (savedZipInput.trim().length < 5) return;
+
+    setSavingLocation(true);
+    try {
+      const res = await fetch(`/api/cases/${caseId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ zipCode: savedZipInput.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const newZip = savedZipInput.trim();
+        setSavedZip(newZip);
+        setSearchZip(newZip);
+        setIsEditingSavedLocation(false);
+        loadCase();
+      }
+    } catch (err) {
+      console.error('Failed to update saved location:', err);
+    } finally {
+      setSavingLocation(false);
     }
   };
 
@@ -145,6 +197,9 @@ function ResourcesContent() {
     }
   };
 
+  const isTemporaryOverride = searchZip !== savedZip;
+  const isOutsidePilot = searchZip.length >= 5 && !searchZip.startsWith('770') && !searchZip.startsWith('773') && !searchZip.startsWith('774') && !searchZip.startsWith('775');
+
   return (
     <WorkspaceShell
       caseId={caseId}
@@ -152,7 +207,7 @@ function ResourcesContent() {
       daysUntilDischarge={daysUntilDischarge}
     >
       <div className="space-y-8">
-        {/* Editorial Page Header with Visible Location */}
+        {/* Editorial Page Header with Location & Pilot Transparency */}
         <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
           <div>
             <div className="flex items-center gap-2 text-xs sm:text-sm text-[#71847D]">
@@ -167,49 +222,94 @@ function ResourcesContent() {
               Local services and free support, matched to what your family needs right now.
             </p>
 
-            {/* Location Banner with Interactive [ Change location ] */}
-            <div className="mt-4 inline-flex flex-wrap items-center gap-2 px-3 py-1.5 rounded-xl bg-[#E8F1EA] border border-[#CCE0D1] text-xs text-[#1F4D45]">
-              <MapPin className="w-3.5 h-3.5 text-[#1F4D45]" />
-              <span className="font-semibold">Near {seniorName}&apos;s home &bull; ZIP {searchZip}</span>
-              {cityState && <span className="text-[#366854]">({cityState})</span>}
+            {/* Saved Family Location & Temporary Search Bar */}
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <div className="inline-flex flex-wrap items-center gap-2 px-3 py-1.5 rounded-xl bg-[#E8F1EA] border border-[#CCE0D1] text-xs text-[#1F4D45]">
+                <MapPin className="w-3.5 h-3.5 text-[#1F4D45]" />
+                <span className="font-semibold">{seniorName}&apos;s saved location: ZIP {savedZip}</span>
+                {cityState && <span className="text-[#366854]">({cityState})</span>}
 
-              {isEditingZip ? (
-                <form onSubmit={handleZipSubmit} className="inline-flex items-center gap-1.5 ml-1">
-                  <input
-                    type="text"
-                    maxLength={5}
-                    value={editZipInput}
-                    onChange={(e) => setEditZipInput(e.target.value.replace(/\D/g, ''))}
-                    placeholder="ZIP"
-                    className="w-16 px-1.5 py-0.5 rounded bg-white text-xs border border-[#1F4D45] text-[#183331] focus:outline-none"
-                    autoFocus
-                  />
-                  <button type="submit" className="font-bold underline text-[#1F4D45] cursor-pointer">
-                    Apply
-                  </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSavedZipInput(savedZip);
+                    setIsEditingSavedLocation(true);
+                  }}
+                  className="font-semibold underline ml-1 hover:text-[#163D37] cursor-pointer inline-flex items-center gap-1"
+                  title="Permanently update senior's home location in plan"
+                >
+                  <Edit2 className="w-3 h-3" />
+                  <span>Edit saved location</span>
+                </button>
+              </div>
+
+              {/* Temporary Search Override Badge */}
+              {isTemporaryOverride ? (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-bg border border-amber/30 text-xs text-amber font-semibold">
+                  <span>Searching near: ZIP {searchZip}</span>
                   <button
                     type="button"
-                    onClick={() => setIsEditingZip(false)}
-                    className="text-[#71847D] cursor-pointer"
+                    onClick={handleResetToSavedLocation}
+                    className="underline hover:opacity-80 cursor-pointer ml-1 inline-flex items-center gap-1"
                   >
-                    Cancel
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Reset to saved location</span>
                   </button>
-                </form>
+                </div>
               ) : (
                 <button
                   type="button"
                   onClick={() => {
-                    setEditZipInput(searchZip);
-                    setIsEditingZip(true);
+                    setAnotherZipInput('');
+                    setIsSearchingAnotherZip(true);
                   }}
-                  className="font-semibold underline ml-1 hover:text-[#163D37] cursor-pointer"
+                  className="text-xs font-semibold text-muted-ink hover:text-ink px-3 py-1.5 rounded-xl border border-line bg-white hover:bg-cream transition-colors cursor-pointer"
                 >
-                  Change location
+                  Search another ZIP
                 </button>
               )}
             </div>
+
+            {/* Inline Temporary Search Input */}
+            {isSearchingAnotherZip && (
+              <form onSubmit={handleApplyAnotherZip} className="mt-3 inline-flex items-center gap-2 p-2 bg-white border border-line rounded-xl shadow-2xs">
+                <span className="text-xs font-medium text-muted-ink">Temporary search:</span>
+                <input
+                  type="text"
+                  maxLength={5}
+                  value={anotherZipInput}
+                  onChange={(e) => setAnotherZipInput(e.target.value.replace(/\D/g, ''))}
+                  placeholder="Enter ZIP (e.g. 78701)"
+                  className="w-28 px-2 py-1 rounded bg-cream text-xs border border-line text-ink focus:outline-none focus:border-evergreen"
+                  autoFocus
+                />
+                <button type="submit" className="px-3 py-1 rounded-lg bg-evergreen text-white text-xs font-semibold cursor-pointer">
+                  Search
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsSearchingAnotherZip(false)}
+                  className="text-xs text-muted-ink hover:text-ink px-1 cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </form>
+            )}
           </div>
         </div>
+
+        {/* Unsupported Pilot Location Notice */}
+        {isOutsidePilot && (
+          <div className="p-4 bg-amber-bg border border-amber/30 rounded-2xl flex items-start gap-3 text-xs text-amber leading-relaxed shadow-2xs">
+            <Info className="w-4 h-4 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-ink mb-0.5">Pilot Resource Coverage Notice</p>
+              <p>
+                No curated local BridgeWell records are currently available for ZIP {searchZip}. Our pilot resource coverage is focused on Harris County / Greater Houston. Broader Texas and national resources are shown below where applicable.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Filter Pills */}
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none" aria-label="Filter resource categories">
@@ -301,57 +401,36 @@ function ResourcesContent() {
                           {res.description}
                         </p>
 
-                        <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-[#8A9B94]">
-                          {res.location && (
-                            <span className="flex items-center gap-1">
-                              <MapPin size={12} className="text-[#A0AEA8]" />
-                              {res.location.city ? `${res.location.city}, TX` : res.location.address}
-                            </span>
-                          )}
+                        <div className="mt-4 flex flex-wrap items-center gap-3">
                           {res.location?.phone && (
-                            <span className="flex items-center gap-1">
-                              <Phone size={12} className="text-[#A0AEA8]" />
-                              <a
-                                href={`tel:${res.location.phone.replace(/[^0-9]/g, '')}`}
-                                className="hover:text-[#1F4D45] underline-offset-2 hover:underline"
-                              >
-                                {res.location.phone}
-                              </a>
-                            </span>
+                            <a
+                              href={`tel:${res.location.phone}`}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-[#CBDCD0] bg-white px-3 py-1.5 text-xs font-semibold text-[#183331] transition hover:bg-[#F1F6F1]"
+                            >
+                              <Phone size={13} className="text-[#1F4D45]" />
+                              <span>{res.location.phone}</span>
+                            </a>
                           )}
-                          {res.costType && (
-                            <span className="text-[11px] font-medium text-[#4F635B]">
-                              {res.costType === 'free_public_service'
-                                ? 'Public program &bull; No cost'
-                                : res.costType === 'sliding_scale'
-                                ? 'Sliding-scale fee'
-                                : 'Direct provider quote'}
+
+                          {res.website && (
+                            <a
+                              href={res.website}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-xs font-semibold text-[#1F4D45] hover:underline"
+                            >
+                              <span>Official website</span>
+                              <ExternalLink size={12} />
+                            </a>
+                          )}
+
+                          {isFree && (
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#2D6A4F] bg-[#E8F5E9] px-2.5 py-1 rounded-md">
+                              <HeartHandshake size={13} />
+                              <span>Free Public / Community Service</span>
                             </span>
                           )}
                         </div>
-                      </div>
-
-                      <div className="self-end sm:self-start shrink-0">
-                        {res.website ? (
-                          <a
-                            href={res.website}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-[#3F6C5C] hover:text-[#1F4D45] transition-colors p-1"
-                            title={`Open ${res.name} website`}
-                          >
-                            <span>Visit</span>
-                            <ExternalLink size={14} />
-                          </a>
-                        ) : res.location?.phone ? (
-                          <a
-                            href={`tel:${res.location.phone.replace(/[^0-9]/g, '')}`}
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-[#3F6C5C] hover:text-[#1F4D45] transition-colors p-1"
-                          >
-                            <span>Call</span>
-                            <Phone size={13} />
-                          </a>
-                        ) : null}
                       </div>
                     </article>
                   );
@@ -360,57 +439,89 @@ function ResourcesContent() {
             )}
           </section>
 
-          {/* Right Aside Column */}
-          <aside className="flex flex-col gap-6">
+          {/* Right Sidebar Rail: Nora Guidance & Pilot Scope */}
+          <aside className="space-y-5">
             <NoraReadCard
-              eyebrow="Nora's read"
-              headline="Start with the free screening."
-              explanation={`The county office and community aging services near ${searchZip} can help screen transportation and caregiver assistance before your family commits to paid support.`}
-              actionLabel="See eligibility notes"
-              onAction={() =>
-                openNoraWithPrompt(
-                  `What public programs or free benefits might ${seniorName} be eligible for in Texas/Harris County near ZIP ${searchZip}?`
-                )
-              }
+              headline="Vetted community help"
+              explanation={`Resources shown near ${searchZip} are cross-referenced with public agencies, nonprofit services, and verified providers for senior safety.`}
+              actionLabel="Ask Nora about resources"
+              onAction={() => openNora({ context: { surface: 'RESOURCES', category: selectedCategory } })}
             />
 
-            <section className="rounded-2xl border border-[#E0E9E2] bg-white p-5 shadow-2xs">
-              <div className="flex items-center gap-2 text-[#3F6C5C]">
-                <HeartHandshake size={18} />
-                <h2 className="font-semibold text-base text-[#183331]">Help that fits</h2>
+            <div className="rounded-2xl border border-[#E0E9E2] bg-white p-5 shadow-2xs text-xs space-y-3">
+              <div className="flex items-center gap-2 font-semibold text-[#183331]">
+                <ShieldCheck size={16} className="text-[#1F4D45]" />
+                <span>Pilot Resource Directory Scope</span>
               </div>
-              <p className="mt-2 text-xs sm:text-sm leading-relaxed text-[#71847D]">
-                Tell Nora what feels hardest and she&apos;ll narrow this directory down without adding unnecessary noise.
+              <p className="text-[#71847D] leading-relaxed">
+                BridgeWell is currently piloting in Harris County (Greater Houston). All records carry clear provenance badges indicating whether they are a public agency, nonprofit, or directory listing.
               </p>
-              <button
-                type="button"
-                onClick={() =>
-                  openNoraWithPrompt(
-                    `Which of these resources near ZIP ${searchZip} should our family reach out to first for ${seniorName}?`
-                  )
-                }
-                className="mt-4 text-xs sm:text-sm font-semibold text-[#3F6C5C] hover:text-[#1F4D45] transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-              >
-                <span>Ask Nora to recommend a provider</span>
-                <ExternalLink size={13} />
-              </button>
-            </section>
+            </div>
           </aside>
         </div>
       </div>
+
+      {/* Edit Saved Location Modal */}
+      {isEditingSavedLocation && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/50 backdrop-blur-xs"
+          onClick={() => setIsEditingSavedLocation(false)}
+        >
+          <div
+            className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-line p-6 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold text-ink mb-1">
+              Update {seniorName}&apos;s saved location
+            </h3>
+            <p className="text-xs text-muted-ink leading-relaxed mb-5">
+              Changing {seniorName}&apos;s home ZIP will refresh nearby resources, location-sensitive cost benchmarks, and record this change in What Changed.
+            </p>
+
+            <form onSubmit={handleSaveLocation} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted-ink mb-1">
+                  Home ZIP Code
+                </label>
+                <input
+                  type="text"
+                  maxLength={5}
+                  required
+                  value={savedZipInput}
+                  onChange={(e) => setSavedZipInput(e.target.value.replace(/\D/g, ''))}
+                  placeholder="e.g. 77025"
+                  className="w-full p-2.5 rounded-xl border border-line bg-cream text-sm text-ink focus:outline-none focus:border-evergreen"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditingSavedLocation(false)}
+                  className="px-4 py-2 rounded-xl bg-cream hover:bg-line text-ink text-xs font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingLocation || savedZipInput.trim().length < 5}
+                  className="px-4 py-2 rounded-xl bg-evergreen hover:bg-evergreen-dark disabled:opacity-50 text-white text-xs font-semibold cursor-pointer"
+                >
+                  {savingLocation ? 'Updating location...' : 'Update location'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </WorkspaceShell>
   );
 }
 
 export default function ResourcesPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-[#F7F8F5] flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-[#1F4D45] border-t-transparent rounded-full animate-spin" />
-        </div>
-      }
-    >
+    <Suspense fallback={<div className="p-8 text-center text-xs text-muted-ink">Loading resources...</div>}>
       <ResourcesContent />
     </Suspense>
   );

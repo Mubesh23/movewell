@@ -1238,12 +1238,10 @@ export default function DraftReviewPage() {
         <AuthModal
           isOpen={isAuthOpen}
           onClose={() => setIsAuthOpen(false)}
-          onSuccess={(userId) => {
-            setIsAuthOpen(false);
-            handleActivatePlan(userId);
-          }}
-          title="Save &amp; Start Your Plan"
-          subtitle={`Create your ${BRAND_NAME} account with Google or email to activate and coordinate.`}
+          intent="activate"
+          draftId={draftId}
+          title="Save & start your plan"
+          subtitle={`Continue with Google to activate your plan and invite your family care circle.`}
         />
       </main>
     </div>

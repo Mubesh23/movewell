@@ -71,7 +71,7 @@ You are helping coordinate a post-hospital senior transition plan.
 - Discharge Date: ${caseData?.dischargeDate || 'Not set'}
 - Target Transition Date: ${caseData?.targetDate || 'Not set'}
 - Confirmed Discharge Destination: ${destStatusLabel}
-- Case Budget: $${caseData?.budget ? caseData.budget.toLocaleString() : '8,000'}
+- Case Budget: ${caseData?.budget ? `$${caseData.budget.toLocaleString()}` : 'Open / not set'}
 - Transition Progress: ${overview?.progressPercent || 0}% (${completedTasks.length}/${tasks.length} tasks completed)
 
 === CURRENT PRIORITY TASK ===
@@ -105,7 +105,7 @@ ${
 }
 
 === COST & QUOTE INFORMATION ===
-- Family Available Budget: $${caseData?.budget ? caseData.budget.toLocaleString() : '8,000'}
+- Family Available Budget: ${caseData?.budget ? `$${caseData.budget.toLocaleString()}` : 'Open / not set'}
 - Planning Estimate Range: $${overview?.costSummary?.minTotal.toLocaleString() || '0'} - $${overview?.costSummary?.maxTotal.toLocaleString() || '0'}
 - Confirmed Vendor Quotes Total: $${overview?.costSummary?.confirmedQuotesTotal ? overview.costSummary.confirmedQuotesTotal.toLocaleString() : '0 (None applied yet)'}
 ${
@@ -317,7 +317,7 @@ ${
               toolResults.push(
                 await AI_TOOLS_REGISTRY.find_resources({
                   category: args.category || 'ALL',
-                  zipCode: args.zipCode || overview?.caseData.zipCode || '77004',
+                  zipCode: args.zipCode || (overview?.caseData.zipCode && overview.caseData.zipCode !== 'UNSET' ? overview.caseData.zipCode : undefined),
                 })
               );
             } else if (call.name === 'complete_task') {
