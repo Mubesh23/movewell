@@ -61,6 +61,25 @@ export async function GET(req: NextRequest) {
 
       if (data?.session?.user?.id && !error) {
         const userId = data.session.user.id;
+        const email = data.session.user.email || '';
+
+        // Explicitly set authenticated session cookie on response
+        response.cookies.set(SESSION_COOKIE_NAME, userId, {
+          path: '/',
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 60 * 60 * 24 * 30, // 30 days
+        });
+
+        if (email) {
+          response.cookies.set('bridgewell_email', email, {
+            path: '/',
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 60 * 60 * 24 * 30,
+          });
+        }
 
         // Auto-claim pending draft if guest token exists in incoming cookies
         const previousGuestToken =
