@@ -479,7 +479,12 @@ function GetStartedContent() {
     <div className="min-h-screen bg-sand text-ink flex flex-col font-sans selection:bg-sage selection:text-ink">
       <Navbar />
 
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <motion.main
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: 'easeOut' }}
+        className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8"
+      >
         {/* Nora Intake Header */}
         <div className="flex items-center justify-between pb-5 mb-6 border-b border-line">
           <div className="flex items-center gap-3">
@@ -517,7 +522,12 @@ function GetStartedContent() {
             {/* Message Thread */}
             <div className="space-y-5">
               {messages.map((msg) => (
-                <div key={msg.id}>
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, ease: 'easeOut' }}
+                >
                   {msg.role === 'assistant' ? (
                     <div className="flex items-start gap-3">
                       {/* Nora Avatar */}
@@ -578,7 +588,7 @@ function GetStartedContent() {
                       </div>
                     </div>
                   )}
-                </div>
+                </motion.div>
               ))}
 
               {submittingTurn && (
@@ -775,7 +785,7 @@ function GetStartedContent() {
             </div>
           </aside>
         </div>
-      </main>
+      </motion.main>
 
       {/* Start Over Confirmation Modal */}
       {showResetModal && (
