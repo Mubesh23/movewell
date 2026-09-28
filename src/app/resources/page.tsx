@@ -135,7 +135,7 @@ export default function PublicResourcesPage() {
             Find help near your family member
           </h1>
           <p className="text-sm sm:text-base text-[#667572] max-w-2xl leading-relaxed">
-            Discover verified senior movers, accessibility contractors, and local support programs matched to your parent&apos;s neighborhood.
+            Discover senior moving services, accessibility contractors, and local support programs matched to your parent&apos;s neighborhood.
           </p>
 
           {/* Location Bar */}
@@ -233,7 +233,7 @@ export default function PublicResourcesPage() {
               <Search className="w-8 h-8 text-[#A0AEA8] mx-auto mb-3" />
               <p className="text-base font-semibold text-[#183331]">No listings found in this category</p>
               <p className="text-xs text-[#71847D] mt-1 max-w-md mx-auto">
-                Try switching to &ldquo;All Services&rdquo; or ask Nora to help research verified options for your parent&apos;s transition.
+                Try switching to &ldquo;All Services&rdquo; or ask Nora to help research local options for your parent&apos;s transition.
               </p>
             </div>
           ) : (

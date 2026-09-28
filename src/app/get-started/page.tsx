@@ -671,11 +671,11 @@ function GetStartedContent() {
                 ) : (
                   /* User Message */
                   <div className="flex items-start justify-end gap-3 ml-auto">
-                    <div className="space-y-1 flex flex-col items-end max-w-[85%]">
+                    <div className="space-y-1 flex flex-col items-end max-w-[85%] sm:max-w-[75%]">
                       <span className="text-[10px] text-muted-ink uppercase tracking-wider font-semibold mr-1">
                         You
                       </span>
-                      <div className="bg-evergreen text-white rounded-2xl rounded-tr-xs px-4.5 py-3 text-sm font-normal leading-relaxed shadow-xs">
+                      <div className="bg-evergreen text-white rounded-2xl rounded-tr-xs px-4 py-2.5 sm:px-5 sm:py-3 text-sm font-normal leading-relaxed shadow-2xs break-words whitespace-pre-wrap">
                         {msg.content}
                       </div>
                     </div>

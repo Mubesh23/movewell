@@ -48,14 +48,14 @@ There is rarely a single system that answers:
 
 ### 5. Honest Cost Engine & Evidence Grounding (`/plan/[caseId]/budget`)
 - Clear separation between `WORKFLOW_PLANNING_RANGE`, `EXTERNAL_EVIDENCE`, `VENDOR_QUOTE`, and `USER_ADJUSTED`.
-- Grounded in external public rate sheets, agency tariffs (e.g. TxDMV), and industry benchmarks with explicit source citation and verification dates.
+- Grounded in external public rate sheets, agency rate guides, and industry benchmarks with explicit source citation and source-check dates.
 - Preserves confirmed vendor quotes across location changes and avoids double-counting against workflow planning ranges.
 
 ### 6. Open Referral / HSDS Community Resource Directory (`/plan/[caseId]/resources` & `/resources`)
 - Open Referral HSDS schema (`organizations`, `services`, `locations`, `resource_verifications`).
 - Curated pilot resources for Harris County / Greater Houston with honest provenance badges (`Public agency`, `Nonprofit`, `Directory listing`, `Nearby option`).
 
-### 7. Team & Care Circle Coordination (`/plan/[caseId]/team`)
+### 7. Family & Care Circle Coordination (`/plan/[caseId]/family`)
 - Staged and live email invitations for family members, local helpers, and professional coordinators.
 
 ### 8. Printable Transition Plan (`/plan/[caseId]/print`)
@@ -72,7 +72,7 @@ src/
 │   ├── get-started/      # Conversational intake with Nora
 │   ├── draft/[draftId]/  # Proposal review & workspace activation
 │   ├── home/             # Authenticated family case dashboard
-│   ├── plan/[caseId]/    # Command center, budget, team, resources, print
+│   ├── plan/[caseId]/    # Command center, budget, family, resources, print
 │   ├── resources/        # Public community directory
 │   └── api/              # Secure endpoints for cases, tasks, drafts, AI
 ├── components/           # UI components, layout shells, Nora assistant
@@ -85,7 +85,7 @@ src/
 - **Framework**: Next.js 14+ (App Router), React 18, TypeScript (Strict)
 - **Styling**: Tailwind CSS (custom Warm Sand, Sage & Evergreen palette)
 - **Database**: Supabase PostgreSQL with SQL migrations & in-memory fallback store
-- **Authentication**: Supabase Auth (Google OAuth & Email Magic Link)
+- **Authentication**: Supabase Auth (Google OAuth)
 - **AI Synthesis**: Google Gemini via `@google/genai`
 - **Testing**: Vitest test runner with unit and integration coverage
 

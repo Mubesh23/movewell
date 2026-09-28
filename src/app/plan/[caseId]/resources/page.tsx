@@ -450,7 +450,7 @@ function ResourcesContent() {
               headline="Community & provider support"
               explanation={
                 searchZip
-                  ? `Resources shown near ${searchZip} are cross-referenced with public agencies, nonprofit services, and verified local providers for senior safety.`
+                  ? `Resources shown near ${searchZip} include public agencies, nonprofit services, and local directory listings relevant to the transition.`
                   : 'Add or select a ZIP code to see nearby public agency, nonprofit, and provider resources.'
               }
               actionLabel="Ask Nora about resources"

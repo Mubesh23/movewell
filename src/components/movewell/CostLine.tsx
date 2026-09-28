@@ -125,15 +125,22 @@ export function CostLine({
         open={sourcesOpen}
         onOpenChange={setSourcesOpen}
         title={`Estimate Evidence: ${title}`}
-        description="Grounded in published regional tariffs, public rate sheets, and local provider benchmarks."
+        description="Market context and source provenance for this planning estimate."
       >
         <div className="py-2 space-y-4 text-xs">
+          {/* Baseline vs Market Context Disclaimer */}
+          <div className="rounded-xl bg-[#f2f7f3] border border-[#dcebe0] p-3 text-xs text-[#527063] leading-relaxed">
+            <p>
+              The displayed planning range comes from BridgeWell&apos;s deterministic workflow baseline unless a confirmed vendor quote replaces it. The external sources below provide market context and may use different units or scopes.
+            </p>
+          </div>
+
           {/* Metadata Grid */}
           <div className="p-3.5 rounded-xl bg-[#fafbfa] border border-[#e1e9e3] space-y-2">
             <div className="flex justify-between items-center text-[#71847d]">
               <span>Geography:</span>
               <strong className="text-[#183331] font-semibold">
-                {resolvedEvidence?.geography || 'Houston, Texas'}
+                {resolvedEvidence?.geography || 'Location not specified'}
               </strong>
             </div>
             <div className="flex justify-between items-center text-[#71847d]">
@@ -145,7 +152,7 @@ export function CostLine({
               </strong>
             </div>
             <div className="flex justify-between items-center text-[#71847d]">
-              <span>Newest Evidence Date:</span>
+              <span>Most recent evidence observation:</span>
               <strong className="text-[#183331] font-semibold">{updatedAt}</strong>
             </div>
             <div className="flex justify-between items-center text-[#71847d]">
@@ -184,7 +191,7 @@ export function CostLine({
                         </div>
                         <p className="text-[11px] text-[#71847d] mt-0.5">{src.title}</p>
                         <p className="text-[10px] text-[#9aa9a3] mt-1">
-                          Coverage: {src.geography} · Last verified: {src.lastCheckedAt}
+                          Coverage: {src.geography} · Last checked: {src.lastCheckedAt}
                         </p>
                       </div>
 

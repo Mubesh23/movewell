@@ -48,9 +48,9 @@ describe('BridgeWell Final Challenge-Aligned Build Test Suite', () => {
       expect(result.message).toBeDefined();
       expect(result.message.length).toBeGreaterThan(50);
       // Explains cost using external source data
-      expect(result.message).toMatch(/Move\.org|TxDMV|tariff|Houston/i);
+      expect(result.message).toMatch(/Move\.org|moveBuddha|tariff|Houston/i);
       // Explains difference between moving estimate and other items
-      expect(result.message).toMatch(/\$(110|950)/);
+      expect(result.message).toMatch(/\$(110|120|950|2,?100)/);
       // Must not invent fake survey
       expect(result.message).not.toContain('Regional Texas Senior Transition Cost Survey');
       expect(result.toolResults?.some((tr) => tr.toolName === 'explain_cost_estimate')).toBe(true);

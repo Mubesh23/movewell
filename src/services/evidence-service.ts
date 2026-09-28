@@ -24,14 +24,14 @@ export const REAL_EVIDENCE_SOURCES: EvidenceSource[] = [
     extractionMethod: 'PUBLIC_RATE_SHEET',
   },
   {
-    id: 'src-txdmv-tariff',
-    title: 'Texas Household Goods Carrier Maximum Rate Tariff Guidelines',
-    publisher: 'Texas Department of Motor Vehicles (TxDMV)',
-    url: 'https://www.txdmv.gov/motor-carriers/moving-companies',
+    id: 'src-movebuddha-texas',
+    title: 'Texas Moving Companies Cost & Pricing Averages',
+    publisher: 'moveBuddha',
+    url: 'https://www.movebuddha.com/moving-cost-calculator/',
     geography: 'Texas',
-    publishedDate: '2025-06-01',
+    publishedDate: '2026-01-20',
     lastCheckedAt: '2026-09-15',
-    extractionMethod: 'PUBLIC_AGENCY_TARIFF',
+    extractionMethod: 'PUBLIC_RATE_SHEET',
   },
   {
     id: 'src-homeadvisor-packing-houston',
@@ -94,6 +94,16 @@ export const REAL_EVIDENCE_SOURCES: EvidenceSource[] = [
     extractionMethod: 'PUBLIC_AGENCY_TARIFF',
   },
   {
+    id: 'src-houston-med-transport',
+    title: 'Houston Non-Emergency Wheelchair Transport Pricing',
+    publisher: 'Senior Transportation Directory',
+    url: 'https://www.houstontx.gov/health/Aging/',
+    geography: 'Houston, TX',
+    publishedDate: '2026-02-10',
+    lastCheckedAt: '2026-09-10',
+    extractionMethod: 'INDUSTRY_BENCHMARK',
+  },
+  {
     id: 'src-houston-furniture-bank-fees',
     title: 'Residential Furniture Donation Pickup Fee Schedule',
     publisher: 'Houston Furniture Bank',
@@ -106,7 +116,7 @@ export const REAL_EVIDENCE_SOURCES: EvidenceSource[] = [
 ];
 
 export const REAL_COST_OBSERVATIONS: CostEvidenceObservation[] = [
-  // 1. Moving (Houston Local)
+  // 1. Moving (Houston Local & Texas)
   {
     id: 'obs-mov-01',
     sourceId: 'src-move-org-houston',
@@ -120,14 +130,14 @@ export const REAL_COST_OBSERVATIONS: CostEvidenceObservation[] = [
   },
   {
     id: 'obs-mov-02',
-    sourceId: 'src-txdmv-tariff',
+    sourceId: 'src-movebuddha-texas',
     category: 'moving',
-    amountMin: 110,
-    amountMax: 185,
+    amountMin: 120,
+    amountMax: 195,
     unit: 'hourly',
     geography: 'Texas',
     observedDate: '2026-09-15',
-    notes: 'TxDMV regulated hourly rate envelope for two to three movers and vehicle.',
+    notes: 'Statewide average hourly rate for two professional movers and fully equipped truck.',
   },
 
   // 2. Packing / Unpacking
@@ -195,11 +205,22 @@ export const REAL_COST_OBSERVATIONS: CostEvidenceObservation[] = [
     sourceId: 'src-metrolift-fare-sheet',
     category: 'transportation',
     amountMin: 1.25,
-    amountMax: 50,
+    amountMax: 1.25,
     unit: 'per trip',
     geography: 'Harris County, TX',
     observedDate: '2026-09-22',
-    notes: '$1.25 for subsidized METROLift transit; $35-$50 for specialized private medical wheelchair transport.',
+    notes: 'Subsidized METROLift curb-to-curb paratransit fare for registered riders.',
+  },
+  {
+    id: 'obs-trans-02',
+    sourceId: 'src-houston-med-transport',
+    category: 'transportation',
+    amountMin: 35,
+    amountMax: 65,
+    unit: 'per one-way trip',
+    geography: 'Houston, TX',
+    observedDate: '2026-09-10',
+    notes: 'Specialized private non-emergency medical wheelchair van transport.',
   },
 
   // 5. Donation / Cleanout
@@ -395,14 +416,14 @@ export class EvidenceService {
       .join('\n');
 
     const explanation =
-      `This planning estimate of **$${summary.minAmount.toLocaleString()}–$${summary.maxAmount.toLocaleString()}** (${summary.unit}) is grounded in ${summary.geography} pricing published by **${primarySource?.publisher || 'Published sources'}**.\n\n` +
-      `**Evidence details:**\n` +
+      `The current task amount is a BridgeWell planning range. I can also show you external market evidence for **${summary.geography}** to help judge whether the range is reasonable.\n\n` +
+      `**External Market Context:**\n` +
+      `• Observed range: $${summary.minAmount.toLocaleString()} to $${summary.maxAmount.toLocaleString()} (${summary.unit})\n` +
       `• Geography: ${summary.geography}\n` +
-      `• Observed range: $${summary.minAmount.toLocaleString()} to $${summary.maxAmount.toLocaleString()}\n` +
       `• Observations: ${summary.observationCount} recent public rate sheet and benchmark observation${summary.observationCount > 1 ? 's' : ''}\n` +
       `• Most recent source check: ${summary.newestObservedDate}\n\n` +
-      `**Published Sources:**\n${sourceList}\n\n` +
-      `*Published pricing is useful for planning, but the final cost depends on the exact job. Confirming with local providers would give you a more reliable current number.*`;
+      `**Published External Sources:**\n${sourceList}\n\n` +
+      `*The displayed planning range comes from BridgeWell's deterministic workflow baseline unless a confirmed vendor quote replaces it. Published market pricing is useful context, but final costs depend on exact vendor quotes.*`;
 
     return { explanation, summary };
   }
