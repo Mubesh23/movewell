@@ -471,9 +471,9 @@ function GetStartedContent() {
     <div className="min-h-screen bg-sand text-ink flex flex-col font-sans selection:bg-sage selection:text-ink">
       <Navbar />
 
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <main className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Nora Intake Header */}
-        <div className="flex items-center justify-between pb-5 mb-6 border-b border-line">
+        <div className="flex items-center justify-between pb-5 mb-5 border-b border-line">
           <div className="flex items-center gap-3">
             <span className="w-10 h-10 rounded-xl bg-sage text-evergreen flex items-center justify-center font-bold text-lg shadow-2xs">
               ✦
@@ -502,307 +502,265 @@ function GetStartedContent() {
           </button>
         </div>
 
-        {/* Mobile Notes Toggle */}
-        <div className="lg:hidden mb-5">
+        {/* Nora's Notes: Smooth Vertical Accordion (Expands/Collapses Up & Down) */}
+        <div className="mb-6 bg-white border border-line rounded-2xl shadow-2xs overflow-hidden transition-colors">
           <button
             type="button"
-            onClick={() => setMobilePanelOpen(!mobilePanelOpen)}
-            className="w-full flex items-center justify-between px-4 py-3 bg-white border border-line rounded-xl text-xs font-semibold text-ink shadow-2xs cursor-pointer"
+            onClick={() => handleToggleNotes(!notesOpen)}
+            className="w-full flex items-center justify-between p-3.5 sm:px-4 text-left hover:bg-cream/40 transition-colors cursor-pointer"
+            aria-expanded={notesOpen}
           >
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-evergreen" />
-              <span>Nora&apos;s notes ({knownCount}/{understoodItems.length} gathered)</span>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className="w-2 h-2 rounded-full bg-evergreen shrink-0" />
+              <span className="text-xs font-bold text-ink uppercase tracking-wider">
+                Nora&apos;s notes
+              </span>
+              <span className="px-2 py-0.5 rounded-full bg-sand text-ink text-[11px] font-semibold border border-line/80">
+                {knownCount} of {understoodItems.length} gathered
+              </span>
+              <span className="text-xs text-muted-ink hidden sm:inline">
+                · {getReadinessHeading()}
+              </span>
             </div>
-            {mobilePanelOpen ? <ChevronUp className="w-4 h-4 text-muted-ink" /> : <ChevronDown className="w-4 h-4 text-muted-ink" />}
+
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-evergreen shrink-0">
+              <span className="hidden sm:inline">{notesOpen ? 'Hide notes' : 'View notes'}</span>
+              <motion.div
+                animate={{ rotate: notesOpen ? 180 : 0 }}
+                transition={{ duration: 0.2 }}
+                className="flex items-center justify-center"
+              >
+                <ChevronDown className="w-4 h-4 text-evergreen" />
+              </motion.div>
+            </div>
           </button>
 
-          {mobilePanelOpen && (
-            <div className="mt-2 p-4 bg-white border border-line rounded-xl space-y-2 text-xs shadow-2xs">
-              <p className="text-[11px] font-medium text-evergreen mb-2">{getReadinessHeading()}</p>
-              {understoodItems.map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between py-1.5 border-b border-line/60 last:border-0">
-                  <span className="text-muted-ink">{item.label}</span>
-                  <span className={`font-semibold ${item.known ? 'text-ink' : 'text-muted-ink/60'}`}>
-                    {item.known ? `✓ ${item.text}` : `○ ${item.text}`}
-                  </span>
-                </div>
-              ))}
-              {isReady && (
-                <button
-                  type="button"
-                  onClick={handleCreateDraft}
-                  disabled={creatingDraft}
-                  className="w-full mt-3 py-2.5 px-4 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-semibold text-xs shadow-xs"
-                >
-                  {creatingDraft ? 'Generating proposal...' : 'Review proposed plan →'}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Layout: Natural Top-to-Bottom Conversation Flow + Sticky Notes Rail */}
-        <div className="flex items-start justify-center gap-8 relative">
-          {/* Main Conversation Column */}
-          <div
-            className={`flex-1 transition-all duration-200 flex flex-col space-y-6 ${
-              notesOpen ? 'max-w-2xl' : 'max-w-3xl'
-            }`}
-          >
-            {/* Message Thread */}
-            <div className="space-y-5">
-              {messages.map((msg) => (
-                <div key={msg.id}>
-                  {msg.role === 'assistant' ? (
-                    <div className="flex items-start gap-3">
-                      {/* Nora Avatar */}
-                      <div className="w-8 h-8 rounded-xl bg-sage text-evergreen flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 shadow-2xs border border-evergreen/15">
-                        ✦
-                      </div>
-                      <div className="flex-1 space-y-1.5 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-ink">Nora</span>
-                          <span className="text-[10px] text-muted-ink uppercase tracking-wider font-semibold">
-                            Transition Assistant
-                          </span>
-                        </div>
-                        <div className="bg-white border border-line/80 rounded-2xl rounded-tl-xs p-4 sm:p-5 text-sm shadow-xs space-y-3">
-                          {renderAssistantMessage(msg.content)}
-
-                          {msg.bulletPoints && msg.bulletPoints.length > 0 && (
-                            <div className="mt-4 pt-3.5 border-t border-line/60 bg-sand/30 -mx-4 -mb-4 sm:-mx-5 sm:-mb-5 p-4 sm:p-5 rounded-b-2xl">
-                              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-ink block mb-2.5">
-                                Key details noted:
-                              </span>
-                              <ul className="space-y-2">
-                                {msg.bulletPoints.map((bp, i) => (
-                                  <li key={i} className="flex items-start gap-2.5 text-xs text-ink/90 font-medium">
-                                    <CheckCircle2 className="w-4 h-4 text-evergreen shrink-0 mt-0.5" />
-                                    <span>{bp}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-
-                          {msg.isConfirmation && (
-                            <div className="mt-4 pt-3.5 border-t border-line/60">
-                              <button
-                                type="button"
-                                onClick={handleCreateDraft}
-                                disabled={creatingDraft}
-                                className="inline-flex items-center gap-2 py-3 px-5 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-semibold text-xs shadow-xs hover:shadow transition-all cursor-pointer active:scale-[0.98]"
-                              >
-                                <span>{creatingDraft ? 'Generating proposal...' : 'Review proposed plan →'}</span>
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    /* User Message */
-                    <div className="flex items-start justify-end gap-3 ml-auto">
-                      <div className="space-y-1 flex flex-col items-end max-w-[85%]">
-                        <span className="text-[10px] text-muted-ink uppercase tracking-wider font-semibold mr-1">
-                          You
-                        </span>
-                        <div className="bg-evergreen text-white rounded-2xl rounded-tr-xs px-4.5 py-3 text-sm font-normal leading-relaxed shadow-xs">
-                          {msg.content}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-
-              {submittingTurn && (
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-sage text-evergreen flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 shadow-2xs border border-evergreen/15">
-                    ✦
-                  </div>
-                  <div className="bg-white border border-line text-muted-ink px-4 py-3 rounded-2xl rounded-tl-xs text-xs flex items-center gap-2.5 shadow-2xs">
-                    <span className="w-2 h-2 rounded-full bg-evergreen animate-ping" />
-                    <span>Nora is organizing details...</span>
-                  </div>
-                </div>
-              )}
-
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Error banner if any */}
-            {chatError && (
-              <div className="p-3.5 bg-amber-bg border border-amber/30 rounded-xl text-xs text-amber font-medium flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{chatError}</span>
-              </div>
-            )}
-
-            {/* Suggestions Chips */}
-            {suggestions.length > 0 && !submittingTurn && (
-              <div className="pt-2">
-                <div className="flex items-center gap-1.5 mb-2.5">
-                  <Sparkles className="w-3.5 h-3.5 text-evergreen" />
-                  <span className="text-[11px] font-bold text-muted-ink uppercase tracking-wider">
-                    Suggested replies
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {suggestions.map((s, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => handleSendMessage(s.prompt)}
-                      className="group inline-flex items-center gap-2 text-xs font-medium px-3.5 py-2 rounded-xl bg-white hover:bg-cream border border-line hover:border-evergreen/40 text-ink shadow-2xs hover:shadow-xs transition-all cursor-pointer active:scale-[0.98]"
-                    >
-                      <span className="text-evergreen group-hover:scale-110 transition-transform">✦</span>
-                      <span>{s.text}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Sleek Composer */}
-            <div className="space-y-1.5 pt-2 sticky bottom-4">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleSendMessage();
-                }}
-                className="relative bg-white border border-line rounded-2xl shadow-sm focus-within:border-evergreen focus-within:ring-2 focus-within:ring-evergreen/10 transition-all p-2 pl-4"
-              >
-                <textarea
-                  ref={textareaRef}
-                  rows={1}
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                  placeholder="Tell Nora what's happening..."
-                  disabled={submittingTurn}
-                  className="w-full min-h-[48px] max-h-[160px] py-2 pr-12 text-sm text-ink placeholder:text-muted-ink/60 bg-transparent focus:outline-none resize-none leading-relaxed"
-                />
-                <button
-                  type="submit"
-                  disabled={submittingTurn || !inputValue.trim()}
-                  className="absolute right-2.5 bottom-2.5 w-9 h-9 rounded-xl bg-evergreen hover:bg-evergreen-dark disabled:opacity-25 disabled:hover:bg-evergreen text-white flex items-center justify-center transition-all shrink-0 shadow-xs cursor-pointer active:scale-95"
-                  aria-label="Send message"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
-              </form>
-
-              <div className="flex items-center justify-between text-[11px] text-muted-ink px-2">
-                <span>Press Enter to send, Shift+Enter for newline</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Nora's Notes Rail (Desktop, Collapsible & Sticky) */}
-          <div className="hidden lg:block shrink-0">
-            {notesOpen ? (
+          <AnimatePresence initial={false}>
+            {notesOpen && (
               <motion.div
-                initial={{ opacity: 0, x: 15 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 15 }}
-                transition={{ duration: 0.2 }}
-                className="w-[300px] bg-white border border-line rounded-2xl p-4.5 shadow-xs space-y-4 sticky top-6"
+                key="notes-content"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.25, ease: 'easeInOut' }}
+                className="overflow-hidden"
               >
-                <div className="flex items-center justify-between pb-3 border-b border-line">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-evergreen" />
-                    <h3 className="text-xs font-bold text-ink uppercase tracking-wider">
-                      Nora&apos;s notes
-                    </h3>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleToggleNotes(false)}
-                    className="text-muted-ink hover:text-ink p-1 rounded-md hover:bg-cream transition-colors cursor-pointer"
-                    title="Collapse notes rail"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <div>
-                  <p className="text-xs font-semibold text-evergreen leading-snug">
-                    {getReadinessHeading()}
-                  </p>
-                </div>
-
-                {/* Compact Structured Items */}
-                <div className="space-y-1.5">
-                  {understoodItems.map((item) => (
-                    <div
-                      key={item.label}
-                      className={`p-2.5 rounded-xl border text-xs flex items-start gap-2.5 transition-colors ${
-                        item.known
-                          ? 'bg-sage/25 border-evergreen/20 text-ink'
-                          : 'bg-cream/40 border-line/60 text-muted-ink/70'
-                      }`}
-                    >
-                      <span
-                        className={`w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[9px] font-bold ${
-                          item.known ? 'bg-evergreen text-white' : 'border border-line text-muted-ink'
+                <div className="p-4 sm:p-5 pt-1 border-t border-line/60 bg-sand/20 space-y-4">
+                  {/* Grid of Understood Items */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {understoodItems.map((item) => (
+                      <div
+                        key={item.label}
+                        className={`p-2.5 rounded-xl border text-xs flex items-start gap-2.5 transition-colors ${
+                          item.known
+                            ? 'bg-sage/25 border-evergreen/20 text-ink'
+                            : 'bg-white/80 border-line/60 text-muted-ink/70'
                         }`}
                       >
-                        {item.known ? '✓' : '○'}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-ink mb-0.5">
-                          {item.label}
+                        <span
+                          className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-bold ${
+                            item.known ? 'bg-evergreen text-white' : 'border border-line text-muted-ink'
+                          }`}
+                        >
+                          {item.known ? '✓' : '○'}
                         </span>
-                        <span className={`truncate block ${item.known ? 'text-ink font-semibold' : 'text-muted-ink italic'}`}>
-                          {item.text}
-                        </span>
+                        <div className="flex-1 min-w-0">
+                          <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-ink mb-0.5">
+                            {item.label}
+                          </span>
+                          <span
+                            className={`truncate block ${
+                              item.known ? 'text-ink font-semibold' : 'text-muted-ink italic'
+                            }`}
+                          >
+                            {item.text}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
 
-                {/* Action button when ready */}
-                <AnimatePresence>
+                  {/* Ready Action Banner */}
                   {isReady && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="pt-3 border-t border-line space-y-2"
-                    >
+                    <div className="pt-2 border-t border-line/60 flex flex-col sm:flex-row items-center justify-between gap-3 bg-sage/30 p-3.5 rounded-xl border border-evergreen/20">
+                      <div>
+                        <p className="text-xs font-bold text-evergreen">
+                          Ready to review proposed plan
+                        </p>
+                        <p className="text-[11px] text-muted-ink">
+                          You can review and refine everything before activating the shared workspace.
+                        </p>
+                      </div>
                       <button
                         type="button"
                         onClick={handleCreateDraft}
                         disabled={creatingDraft}
-                        className="w-full py-2.5 px-4 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-semibold text-xs shadow-xs transition-all cursor-pointer"
+                        className="w-full sm:w-auto py-2 px-4 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-semibold text-xs shadow-xs transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]"
                       >
                         {creatingDraft ? 'Generating proposal...' : 'Review proposed plan →'}
                       </button>
-                      <p className="text-[10px] text-muted-ink text-center">
-                        You review and adjust everything before activation.
-                      </p>
-                    </motion.div>
+                    </div>
                   )}
-                </AnimatePresence>
+                </div>
               </motion.div>
-            ) : (
-              /* Collapsed Button */
-              <button
-                type="button"
-                onClick={() => handleToggleNotes(true)}
-                className="flex items-center gap-2 py-2.5 px-3 rounded-xl bg-white border border-line text-xs font-semibold text-ink shadow-xs hover:border-evergreen/40 hover:bg-cream transition-all sticky top-6 cursor-pointer"
-                title="Expand Nora's notes"
-              >
-                <ChevronLeft className="w-4 h-4 text-evergreen" />
-                <span className="text-evergreen">✦</span>
-                <span>Notes ({knownCount}/{understoodItems.length})</span>
-              </button>
             )}
+          </AnimatePresence>
+        </div>
+
+        {/* Main Conversation Stream */}
+        <div className="flex flex-col space-y-6">
+          {/* Message Thread */}
+          <div className="space-y-5">
+            {messages.map((msg) => (
+              <div key={msg.id}>
+                {msg.role === 'assistant' ? (
+                  <div className="flex items-start gap-3">
+                    {/* Nora Avatar */}
+                    <div className="w-8 h-8 rounded-xl bg-sage text-evergreen flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 shadow-2xs border border-evergreen/15">
+                      ✦
+                    </div>
+                    <div className="flex-1 space-y-1.5 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-ink">Nora</span>
+                        <span className="text-[10px] text-muted-ink uppercase tracking-wider font-semibold">
+                          Transition Assistant
+                        </span>
+                      </div>
+                      <div className="bg-white border border-line/80 rounded-2xl rounded-tl-xs p-4 sm:p-5 text-sm shadow-xs space-y-3">
+                        {renderAssistantMessage(msg.content)}
+
+                        {msg.bulletPoints && msg.bulletPoints.length > 0 && (
+                          <div className="mt-4 pt-3.5 border-t border-line/60 bg-sand/30 -mx-4 -mb-4 sm:-mx-5 sm:-mb-5 p-4 sm:p-5 rounded-b-2xl">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-ink block mb-2.5">
+                              Key details noted:
+                            </span>
+                            <ul className="space-y-2">
+                              {msg.bulletPoints.map((bp, i) => (
+                                <li key={i} className="flex items-start gap-2.5 text-xs text-ink/90 font-medium">
+                                  <CheckCircle2 className="w-4 h-4 text-evergreen shrink-0 mt-0.5" />
+                                  <span>{bp}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {msg.isConfirmation && (
+                          <div className="mt-4 pt-3.5 border-t border-line/60">
+                            <button
+                              type="button"
+                              onClick={handleCreateDraft}
+                              disabled={creatingDraft}
+                              className="inline-flex items-center gap-2 py-3 px-5 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-semibold text-xs shadow-xs hover:shadow transition-all cursor-pointer active:scale-[0.98]"
+                            >
+                              <span>{creatingDraft ? 'Generating proposal...' : 'Review proposed plan →'}</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* User Message */
+                  <div className="flex items-start justify-end gap-3 ml-auto">
+                    <div className="space-y-1 flex flex-col items-end max-w-[85%]">
+                      <span className="text-[10px] text-muted-ink uppercase tracking-wider font-semibold mr-1">
+                        You
+                      </span>
+                      <div className="bg-evergreen text-white rounded-2xl rounded-tr-xs px-4.5 py-3 text-sm font-normal leading-relaxed shadow-xs">
+                        {msg.content}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {submittingTurn && (
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-xl bg-sage text-evergreen flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 shadow-2xs border border-evergreen/15">
+                  ✦
+                </div>
+                <div className="bg-white border border-line text-muted-ink px-4 py-3 rounded-2xl rounded-tl-xs text-xs flex items-center gap-2.5 shadow-2xs">
+                  <span className="w-2 h-2 rounded-full bg-evergreen animate-ping" />
+                  <span>Nora is organizing details...</span>
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Error banner if any */}
+          {chatError && (
+            <div className="p-3.5 bg-amber-bg border border-amber/30 rounded-xl text-xs text-amber font-medium flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{chatError}</span>
+            </div>
+          )}
+
+          {/* Suggestions Chips */}
+          {suggestions.length > 0 && !submittingTurn && (
+            <div className="pt-2">
+              <div className="flex items-center gap-1.5 mb-2.5">
+                <Sparkles className="w-3.5 h-3.5 text-evergreen" />
+                <span className="text-[11px] font-bold text-muted-ink uppercase tracking-wider">
+                  Suggested replies
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {suggestions.map((s, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleSendMessage(s.prompt)}
+                    className="group inline-flex items-center gap-2 text-xs font-medium px-3.5 py-2 rounded-xl bg-white hover:bg-cream border border-line hover:border-evergreen/40 text-ink shadow-2xs hover:shadow-xs transition-all cursor-pointer active:scale-[0.98]"
+                  >
+                    <span className="text-evergreen group-hover:scale-110 transition-transform">✦</span>
+                    <span>{s.text}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Sleek Composer */}
+          <div className="space-y-1.5 pt-2 sticky bottom-4">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSendMessage();
+              }}
+              className="relative bg-white border border-line rounded-2xl shadow-sm focus-within:border-evergreen focus-within:ring-2 focus-within:ring-evergreen/10 transition-all p-2 pl-4"
+            >
+              <textarea
+                ref={textareaRef}
+                rows={1}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
+                placeholder="Tell Nora what's happening..."
+                disabled={submittingTurn}
+                className="w-full min-h-[48px] max-h-[160px] py-2 pr-12 text-sm text-ink placeholder:text-muted-ink/60 bg-transparent focus:outline-none resize-none leading-relaxed"
+              />
+              <button
+                type="submit"
+                disabled={submittingTurn || !inputValue.trim()}
+                className="absolute right-2.5 bottom-2.5 w-9 h-9 rounded-xl bg-evergreen hover:bg-evergreen-dark disabled:opacity-25 disabled:hover:bg-evergreen text-white flex items-center justify-center transition-all shrink-0 shadow-xs cursor-pointer active:scale-95"
+                aria-label="Send message"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </form>
+
+            <div className="flex items-center justify-between text-[11px] text-muted-ink px-2">
+              <span>Press Enter to send, Shift+Enter for newline</span>
+            </div>
           </div>
         </div>
       </main>
