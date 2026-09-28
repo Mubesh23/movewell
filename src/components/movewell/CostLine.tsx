@@ -1,12 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/Badge';
-import { CostLifecycleStage, CostProvenance } from '@/types';
-import { Info, Check } from 'lucide-react';
+import { CostLifecycleStage, CostProvenance, EstimateEvidenceSummary } from '@/types';
+import { Info, Check, ExternalLink, Sparkles, Send } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
-import { BRAND_NAME } from '@/lib/brand';
 
 export interface CostLineProps {
   category: string;
@@ -16,6 +15,8 @@ export interface CostLineProps {
   type: 'ESTIMATE' | 'QUOTE';
   stage?: CostLifecycleStage;
   provenance?: CostProvenance;
+  evidenceSummary?: EstimateEvidenceSummary;
+  caseId?: string;
   previousEstimate?: string;
   className?: string;
 }
@@ -27,20 +28,29 @@ export function CostLine({
   amount,
   type,
   stage = type === 'QUOTE' ? 'QUOTED' : 'ESTIMATED',
-  provenance = {
-    sourceType: type === 'QUOTE' ? 'VENDOR_QUOTE' : 'PLANNING_RANGE',
-    updatedAt: 'Sep 2026',
-    confidence: 'Medium',
-    sources: [
-      'Regional Texas Senior Transition Cost Survey (2026)',
-      `Curated ${BRAND_NAME} Directory Median Pricing`,
-    ],
-  },
+  provenance,
+  evidenceSummary,
+  caseId,
   previousEstimate,
   className,
 }: CostLineProps) {
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const isQuote = type === 'QUOTE';
+
+  // Use real evidenceSummary if provided, otherwise check provenance, otherwise neutral fallback
+  const resolvedEvidence = evidenceSummary || provenance?.evidenceSummary;
+  const confidence = resolvedEvidence?.confidence || provenance?.confidence || 'Medium';
+  const updatedAt = resolvedEvidence?.newestObservedDate || provenance?.updatedAt || 'Current';
+
+  const defaultSources = isQuote
+    ? ['Vendor Quote on file']
+    : resolvedEvidence && resolvedEvidence.sources.length > 0
+    ? resolvedEvidence.sources.map((s) => `${s.publisher}: ${s.title}`)
+    : ['Planning estimate · Source details unavailable'];
+
+  const sourcesList = provenance?.sources && provenance.sources.length > 0
+    ? provenance.sources
+    : defaultSources;
 
   return (
     <>
@@ -65,17 +75,18 @@ export function CostLine({
             </p>
           )}
 
-          <div className="flex items-center gap-2 mt-1.5 text-[11px] text-muted-ink">
-            <span>Updated {provenance.updatedAt}</span>
+          <div className="flex items-center gap-2 mt-1.5 text-[11px] text-muted-ink flex-wrap">
+            <span>Updated {updatedAt}</span>
             <span>·</span>
-            <span>Confidence: {provenance.confidence}</span>
+            <span>Confidence: {confidence}</span>
             <span>·</span>
             <button
               type="button"
               onClick={() => setSourcesOpen(true)}
-              className="text-evergreen hover:underline font-medium inline-flex items-center gap-1"
+              className="text-evergreen hover:underline font-semibold inline-flex items-center gap-1"
             >
-              <span>View sources</span>
+              <Info size={12} className="text-[#1f4d45]" />
+              <span>Why this estimate?</span>
             </button>
           </div>
         </div>
@@ -109,50 +120,123 @@ export function CostLine({
         </div>
       </div>
 
-      {/* Provenance Dialog */}
+      {/* External Evidence & Provenance Modal */}
       <Dialog
         open={sourcesOpen}
         onOpenChange={setSourcesOpen}
-        title={`Cost Provenance: ${title}`}
-        description={`${BRAND_NAME} distinguishes deterministic research data from model-generated assumptions.`}
+        title={`Estimate Evidence: ${title}`}
+        description="Grounded in published regional tariffs, public rate sheets, and local provider benchmarks."
       >
-        <div className="py-2 space-y-3 text-xs">
-          <div className="p-3 rounded-xl bg-white border border-line space-y-1">
-            <div className="flex justify-between text-muted-ink">
-              <span>Methodology:</span>
-              <strong className="text-ink">{provenance.sourceType.replace('_', ' ')}</strong>
+        <div className="py-2 space-y-4 text-xs">
+          {/* Metadata Grid */}
+          <div className="p-3.5 rounded-xl bg-[#fafbfa] border border-[#e1e9e3] space-y-2">
+            <div className="flex justify-between items-center text-[#71847d]">
+              <span>Geography:</span>
+              <strong className="text-[#183331] font-semibold">
+                {resolvedEvidence?.geography || 'Houston, Texas'}
+              </strong>
             </div>
-            <div className="flex justify-between text-muted-ink">
+            <div className="flex justify-between items-center text-[#71847d]">
+              <span>Evidence Basis:</span>
+              <strong className="text-[#183331] font-semibold">
+                {resolvedEvidence?.observationCount
+                  ? `${resolvedEvidence.observationCount} relevant observation${resolvedEvidence.observationCount > 1 ? 's' : ''}`
+                  : 'Workflow Planning Baseline'}
+              </strong>
+            </div>
+            <div className="flex justify-between items-center text-[#71847d]">
+              <span>Newest Evidence Date:</span>
+              <strong className="text-[#183331] font-semibold">{updatedAt}</strong>
+            </div>
+            <div className="flex justify-between items-center text-[#71847d]">
               <span>Confidence Rating:</span>
-              <strong className="text-evergreen">{provenance.confidence}</strong>
-            </div>
-            <div className="flex justify-between text-muted-ink">
-              <span>Effective Date:</span>
-              <strong className="text-ink">{provenance.updatedAt}</strong>
+              <span className="px-2 py-0.5 rounded-md bg-[#e8f1ea] text-[#1f4d45] font-bold text-[11px]">
+                {confidence}
+              </span>
             </div>
           </div>
 
-          {provenance.sources && provenance.sources.length > 0 && (
-            <div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-ink block mb-1.5">
-                Verified Data Sources:
-              </span>
+          {/* Rationale explanation if available */}
+          {resolvedEvidence?.rationale && (
+            <p className="text-xs text-[#527063] leading-relaxed bg-[#f2f7f3] p-3 rounded-xl border border-[#dcebe0]">
+              {resolvedEvidence.rationale}
+            </p>
+          )}
+
+          {/* Real External Sources with Clickable URLs */}
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#71847d] block mb-2">
+              External Sources & Rate Sheets:
+            </span>
+
+            {resolvedEvidence && resolvedEvidence.sources.length > 0 ? (
+              <div className="space-y-2">
+                {resolvedEvidence.sources.map((src) => (
+                  <div
+                    key={src.id}
+                    className="p-3 rounded-xl border border-[#e1e9e3] bg-white hover:border-[#1f4d45] transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="font-semibold text-[#183331] flex items-center gap-1.5">
+                          <Check className="w-3.5 h-3.5 text-[#1f4d45] shrink-0" />
+                          <span>{src.publisher}</span>
+                        </div>
+                        <p className="text-[11px] text-[#71847d] mt-0.5">{src.title}</p>
+                        <p className="text-[10px] text-[#9aa9a3] mt-1">
+                          Coverage: {src.geography} · Last verified: {src.lastCheckedAt}
+                        </p>
+                      </div>
+
+                      <a
+                        href={src.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#1f4d45] hover:text-[#153c36] bg-[#e8f1ea] px-2 py-1 rounded-lg shrink-0 mt-0.5"
+                      >
+                        <span>View source</span>
+                        <ExternalLink size={11} />
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
               <ul className="space-y-1.5">
-                {provenance.sources.map((src, i) => (
-                  <li key={i} className="flex items-start gap-2 text-xs text-ink/90 font-medium">
-                    <Check className="w-3.5 h-3.5 text-evergreen shrink-0 mt-0.5" />
+                {sourcesList.map((src, i) => (
+                  <li key={i} className="flex items-start gap-2 text-xs text-[#183331] font-medium">
+                    <Check className="w-3.5 h-3.5 text-[#1f4d45] shrink-0 mt-0.5" />
                     <span>{src}</span>
                   </li>
                 ))}
               </ul>
-            </div>
-          )}
+            )}
+          </div>
 
-          <div className="flex justify-end pt-2 border-t border-line">
+          {/* Cost Confirmation Guidance Banner */}
+          <div className="rounded-xl bg-[#fafbfa] border border-[#e1e9e3] p-3 text-xs text-[#71847d] leading-relaxed">
+            <p>
+              Published pricing is useful for planning, but the final cost depends on the exact job. Confirming with local providers will give your family a firm current quote.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between pt-2 border-t border-[#edf2ee]">
+            {caseId ? (
+              <Link
+                href={`/plan/${caseId}/outreach`}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#1f4d45] hover:text-[#153c36]"
+              >
+                <Send size={13} />
+                <span>Prepare provider outreach</span>
+              </Link>
+            ) : (
+              <div />
+            )}
+
             <button
               type="button"
               onClick={() => setSourcesOpen(false)}
-              className="px-4 py-2 rounded-xl bg-evergreen text-white text-xs font-semibold hover:bg-evergreen-dark transition-colors"
+              className="px-4 py-2 rounded-xl bg-[#1f4d45] text-white text-xs font-semibold hover:bg-[#153c36] transition-colors"
             >
               Close
             </button>

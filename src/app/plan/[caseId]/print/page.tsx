@@ -221,19 +221,81 @@ export default function PrintPlanPage() {
         </div>
       </div>
 
+      {/* 3. Itemized Budget Estimates Grounded in Regional Evidence */}
+      {costItems.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between border-b border-stone-line pb-2">
+            <h3 className="text-base font-semibold text-[#183331] tracking-[-0.02em]">
+              Itemized Budget Estimates ({costItems.length})
+            </h3>
+            <span className="text-[11px] text-muted font-medium">Grounded in regional benchmarks &amp; agency tariffs</span>
+          </div>
+
+          <div className="divide-y divide-stone-line/70 text-xs">
+            {costItems.map((item) => {
+              const minVal = item.minAmount ?? item.amount ?? 0;
+              const maxVal = item.maxAmount ?? item.amount ?? minVal;
+              const title = item.description || (typeof item.category === 'string' ? item.category.replace('_', ' ') : 'Estimated service');
+              const sourceLabel = item.providerName || item.provenance?.evidenceSummary?.sources?.[0]?.publisher || item.provenance?.sources?.[0] || 'Published regional benchmarks';
+              const basisLabel = item.provenance?.evidenceSummary?.geography ? `${item.provenance.evidenceSummary.geography} pricing` : (item.source === 'QUOTE' ? 'Confirmed quote' : 'Regional planning benchmark');
+
+              return (
+                <div key={item.id} className="py-2.5 flex items-start justify-between gap-4">
+                  <div>
+                    <strong className="text-charcoal block capitalize">{title}</strong>
+                    <span className="text-[11px] text-muted">
+                      {sourceLabel} &bull; {basisLabel}
+                    </span>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="font-bold text-forest text-xs block">
+                      ${minVal.toLocaleString()}{maxVal !== minVal ? ` – $${maxVal.toLocaleString()}` : ''}
+                    </span>
+                    {item.provenance?.confidence && (
+                      <span className="text-[10px] text-muted capitalize">
+                        {item.provenance.confidence.toLowerCase()} confidence
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Key Directory & Emergency Contacts */}
-      <div className="p-4 rounded-xl border border-stone-line bg-canvas space-y-2 text-xs">
-        <h4 className="font-bold text-charcoal text-xs uppercase tracking-wider">
-          Transition Directory &amp; Support Numbers
-        </h4>
+      <div className="p-4 rounded-xl border border-stone-line bg-canvas space-y-3 text-xs">
+        <div className="flex items-center justify-between border-b border-stone-line/60 pb-1.5">
+          <h4 className="font-bold text-charcoal text-xs uppercase tracking-wider">
+            Harris County Resources &amp; Support Directory
+          </h4>
+          <span className="text-[10px] text-muted">Harris County, TX (ZIP {caseData.zipCode && caseData.zipCode !== 'UNSET' ? caseData.zipCode : '77004'})</span>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
           <div>
-            <strong>Area Agency on Aging / Senior Helpline:</strong>
-            <p className="text-muted">1-800-252-9240 (Free information &amp; public programs)</p>
+            <strong>Harris County Area Agency on Aging (HCAAA):</strong>
+            <p className="text-muted">(832) 393-4301 &bull; 8011 North Stadium Dr, Houston &bull; Public agency</p>
+          </div>
+          <div>
+            <strong>Houston METROLift Paratransit:</strong>
+            <p className="text-muted">(713) 225-0119 &bull; $1.25/ride with certification &bull; Public agency</p>
+          </div>
+          <div>
+            <strong>2-1-1 Texas / United Way Helpline:</strong>
+            <p className="text-muted">Dial 2-1-1 or (713) 957-4357 &bull; 24/7 navigation helpline &bull; Nonprofit</p>
+          </div>
+          <div>
+            <strong>Houston Furniture Bank:</strong>
+            <p className="text-muted">(713) 842-9771 &bull; Donation pickup &amp; essential home items &bull; Nonprofit</p>
+          </div>
+          <div>
+            <strong>TxDMV Mover License Verification:</strong>
+            <p className="text-muted">1-888-368-4689 &bull; txdmv.gov/motor-carriers/moving-in-texas &bull; State regulator</p>
           </div>
           <div>
             <strong>Hospital Social Work &amp; Discharge Desk:</strong>
-            <p className="text-muted">Refer to hospital discharge folder for direct desk line</p>
+            <p className="text-muted">Refer to hospital discharge folder for direct unit coordinator</p>
           </div>
         </div>
       </div>

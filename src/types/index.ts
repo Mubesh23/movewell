@@ -101,7 +101,9 @@ export type AIToolName =
   | 'update_case_context'
   | 'assign_task'
   | 'complete_task'
-  | 'find_resources';
+  | 'find_resources'
+  | 'confirm_discharge_destination'
+  | 'explain_cost_estimate';
 
 export type DocumentType =
   | 'MOVING_QUOTE'
@@ -131,6 +133,7 @@ export interface CostProvenance {
   confidence: 'High' | 'Medium' | 'Low';
   sources?: string[];
   disclaimer?: string;
+  evidenceSummary?: EstimateEvidenceSummary;
 }
 
 export type TransportationNeed =
@@ -648,5 +651,50 @@ export interface TransitionPulseMetrics {
   unassignedCount: number;
   budgetAssessment: 'Within planning range' | 'Exceeds budget' | 'Budget open';
   budgetAssessmentDetail: string;
+}
+
+// --- External Evidence Registry Types ---
+export type ExtractionMethod =
+  | 'MANUAL_CRAWL'
+  | 'API'
+  | 'PUBLIC_RATE_SHEET'
+  | 'INDUSTRY_BENCHMARK'
+  | 'PUBLIC_AGENCY_TARIFF';
+
+export interface EvidenceSource {
+  id: string;
+  title: string;
+  publisher: string;
+  url: string;
+  geography: string;
+  publishedDate?: string;
+  lastCheckedAt: string;
+  extractionMethod: ExtractionMethod;
+}
+
+export interface CostEvidenceObservation {
+  id: string;
+  sourceId: string;
+  category: string;
+  amountMin: number;
+  amountMax: number;
+  unit: string;
+  geography: string;
+  observedDate: string;
+  notes?: string;
+}
+
+export interface EstimateEvidenceSummary {
+  category: string;
+  minAmount: number;
+  maxAmount: number;
+  unit: string;
+  geography: string;
+  observationCount: number;
+  newestObservedDate: string;
+  confidence: 'High' | 'Medium' | 'Low';
+  sources: EvidenceSource[];
+  observations: CostEvidenceObservation[];
+  rationale: string;
 }
 

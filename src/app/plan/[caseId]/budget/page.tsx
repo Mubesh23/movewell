@@ -8,6 +8,7 @@ import { QuoteUploader } from '@/components/documents/QuoteUploader';
 import { QuoteSummary } from '@/components/movewell/QuoteSummary';
 import { CostLine } from '@/components/movewell/CostLine';
 import { openNoraWithPrompt } from '@/components/assistant/AIAssistant';
+import { evidenceService } from '@/services/evidence-service';
 import { CaseOverview } from '@/types';
 import {
   WalletCards,
@@ -241,6 +242,11 @@ export default function BudgetPage() {
                       ? costItems.find((ci) => ci.category === 'moving')
                       : undefined;
 
+                    const evidence = evidenceService.getEvidenceForCategory(
+                      t.templateId || t.title,
+                      overview.caseData.zipCode
+                    );
+
                     if (appliedQuote && appliedQuote.amount) {
                       return (
                         <CostLine
@@ -251,6 +257,8 @@ export default function BudgetPage() {
                           amount={`$${appliedQuote.amount.toLocaleString()}`}
                           type="QUOTE"
                           previousEstimate={`$${t.minEstimatedCost.toLocaleString()} \u2013 $${t.maxEstimatedCost.toLocaleString()}`}
+                          evidenceSummary={evidence || undefined}
+                          caseId={caseId}
                         />
                       );
                     }
@@ -263,6 +271,8 @@ export default function BudgetPage() {
                         subtitle={t.whyItMatters || t.description}
                         amount={`$${t.minEstimatedCost.toLocaleString()} \u2013 $${t.maxEstimatedCost.toLocaleString()}`}
                         type="ESTIMATE"
+                        evidenceSummary={evidence || undefined}
+                        caseId={caseId}
                       />
                     );
                   })}

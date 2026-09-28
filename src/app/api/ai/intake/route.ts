@@ -446,7 +446,17 @@ RULES FOR CONVERSATIONAL REPLY:
 - If all required information is now known:
   Acknowledge warmly, provide a concise recap of what you've gathered, state the immediate first priority, and confirm you have enough to build their transition plan.
 - If more information is still needed:
-  Warmly acknowledge what the user just said in 1 brief sentence, then ask ONE natural, gentle follow-up question for ${initialEvaluation.nextTargetField}.
+  - If this is the start of the consultation (first user message or history has <= 1 turn):
+    Provide immediate grounding before asking your single follow-up question:
+    "Based on what you've shared, I'd focus first on:
+    1. confirming discharge timing and destination;
+    2. making sure the next location is safe;
+    3. identifying who can help locally.
+
+    I'll build the rest into a shared plan as we fill in the missing details."
+    Then follow with ONE natural, gentle follow-up question for ${initialEvaluation.nextTargetField}.
+  - If subsequent turn:
+    Warmly acknowledge what the user just said in 1 brief sentence, then ask ONE natural, gentle follow-up question for ${initialEvaluation.nextTargetField}.
   - If TIMING_CLARIFICATION: "Is there a particular day next week you're expecting, or is the timing still flexible?"
   - If DISCHARGE_TIMING and date is known but time is not: Ask if a specific time is known or just the day.
   - If SAFETY_MOBILITY: "Does ${currentDraft.seniorName || 'your family member'} have any mobility limitations right now — for example stairs, a walker, or needing help getting around?"
@@ -594,6 +604,10 @@ RULES FOR CONVERSATIONAL REPLY:
     const readiness = intakeReadinessService.evaluate(updatedDraft);
 
     // If Gemini reply wasn't generated or was blank, build deterministic reply
+    const isFirstTurn = history.length <= 1;
+    const guidancePrefix =
+      "Based on what you've shared, I'd focus first on:\n1. confirming discharge timing and destination;\n2. making sure the next location is safe;\n3. identifying who can help locally.\n\nI'll build the rest into a shared plan as we fill in the missing details.";
+
     if (!conversationalReply) {
       if (readiness.isReady) {
         conversationalReply = `Understood. I have enough details to build your family's initial transition plan.\n\nHere is what I've noted:\n• ${readiness.summaryBulletPoints.join('\n• ')}\n\nThe immediate priority will be confirming a safe discharge destination.`;
@@ -602,8 +616,15 @@ RULES FOR CONVERSATIONAL REPLY:
           readiness.nextTargetField,
           updatedDraft.seniorName
         );
-        conversationalReply = `I can help with this. ${question}`;
+        if (isFirstTurn) {
+          conversationalReply = `${guidancePrefix}\n\n${question}`;
+        } else {
+          conversationalReply = `I can help with this. ${question}`;
+        }
       }
+    } else if (isFirstTurn && !readiness.isReady && !conversationalReply.includes("focus first on")) {
+      // Prepend guidance prefix if model didn't include the 3 points on first turn
+      conversationalReply = `${guidancePrefix}\n\n${conversationalReply}`;
     }
 
     return NextResponse.json({

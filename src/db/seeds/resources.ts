@@ -12,13 +12,13 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     organization: {
       id: 'org-harris-aaa',
       name: 'Harris County Area Agency on Aging',
-      description: 'Official Area Agency on Aging providing family caregiver support, care coordination, and senior housing guidance in Harris County.',
+      description: 'Public Area Agency on Aging providing family caregiver support, care coordination, and senior housing guidance in Harris County.',
       website: 'https://www.houstontx.gov/health/Aging',
     },
     service: {
       id: 'srv-harris-aaa',
-      organizationId: 'org-harris-aaa',
       name: 'Senior Housing Transition & Caregiver Support',
+      organizationId: 'org-harris-aaa',
       category: 'senior_move_management',
       description: 'Comprehensive family consultation, case management, and senior living placement assistance.',
       costType: 'free_public_service',
@@ -35,7 +35,7 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     verification: {
       id: 'ver-harris-aaa',
       serviceId: 'srv-harris-aaa',
-      verificationStatus: 'Verified public agency',
+      verificationStatus: 'Public agency',
       verificationSource: 'City of Houston Health Department & Texas HHS',
       lastVerifiedAt: '2026-09-20',
     },
@@ -49,8 +49,8 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     },
     service: {
       id: 'srv-furniture-bank',
-      organizationId: 'org-furniture-bank',
       name: 'Donation Home Pickup & Receipt',
+      organizationId: 'org-furniture-bank',
       category: 'donation',
       description: 'Scheduled residential pickup for gently used furniture, beds, and household items with tax receipt.',
       costType: 'donation_pickup',
@@ -67,7 +67,7 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     verification: {
       id: 'ver-furniture-bank',
       serviceId: 'srv-furniture-bank',
-      verificationStatus: 'Verified 501(c)(3) nonprofit',
+      verificationStatus: 'Nonprofit',
       verificationSource: 'IRS Exempt Organizations Database',
       lastVerifiedAt: '2026-09-18',
     },
@@ -81,8 +81,8 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     },
     service: {
       id: 'srv-rebuilding-together',
-      organizationId: 'org-rebuilding-together',
       name: 'Senior Safety & Home Accessibility Modifications',
+      organizationId: 'org-rebuilding-together',
       category: 'home_modification',
       description: 'Installation of exterior wheelchair ramps, grab bars, handrails, and fall prevention hazard repairs.',
       costType: 'grant_funded_or_sliding_scale',
@@ -99,7 +99,7 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     verification: {
       id: 'ver-rebuilding-together',
       serviceId: 'srv-rebuilding-together',
-      verificationStatus: 'Verified 501(c)(3) provider',
+      verificationStatus: 'Nonprofit',
       verificationSource: 'Rebuilding Together National Registry',
       lastVerifiedAt: '2026-09-22',
     },
@@ -113,8 +113,8 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     },
     service: {
       id: 'srv-baker-ripley',
-      organizationId: 'org-baker-ripley',
       name: 'Adult Day Care & Senior Case Management',
+      organizationId: 'org-baker-ripley',
       category: 'senior_move_management',
       description: 'Respite care, community resources, and social work consultation for aging parents.',
       costType: 'sliding_scale',
@@ -131,7 +131,7 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     verification: {
       id: 'ver-baker-ripley',
       serviceId: 'srv-baker-ripley',
-      verificationStatus: 'Verified community agency',
+      verificationStatus: 'Nonprofit',
       verificationSource: 'United Way Greater Houston Charter',
       lastVerifiedAt: '2026-09-15',
     },
@@ -145,8 +145,8 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     },
     service: {
       id: 'srv-interfaith',
-      organizationId: 'org-interfaith',
       name: 'Meals on Wheels & Senior Nutrition Support',
+      organizationId: 'org-interfaith',
       category: 'senior_move_management',
       description: 'Home-delivered meals and wellness checks for homebound or post-hospital seniors.',
       costType: 'free_public_service',
@@ -163,8 +163,8 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     verification: {
       id: 'ver-interfaith',
       serviceId: 'srv-interfaith',
-      verificationStatus: 'Verified 501(c)(3) nonprofit',
-      verificationSource: 'Meals on Wheels America Certified Member',
+      verificationStatus: 'Nonprofit',
+      verificationSource: 'Meals on Wheels America Member Directory',
       lastVerifiedAt: '2026-09-19',
     },
   },
@@ -172,13 +172,13 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     organization: {
       id: 'org-sheltering-arms',
       name: 'Sheltering Arms Senior Services',
-      description: 'Specialized senior care agency providing home care coordination, memory care resources, and transition planning.',
+      description: 'Senior care agency providing home care coordination, memory care resources, and transition planning.',
       website: 'https://www.shelteringarms.org',
     },
     service: {
       id: 'srv-sheltering-arms',
-      organizationId: 'org-sheltering-arms',
       name: 'Post-Hospital In-Home Care Coordination',
+      organizationId: 'org-sheltering-arms',
       category: 'senior_move_management',
       description: 'Professional care planning, personal care assistance, and transitional safety evaluations.',
       costType: 'hourly_or_quote',
@@ -195,7 +195,7 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     verification: {
       id: 'ver-sheltering-arms',
       serviceId: 'srv-sheltering-arms',
-      verificationStatus: 'Verified senior provider',
+      verificationStatus: 'Nonprofit',
       verificationSource: 'Texas Department of Aging & Disability Services',
       lastVerifiedAt: '2026-09-14',
     },
@@ -209,10 +209,10 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     },
     service: {
       id: 'srv-metrolift',
-      organizationId: 'org-metrolift',
       name: 'Wheelchair-Accessible Medical & Transition Transportation',
+      organizationId: 'org-metrolift',
       category: 'transportation',
-      description: 'Shared-ride door-through-door transit for medical visits, housing tours, and appointments.',
+      description: 'Shared-ride door-through-door transit for medical visits, housing tours, and appointments in Harris County.',
       costType: 'public_transit_fare',
     },
     location: {
@@ -227,7 +227,7 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     verification: {
       id: 'ver-metrolift',
       serviceId: 'srv-metrolift',
-      verificationStatus: 'Verified public agency',
+      verificationStatus: 'Public agency',
       verificationSource: 'Metropolitan Transit Authority of Harris County',
       lastVerifiedAt: '2026-09-24',
     },
@@ -236,13 +236,13 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     organization: {
       id: 'org-caring-transitions',
       name: 'Caring Transitions of Greater Houston',
-      description: 'NASMM-certified senior move management, rightsizing, gentle packing, and local moving coordination for older adults.',
+      description: 'Senior move management, rightsizing, gentle packing, and local moving coordination for older adults.',
       website: 'https://www.caringtransitions.com/houston',
     },
     service: {
       id: 'srv-caring-transitions',
-      organizationId: 'org-caring-transitions',
       name: 'Senior Move Management & Rightsizing Mover',
+      organizationId: 'org-caring-transitions',
       category: 'moving',
       description: 'Full-service senior moving, rightsizing, packing, unpacking, and new home setup for seniors.',
       costType: 'custom_quote',
@@ -259,8 +259,8 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     verification: {
       id: 'ver-caring-transitions',
       serviceId: 'srv-caring-transitions',
-      verificationStatus: 'Verified NASMM member',
-      verificationSource: 'National Association of Senior & Specialty Move Managers',
+      verificationStatus: 'Directory listing',
+      verificationSource: 'National Association of Senior & Specialty Move Managers Public Registry',
       lastVerifiedAt: '2026-09-24',
     },
   },
@@ -273,8 +273,8 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     },
     service: {
       id: 'srv-houston-smm',
-      organizationId: 'org-houston-smm',
       name: 'Senior Packing & Residential Transition Movers',
+      organizationId: 'org-houston-smm',
       category: 'moving',
       description: 'Dedicated senior moving team specializing in gentle packing, furniture placement, and stress-free moves.',
       costType: 'hourly_or_quote',
@@ -291,8 +291,8 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     verification: {
       id: 'ver-houston-smm',
       serviceId: 'srv-houston-smm',
-      verificationStatus: 'Verified senior move provider',
-      verificationSource: 'Texas Department of Motor Vehicles Mover Registry',
+      verificationStatus: 'Directory listing',
+      verificationSource: 'Texas Department of Motor Vehicles Carrier Registry',
       lastVerifiedAt: '2026-09-22',
     },
   },
@@ -305,8 +305,8 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     },
     service: {
       id: 'srv-united-way',
-      organizationId: 'org-united-way',
       name: '211 Senior Helpline & Public Assistance Referral',
+      organizationId: 'org-united-way',
       category: 'senior_move_management',
       description: 'Immediate navigation to public benefits, Medicaid assistance, and local housing programs.',
       costType: 'free_public_service',
@@ -323,7 +323,7 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     verification: {
       id: 'ver-united-way',
       serviceId: 'srv-united-way',
-      verificationStatus: 'Verified public helpline',
+      verificationStatus: 'Public agency',
       verificationSource: 'Texas Information and Referral Network',
       lastVerifiedAt: '2026-09-25',
     },
@@ -337,8 +337,8 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     },
     service: {
       id: 'srv-lone-star-legal',
-      organizationId: 'org-lone-star-legal',
       name: 'Elder Law & Housing Protection Representation',
+      organizationId: 'org-lone-star-legal',
       category: 'senior_move_management',
       description: 'Legal consultation on lease terminations, advance directives, and senior housing rights.',
       costType: 'free_legal_aid',
@@ -355,7 +355,7 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     verification: {
       id: 'ver-lone-star-legal',
       serviceId: 'srv-lone-star-legal',
-      verificationStatus: 'Verified legal aid organization',
+      verificationStatus: 'Nonprofit',
       verificationSource: 'Legal Services Corporation (LSC) Grantee',
       lastVerifiedAt: '2026-09-21',
     },
@@ -369,8 +369,8 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     },
     service: {
       id: 'srv-food-bank',
-      organizationId: 'org-food-bank',
       name: 'Commodity Supplemental Food Program (Senior Boxes)',
+      organizationId: 'org-food-bank',
       category: 'senior_move_management',
       description: 'Monthly home delivery or pickup of shelf-stable groceries for elderly residents.',
       costType: 'free_public_service',
@@ -387,7 +387,7 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     verification: {
       id: 'ver-food-bank',
       serviceId: 'srv-food-bank',
-      verificationStatus: 'Verified 501(c)(3) nonprofit',
+      verificationStatus: 'Nonprofit',
       verificationSource: 'Feeding America Member Food Bank',
       lastVerifiedAt: '2026-09-23',
     },
@@ -401,8 +401,8 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     },
     service: {
       id: 'srv-caregiver-action',
-      organizationId: 'org-caregiver-action',
       name: 'Family Caregiver HelpDesk & Peer Network',
+      organizationId: 'org-caregiver-action',
       category: 'senior_move_management',
       description: 'Peer support groups, remote caregiving guides, and transition management checklists for adult children.',
       costType: 'free_public_service',
@@ -419,7 +419,7 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     verification: {
       id: 'ver-caregiver-action',
       serviceId: 'srv-caregiver-action',
-      verificationStatus: 'Verified national nonprofit',
+      verificationStatus: 'Nonprofit',
       verificationSource: 'National Family Caregivers Association Registry',
       lastVerifiedAt: '2026-09-22',
     },
@@ -433,8 +433,8 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     },
     service: {
       id: 'srv-texas-hhs-aaa',
-      organizationId: 'org-texas-hhs-aaa',
       name: 'Long-Term Care Ombudsman & Benefits Counseling',
+      organizationId: 'org-texas-hhs-aaa',
       category: 'senior_move_management',
       description: 'Advocacy for residents in long-term care facilities and assistance evaluating senior living options.',
       costType: 'free_public_service',
@@ -451,7 +451,7 @@ export const HOUSTON_RESOURCE_SEEDS: SeedResourcePackage[] = [
     verification: {
       id: 'ver-texas-hhs-aaa',
       serviceId: 'srv-texas-hhs-aaa',
-      verificationStatus: 'Verified state agency',
+      verificationStatus: 'Public agency',
       verificationSource: 'Texas Health & Human Services Commission',
       lastVerifiedAt: '2026-09-25',
     },

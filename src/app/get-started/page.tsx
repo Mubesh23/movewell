@@ -304,6 +304,25 @@ function GetStartedContent() {
           </button>
         </div>
 
+        {/* Scenario Selection & Availability Bar */}
+        <div className="mb-6 p-3 bg-white border border-line rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs shadow-2xs">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-ink">Transition Workflow:</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sage/60 border border-evergreen/30 text-evergreen font-semibold">
+              <span className="w-1.5 h-1.5 rounded-full bg-evergreen" />
+              <span>Post-hospital transition — Available</span>
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cream border border-line text-muted-ink opacity-70 cursor-not-allowed" title="In development for future release">
+              <span>Planned downsizing — Coming soon</span>
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cream border border-line text-muted-ink opacity-70 cursor-not-allowed" title="In development for future release">
+              <span>Emergency/storm displacement — Coming soon</span>
+            </div>
+          </div>
+        </div>
+
         {/* Mobile Understanding Bar Toggle */}
         <div className="lg:hidden mb-4">
           <button

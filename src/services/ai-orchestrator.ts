@@ -238,6 +238,22 @@ ${
                       properties: {},
                     },
                   },
+                  {
+                    name: 'explain_cost_estimate',
+                    description:
+                      'Explain where a transition cost planning estimate comes from, citing real published external rate sheets, public tariffs, or agency benchmarks for Houston/Texas. Use when user asks why an estimate is high, where a cost came from, how recent the data is, or what sources are used.',
+                    parameters: {
+                      type: Type.OBJECT,
+                      properties: {
+                        category: {
+                          type: Type.STRING,
+                          description:
+                            'Cost category to explain: moving, packing, home_modification, transportation, or donation',
+                        },
+                      },
+                      required: ['category'],
+                    },
+                  },
                 ],
               },
             ],
@@ -325,6 +341,13 @@ ${
               );
             } else if (call.name === 'get_plan') {
               toolResults.push(await AI_TOOLS_REGISTRY.get_plan({ caseId }));
+            } else if (call.name === 'explain_cost_estimate') {
+              toolResults.push(
+                await AI_TOOLS_REGISTRY.explain_cost_estimate({
+                  category: args.category || 'moving',
+                  caseId,
+                })
+              );
             }
           }
         }
@@ -414,6 +437,37 @@ ${
         message: tr.message,
         toolResults: [tr],
         suggestedNextAction: 'Review the updated transition pulse and unlocked downstream tasks.',
+      };
+    }
+
+    // Deterministic cost evidence explanation fallback
+    const isCostQuestion =
+      pLower.includes('estimate') ||
+      pLower.includes('cost') ||
+      pLower.includes('high') ||
+      pLower.includes('where did') ||
+      pLower.includes('source') ||
+      pLower.includes('recent') ||
+      pLower.includes('pricing');
+
+    if (isCostQuestion) {
+      let category = 'moving';
+      if (pLower.includes('pack')) category = 'packing';
+      else if (pLower.includes('ramp') || pLower.includes('grab') || pLower.includes('mod') || pLower.includes('access'))
+        category = 'home_modification';
+      else if (pLower.includes('ride') || pLower.includes('transit') || pLower.includes('transport'))
+        category = 'transportation';
+      else if (pLower.includes('donat')) category = 'donation';
+
+      const tr = await AI_TOOLS_REGISTRY.explain_cost_estimate({
+        category,
+        caseId,
+      });
+
+      return {
+        message: tr.message,
+        toolResults: [tr],
+        suggestedNextAction: 'Review provider rate sheets or prepare an inquiry request.',
       };
     }
 

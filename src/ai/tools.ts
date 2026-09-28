@@ -1,6 +1,7 @@
 import { caseService } from '../services/case-service';
 import { taskService } from '../services/task-service';
 import { resourceService } from '../services/resource-service';
+import { evidenceService } from '../services/evidence-service';
 import { repository } from '../db/repository';
 import { eventService } from '../services/event-service';
 import { pulseAndChangeService } from '../services/pulse-and-change-service';
@@ -307,6 +308,24 @@ export const AI_TOOLS_REGISTRY = {
       success: true,
       message: `**Houston Care & Transition Directory Resources:**\n\n${formattedList}`,
       data: resources,
+    };
+  },
+
+  explain_cost_estimate: async (args: { category: string; caseId?: string }): Promise<ToolExecutionResult> => {
+    let zipCode = '77004';
+    if (args.caseId) {
+      const caseData = await repository.getCaseById(args.caseId);
+      if (caseData?.zipCode && caseData.zipCode !== 'UNSET') {
+        zipCode = caseData.zipCode;
+      }
+    }
+
+    const result = evidenceService.explainCost(args.category, zipCode);
+    return {
+      toolName: 'explain_cost_estimate',
+      success: true,
+      message: result.explanation,
+      data: result.summary,
     };
   },
 };
