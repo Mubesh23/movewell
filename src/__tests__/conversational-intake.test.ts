@@ -417,5 +417,77 @@ describe('Conversational Intake State Machine & Deterministic Readiness', () => 
       expect(yinMember?.role).toBe('OWNER');
       expect(yinMember?.relationship).toBe('Child');
     });
+
+    it('accurately resolves user walk-through transcript: Eleanor, Houston Methodist 5 days, 77004, Elena, Mubesh, not yet', async () => {
+      // Turn 1
+      const t1Res = await intakePost(
+        new NextRequest('http://localhost:3000/api/ai/intake', {
+          method: 'POST',
+          body: JSON.stringify({
+            message:
+              'My mother Eleanor is 81 and being discharged from Houston Methodist Hospital in 5 days after hip surgery. She needs to move from her two-story home in 77004 to a single-story apartment',
+            currentDraft: {},
+          }),
+        })
+      );
+      const t1 = await t1Res.json();
+      expect(t1.success).toBe(true);
+      expect(t1.draft.seniorName).toBe('Eleanor');
+      expect(t1.draft.dischargeDays).toBe(5);
+      expect(t1.draft.zipCode).toBe('77004');
+      expect(t1.draft.transitionType).toBe('POST_HOSPITAL');
+      expect(t1.isReady).toBe(false);
+
+      // Turn 2
+      const t2Res = await intakePost(
+        new NextRequest('http://localhost:3000/api/ai/intake', {
+          method: 'POST',
+          body: JSON.stringify({
+            message: 'My sister Elena lives is local and can help',
+            currentDraft: t1.draft,
+          }),
+        })
+      );
+      const t2 = await t2Res.json();
+      expect(t2.success).toBe(true);
+      expect(t2.draft.localHelperName).toBe('Elena');
+      expect(t2.draft.hasLocalHelper).toBe(true);
+      expect(t2.isReady).toBe(false);
+
+      // Turn 3
+      const t3Res = await intakePost(
+        new NextRequest('http://localhost:3000/api/ai/intake', {
+          method: 'POST',
+          body: JSON.stringify({
+            message: "I'm Mubesh, Eleonor is my mom",
+            currentDraft: t2.draft,
+          }),
+        })
+      );
+      const t3 = await t3Res.json();
+      expect(t3.success).toBe(true);
+      expect(t3.draft.coordinatorName).toBe('Mubesh');
+      expect(t3.draft.coordinatorRelationship).toBe('Child');
+      expect(t3.nextTargetField).toBe('BUDGET');
+      expect(t3.isReady).toBe(false);
+
+      // Turn 4: "not yet"
+      const t4Res = await intakePost(
+        new NextRequest('http://localhost:3000/api/ai/intake', {
+          method: 'POST',
+          body: JSON.stringify({
+            message: 'not yet',
+            currentDraft: t3.draft,
+          }),
+        })
+      );
+      const t4 = await t4Res.json();
+      expect(t4.success).toBe(true);
+      expect(t4.draft.budgetStatus).toBe('UNSET');
+      expect(t4.draft.budget).toBeUndefined();
+      expect(t4.isReady).toBe(true);
+      expect(t4.nextAction).toBe('CREATE_PLAN');
+      expect(t4.assistantMessage).toContain('Understood');
+    });
   });
 });

@@ -35,10 +35,12 @@ function deterministicExtract(
   text: string,
   currentDraft: IntakeDraft = {},
   referenceDate: Date = new Date(),
-  clientTimeZone?: string
+  clientTimeZone?: string,
+  targetField?: IntakeTargetField
 ): Partial<IntakeDraft> {
   const updates: Partial<IntakeDraft> = {};
   const lower = text.toLowerCase();
+  const lowerTrimmed = lower.trim();
 
   // 1. Senior name / reference
   if (!currentDraft.seniorName || NON_NAME_WORDS.has(currentDraft.seniorName.toLowerCase())) {
@@ -130,7 +132,6 @@ function deterministicExtract(
   }
 
   // 5. Mobility & safety limitations
-  const lowerTrimmed = lower.trim();
   const isNegativeMobility =
     lowerTrimmed === 'no' ||
     lowerTrimmed === 'none' ||
@@ -200,6 +201,21 @@ function deterministicExtract(
     const capitalizedRel = captured.charAt(0).toUpperCase() + captured.slice(1).toLowerCase();
     updates.coordinatorRelationship = capitalizedRel;
     updates.userRelationship = capitalizedRel;
+  } else if (
+    lower.includes('is my mom') ||
+    lower.includes('is my mother') ||
+    lower.includes('is my dad') ||
+    lower.includes('is my father') ||
+    lower.includes('is my parent') ||
+    lower.includes("she's my mom") ||
+    lower.includes("he's my dad") ||
+    lower.includes('my mom') ||
+    lower.includes('my mother')
+  ) {
+    if (!updates.coordinatorRelationship && !currentDraft.coordinatorRelationship) {
+      updates.coordinatorRelationship = 'Child';
+      updates.userRelationship = 'Child';
+    }
   }
 
   // 7. Care circle & helpers (e.g. "Yes, my brother Jim, my sister Kim, and my aunt Jin")
@@ -334,7 +350,7 @@ function deterministicExtract(
   }
 
   // 10. Budget
-  if (
+  const isExplicitOpenBudget =
     lower.includes('leave it open') ||
     lower.includes('leave open') ||
     lower.includes('live it open') ||
@@ -343,10 +359,43 @@ function deterministicExtract(
     lower.includes('keep it open') ||
     lower.includes('not set') ||
     lower.includes('no budget') ||
-    lower.includes('not sure') ||
     lower.includes('open for now') ||
-    lowerTrimmed === 'open'
-  ) {
+    lower.includes('leave that open') ||
+    lower.includes('leave it for now') ||
+    lower.includes('open budget') ||
+    lower.includes('no set budget') ||
+    lower.includes("don't have a budget") ||
+    lower.includes("dont have a budget");
+
+  const isTargetedBudgetResponse =
+    targetField === 'BUDGET' &&
+    (
+      lowerTrimmed === 'no' ||
+      lowerTrimmed === 'nope' ||
+      lowerTrimmed === 'not yet' ||
+      lowerTrimmed === 'none' ||
+      lowerTrimmed === 'not really' ||
+      lowerTrimmed === 'open' ||
+      lowerTrimmed === 'not sure' ||
+      lowerTrimmed === 'no idea' ||
+      lowerTrimmed === 'dont know' ||
+      lowerTrimmed === "don't know" ||
+      lowerTrimmed === 'tbd' ||
+      lowerTrimmed === 'flexible' ||
+      lowerTrimmed === 'undecided' ||
+      lowerTrimmed.startsWith('no') ||
+      lower.includes('not yet') ||
+      lower.includes('dont know') ||
+      lower.includes("don't know") ||
+      lower.includes('no idea') ||
+      lower.includes('flexible') ||
+      lower.includes('undecided') ||
+      lower.includes('open')
+    );
+
+  const isNegativeOrOpenBudget = isExplicitOpenBudget || isTargetedBudgetResponse;
+
+  if (isNegativeOrOpenBudget) {
     updates.budgetStatus = 'UNSET';
     updates.budget = undefined;
   } else {
@@ -438,7 +487,7 @@ RULES FOR EXTRACTION & TEMPORAL REASONING:
 - HELP NETWORK & INVITATIONS:
   - If user mentions people helping (e.g. "my brother Jim, my sister Kim, and my aunt Jin"), capture them in draftMembers with their relationship to the senior.
   - We invite collaborators via email only. If user provides an email address to invite someone, capture their email address.
-- BUDGET: If the user says "leave it open", "live it open" (typo), "not sure", or "no budget", set budgetStatus: "UNSET" and budget: null.
+- BUDGET: If the user says "leave it open", "live it open" (typo), "not sure", "not yet", "no", or "no budget", set budgetStatus: "UNSET" and budget: null.
 - LOCATION: If user provides a ZIP code or city/state, extract zipCode and/or city.
 - DO NOT invent fictional names, locations, or details. Leave missing fields null.
 
@@ -536,7 +585,13 @@ RULES FOR CONVERSATIONAL REPLY:
     }
 
     // Merge deterministic extraction to guarantee robustness
-    const fallbackExtracted = deterministicExtract(userMessage, currentDraft, referenceDate, clientTimeZone);
+    const fallbackExtracted = deterministicExtract(
+      userMessage,
+      currentDraft,
+      referenceDate,
+      clientTimeZone,
+      initialEvaluation.nextTargetField
+    );
     const combinedExtracted: Partial<IntakeDraft> = {
       ...fallbackExtracted,
       ...extractedUpdates,
@@ -610,7 +665,8 @@ RULES FOR CONVERSATIONAL REPLY:
 
     if (!conversationalReply) {
       if (readiness.isReady) {
-        conversationalReply = `Understood. I have enough details to build your family's initial transition plan.\n\nHere is what I've noted:\n• ${readiness.summaryBulletPoints.join('\n• ')}\n\nThe immediate priority will be confirming a safe discharge destination.`;
+        const sName = updatedDraft.seniorName || 'your family member';
+        conversationalReply = `Understood. I have enough details to build ${sName}'s initial transition plan.\n\nHere is what I've noted:\n• ${readiness.summaryBulletPoints.join('\n• ')}\n\nThe immediate priority will be confirming a safe discharge destination.`;
       } else {
         const question = intakeReadinessService.getFallbackQuestion(
           readiness.nextTargetField,
@@ -619,7 +675,18 @@ RULES FOR CONVERSATIONAL REPLY:
         if (isFirstTurn) {
           conversationalReply = `${guidancePrefix}\n\n${question}`;
         } else {
-          conversationalReply = `I can help with this. ${question}`;
+          let ack = "I can help with this.";
+          const uLower = userMessage.toLowerCase();
+          if (uLower.includes('sister') || uLower.includes('brother') || uLower.includes('helper') || uLower.includes('local')) {
+            ack = "Got it, I've noted that local family support.";
+          } else if (updatedDraft.coordinatorName && uLower.includes(updatedDraft.coordinatorName.toLowerCase())) {
+            ack = `Thank you, ${updatedDraft.coordinatorName}.`;
+          } else if (updatedDraft.budgetStatus === 'UNSET' || updatedDraft.budget) {
+            ack = "Got it, I've noted your budget preference.";
+          } else if (userMessage.length < 20) {
+            ack = "Understood.";
+          }
+          conversationalReply = `${ack} ${question}`;
         }
       }
     } else if (isFirstTurn && !readiness.isReady && !conversationalReply.includes("focus first on")) {
