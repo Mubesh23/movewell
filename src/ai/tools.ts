@@ -51,90 +51,65 @@ export const AI_TOOLS_REGISTRY = {
     targetDate?: string;
     dischargeDate?: string;
     destinationStatus?: 'KNOWN' | 'UNKNOWN' | 'REHAB_FIRST' | 'RETURN_HOME' | 'UNDECIDED';
+    zipCode?: string;
+    actor?: string;
   }): Promise<ToolExecutionResult> => {
+    const actor = args.actor || 'Family Coordinator via Nora';
+
+    // If confirming destination to REHAB_FIRST or RETURN_HOME, route through deterministic confirm_discharge_destination
+    if (args.destinationStatus === 'REHAB_FIRST' || args.destinationStatus === 'RETURN_HOME') {
+      const destResult = await AI_TOOLS_REGISTRY.confirm_discharge_destination({
+        caseId: args.caseId,
+        destination: args.destinationStatus,
+        actor,
+      });
+
+      // If budget or dates are also being updated in the same call, process them
+      if (args.budget !== undefined || args.targetDate || args.dischargeDate || args.zipCode) {
+        await caseService.updateCase(
+          args.caseId,
+          { budget: args.budget, targetDate: args.targetDate, dischargeDate: args.dischargeDate, zipCode: args.zipCode },
+          actor
+        );
+      }
+
+      return destResult;
+    }
+
     const caseData = await repository.getCaseById(args.caseId);
     if (!caseData) return { toolName: 'update_case_context', success: false, message: 'Case not found' };
 
-    const oldDest = caseData.destinationStatus || 'UNDECIDED';
-
-    if (args.budget !== undefined) caseData.budget = Number(args.budget);
-    if (args.targetDate) caseData.targetDate = args.targetDate;
-    if (args.dischargeDate) caseData.dischargeDate = args.dischargeDate;
-    if (args.destinationStatus) {
-      const allowed = ['KNOWN', 'UNKNOWN', 'REHAB_FIRST', 'RETURN_HOME', 'UNDECIDED'];
-      if (allowed.includes(args.destinationStatus)) {
-        caseData.destinationStatus = args.destinationStatus;
-      }
-    }
-    caseData.updatedAt = new Date().toISOString();
-
-    await repository.saveCase(caseData);
-
-    if (args.budget !== undefined) {
-      await eventService.recordEvent(
-        args.caseId,
-        'BUDGET_UPDATED',
-        { budget: caseData.budget, updatedBy: 'AI Assistant' },
-        'AI'
-      );
-    }
-    if (args.destinationStatus) {
-      await eventService.recordEvent(
-        args.caseId,
-        'DESTINATION_CONFIRMED',
-        { destinationStatus: caseData.destinationStatus, updatedBy: 'AI Assistant' },
-        'AI'
-      );
-
-      const destLabel =
-        args.destinationStatus === 'REHAB_FIRST'
-          ? 'Rehab first'
-          : args.destinationStatus === 'RETURN_HOME'
-          ? 'Return home'
-          : args.destinationStatus;
-
-      await pulseAndChangeService.recordPlanChange(
-        args.caseId,
-        'Plan updated',
-        [
-          `✓ ${destLabel} confirmed`,
-          `✓ Safe-discharge destination updated`,
-          `→ Downstream care plan adapts to ${destLabel.toLowerCase()}`,
-        ],
-        [
-          { label: 'Destination', before: oldDest === 'UNDECIDED' ? 'Unknown' : oldDest, after: destLabel },
-          { label: 'Next milestone', before: 'Confirm destination', after: args.destinationStatus === 'REHAB_FIRST' ? 'Prepare rehab transfer' : 'Prepare home' },
-          { label: 'Home assessment', before: 'Blocked', after: args.destinationStatus === 'REHAB_FIRST' ? 'Available later' : 'Available now' },
-        ]
-      );
-    }
-    if (args.targetDate || args.dischargeDate) {
-      await eventService.recordEvent(
-        args.caseId,
-        'TARGET_DATE_CHANGED',
-        { targetDate: caseData.targetDate, dischargeDate: caseData.dischargeDate, updatedBy: 'AI Assistant' },
-        'AI'
-      );
-    }
-
     const updates: string[] = [];
-    if (args.budget !== undefined) updates.push(`Updated case budget to ${caseData.budget ? `$${caseData.budget.toLocaleString()}` : 'open / unset'}.`);
-    if (args.targetDate) updates.push(`Updated target date to ${caseData.targetDate}.`);
-    if (args.dischargeDate) updates.push(`Updated discharge date to ${caseData.dischargeDate}.`);
-    if (args.destinationStatus) {
-      const destName =
-        args.destinationStatus === 'REHAB_FIRST'
-          ? 'short-term rehab'
-          : args.destinationStatus === 'RETURN_HOME'
-          ? 'return home'
-          : args.destinationStatus;
-      updates.push(`Updated discharge destination status to ${destName} (${args.destinationStatus}).`);
+
+    if (args.budget !== undefined || args.targetDate || args.dischargeDate || args.zipCode) {
+      const result = await caseService.updateCase(
+        args.caseId,
+        {
+          budget: args.budget,
+          targetDate: args.targetDate,
+          dischargeDate: args.dischargeDate,
+          zipCode: args.zipCode,
+        },
+        actor
+      );
+
+      if (args.budget !== undefined) updates.push(`Updated case budget to ${result.caseData.budget ? `$${result.caseData.budget.toLocaleString()}` : 'open / unset'}.`);
+      if (args.targetDate) updates.push(`Updated target date to ${result.caseData.targetDate}.`);
+      if (args.dischargeDate) updates.push(`Updated discharge date to ${result.caseData.dischargeDate}.`);
+      if (args.zipCode) updates.push(`Updated zip code to ${result.caseData.zipCode}.`);
+
+      return {
+        toolName: 'update_case_context',
+        success: true,
+        message: updates.join(' ') || `Updated case context.`,
+        data: result.caseData,
+      };
     }
 
     return {
       toolName: 'update_case_context',
       success: true,
-      message: updates.join(' ') || `Updated case context.`,
+      message: `No changes applied.`,
       data: caseData,
     };
   },
@@ -243,6 +218,7 @@ export const AI_TOOLS_REGISTRY = {
     taskId?: string;
     taskTitleQuery?: string;
     note?: string;
+    actor?: string;
   }): Promise<ToolExecutionResult> => {
     const tasks = await repository.getTasksByCaseId(args.caseId);
     let targetTask: typeof tasks[0] | undefined = undefined;
@@ -271,7 +247,8 @@ export const AI_TOOLS_REGISTRY = {
       };
     }
 
-    const updated = await taskService.completeTask(targetTask.id, 'AI Assistant', args.caseId, args.note);
+    const actorName = args.actor ? (args.actor.includes('via Nora') ? args.actor : `${args.actor} via Nora`) : 'Family Coordinator via Nora';
+    const updated = await taskService.completeTask(targetTask.id, actorName, args.caseId, args.note);
     return {
       toolName: 'complete_task',
       success: true,

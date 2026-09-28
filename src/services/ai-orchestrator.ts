@@ -14,11 +14,25 @@ export interface AIResponse {
   suggestedNextAction?: string;
 }
 
+export interface ProcessConversationOptions {
+  context?: {
+    surface?: string;
+    taskId?: string;
+    resourceCategory?: string;
+    resourceId?: string;
+    costCategory?: string;
+    [key: string]: any;
+  };
+  actorName?: string;
+  userId?: string;
+}
+
 export class AIOrchestrator {
   public async processConversation(
     caseId: string,
     rawMessages?: ChatMessageTurn[],
-    latestPrompt?: string
+    latestPrompt?: string,
+    options?: ProcessConversationOptions
   ): Promise<AIResponse> {
     const apiKey = process.env.GEMINI_API_KEY;
 
@@ -29,6 +43,7 @@ export class AIOrchestrator {
     }
 
     const promptText = latestPrompt || (messages.length > 0 ? messages[messages.length - 1].text : '');
+    const effectiveActor = options?.actorName || 'Family Coordinator';
 
     if (apiKey) {
       try {
@@ -61,9 +76,17 @@ export class AIOrchestrator {
           return prereqIds.map((id) => `"${taskTitleById.get(id) || id}"`).join(', ');
         };
 
+        const contextBlock = options?.context
+          ? `\n=== ACTIVE PAGE CONTEXT (USER IS CURRENTLY VIEWING) ===
+- Current Surface / Tab: ${options.context.surface || 'General Workspace'}
+${options.context.taskId ? `- Selected Task ID: ${options.context.taskId}` : ''}
+${options.context.costCategory ? `- Selected Cost Category: ${options.context.costCategory}` : ''}
+${options.context.resourceCategory ? `- Selected Resource Category: ${options.context.resourceCategory}` : ''}\n`
+          : '';
+
         const systemInstruction = `You are Nora, an empathetic senior transition coordinator for ${BRAND_NAME}.
 You are helping coordinate a post-hospital senior transition plan.
-
+${contextBlock}
 === ACTIVE CASE CONTEXT ===
 - Senior Name: ${senior?.name || 'Senior'}
 - Transition Type: ${caseData?.transitionType || 'POST_HOSPITAL'}
@@ -120,7 +143,7 @@ ${
 === FAMILY MEMBERS & COLLABORATORS ===
 ${
   members.length > 0
-    ? members.map((m) => `- ${m.name} (Role: ${m.role}, Relationship: ${m.relationship || 'Family/Helper'}, Local: ${m.isLocal ? 'Yes' : 'No'})`).join('\n')
+    ? members.map((m) => `- ${m.name} (Role: ${m.role}, Relationship: ${m.relationship || 'Family/Helper'}, Local: ${m.isLocal === true ? 'Yes' : m.isLocal === false ? 'No' : 'Unknown'})`).join('\n')
     : 'None'
 }
 
@@ -136,13 +159,13 @@ ${
      - Saying not to do something ("Don't change anything yet", "Not yet")
    - For questions and hypotheticals, provide a direct, warm, conversational response WITHOUT invoking mutation tools.
 
-2. READ-ONLY & SEARCH TOOLS (find_resources, get_plan):
-   - Call find_resources when the user asks for local Houston resources, care options, movers, storage, housing, or support services.
+2. READ-ONLY & SEARCH TOOLS (find_resources, get_plan, explain_cost_estimate):
+   - Call find_resources when the user asks for local resources, care options, movers, storage, housing, or support services.
    - Call get_plan when the user asks for a complete status summary or remaining task overview.
 
 3. CONVERSATIONAL GROUNDING & FACTUAL DISCIPLINE:
    - Treat structured case context (Destination Status, Budget, Tasks, Cost & Quotes) as authoritative product truth. When asked about case state (e.g. "Where is Maria going after discharge?"), answer based on structured Destination Status ("${destStatusLabel}").
-   - Distinguish between Family Available Budget and Vendor Quotes: A vendor quote (e.g. moving quote of $2,150) is an expense item for a service, NOT the family's total available transition budget ($${caseData?.budget ? caseData.budget.toLocaleString() : '8,000'}). Never overwrite or confuse total family budget with an individual vendor quote.
+   - Distinguish between Family Available Budget and Vendor Quotes: A vendor quote (e.g. moving quote of $2,150) is an expense item for a service, NOT the family's total available transition budget (${caseData?.budget ? `$${caseData.budget.toLocaleString()}` : 'Open / not set'}). Never overwrite or confuse total family budget with an individual vendor quote.
    - NEVER invent or fabricate verification, certification, NASMM membership, partnership, phone numbers, addresses, prices, or service offerings beyond what tool results or structured case state contain.
    - NEVER use terms like "partner", "${BRAND_NAME} partner", "our providers", or "certified" unless explicitly present in tool verification data. Use neutral terms ("resource", "provider", "directory listing", "verified listing", "local service").
    - Frame operational advice (how to talk with hospital staff) as general guidance ("A common next step is...", "You may want to ask..."). Do not present general advice as hospital-specific facts unless specified in case state.`;
@@ -302,6 +325,7 @@ ${
                     destinationStatus: parsedDest,
                     targetDate: args.targetDate,
                     dischargeDate: args.dischargeDate,
+                    actor: effectiveActor,
                   })
                 );
               }
@@ -327,6 +351,7 @@ ${
                   taskId: args.taskId,
                   taskTitleQuery: args.taskTitleQuery || args.taskTitle || args.task,
                   note: args.note || args.completionNotes,
+                  actor: effectiveActor,
                 })
               );
             } else if (call.name === 'confirm_discharge_destination') {
@@ -335,7 +360,7 @@ ${
                 await AI_TOOLS_REGISTRY.confirm_discharge_destination({
                   caseId,
                   destination: dest,
-                  actor: 'Sarah',
+                  actor: effectiveActor,
                   note: args.note || 'Confirmed by social worker',
                 })
               );
@@ -413,15 +438,16 @@ ${
     }
 
     // Safe, non-mutating fallback strictly used when GEMINI_API_KEY is absent or API call fails
-    return this.processUserIntentLocal(caseId, promptText);
+    return this.processUserIntentLocal(caseId, promptText, options);
   }
 
-  public async processUserIntent(caseId: string, prompt: string): Promise<AIResponse> {
-    return this.processConversation(caseId, [{ role: 'user', text: prompt }], prompt);
+  public async processUserIntent(caseId: string, prompt: string, options?: ProcessConversationOptions): Promise<AIResponse> {
+    return this.processConversation(caseId, [{ role: 'user', text: prompt }], prompt, options);
   }
 
-  public async processUserIntentLocal(caseId: string, prompt?: string): Promise<AIResponse> {
+  public async processUserIntentLocal(caseId: string, prompt?: string, options?: ProcessConversationOptions): Promise<AIResponse> {
     const pLower = (prompt || '').toLowerCase();
+    const actor = options?.actorName ? (options.actorName.includes('via Nora') ? options.actorName : `${options.actorName} via Nora`) : 'Family Coordinator via Nora';
     if (
       (pLower.includes('rehab') || pLower.includes('return home')) &&
       (pLower.includes('confirm') || pLower.includes('social worker') || pLower.includes('complete') || pLower.includes('decision'))
@@ -430,7 +456,7 @@ ${
       const tr = await AI_TOOLS_REGISTRY.confirm_discharge_destination({
         caseId,
         destination: dest,
-        actor: 'Sarah',
+        actor,
         note: prompt,
       });
       return {

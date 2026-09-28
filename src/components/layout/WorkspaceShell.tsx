@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import {
   Home,
@@ -12,17 +13,15 @@ import {
   WalletCards,
   FileText,
   ShieldCheck,
-  Printer,
   FileDown,
-  ChevronDown,
   Sparkles,
   MessageSquare,
   Send,
   Building2,
 } from 'lucide-react';
 import { BRAND_NAME } from '@/lib/brand';
-import { AIAssistant, openNora, openNoraWithPrompt } from '@/components/assistant/AIAssistant';
-import { AuthModal } from '@/components/auth/AuthModal';
+import { AIAssistant, openNora } from '@/components/assistant/AIAssistant';
+import { AccountMenu } from '@/components/layout/AccountMenu';
 
 interface WorkspaceShellProps {
   caseId: string;
@@ -38,7 +37,6 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
   children,
 }) => {
   const pathname = usePathname();
-  const [authOpen, setAuthOpen] = useState(false);
 
   const navItems = [
     { href: `/plan/${caseId}`, label: 'Today', icon: ClipboardList, exact: true },
@@ -59,7 +57,7 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
     <div className="min-h-screen bg-[#f7f8f5] text-[#183331]">
       {/* Desktop Persistent Left Sidebar */}
       <aside className="fixed inset-y-0 left-0 hidden w-[238px] border-r border-[#e1e9e3] bg-white px-5 py-6 lg:block z-30">
-        <Link href="/" className="flex items-center gap-3 px-2 group" aria-label={`${BRAND_NAME} home`}>
+        <Link href="/home" className="flex items-center gap-3 px-2 group" aria-label={`${BRAND_NAME} transitions`}>
           <span className="grid size-9 place-items-center rounded-xl bg-[#1f4d45] text-white shadow-xs group-hover:bg-[#153c36] transition-colors">
             <Home size={18} />
           </span>
@@ -72,7 +70,7 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
           Family workspace
         </div>
 
-        <nav className="mt-3 flex flex-col gap-1" aria-label="Workspace navigation">
+        <nav className="mt-3 flex flex-col gap-1 relative" aria-label="Workspace navigation">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isCurrentActive(item);
@@ -81,12 +79,19 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition',
+                  'relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors z-10',
                   active
-                    ? 'bg-[#e8f1ea] text-[#1f4d45] font-semibold'
-                    : 'text-[#71847d] hover:bg-[#f2f6f2] hover:text-[#183331]'
+                    ? 'text-[#1f4d45] font-semibold'
+                    : 'text-[#71847d] hover:text-[#183331]'
                 )}
               >
+                {active && (
+                  <motion.div
+                    layoutId="workspace-nav-active-desktop"
+                    className="absolute inset-0 rounded-lg bg-[#e8f1ea] -z-10"
+                    transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                  />
+                )}
                 <Icon size={17} className={active ? 'text-[#1f4d45]' : 'text-[#71847d]'} />
                 <span>{item.label}</span>
               </Link>
@@ -181,14 +186,7 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
               <span>Export PDF / Print</span>
             </Link>
 
-            <button
-              type="button"
-              onClick={() => setAuthOpen(true)}
-              className="grid size-9 place-items-center rounded-full bg-[#d7e6d9] text-xs font-bold text-[#356553] hover:opacity-90 transition-opacity cursor-pointer"
-              title="Account"
-            >
-              <Users size={16} />
-            </button>
+            <AccountMenu />
           </div>
         </header>
 
@@ -204,29 +202,40 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
+                  'relative shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
                   active
-                    ? 'bg-[#e8f1ea] text-[#1f4d45]'
+                    ? 'text-[#1f4d45]'
                     : 'text-[#71847d] hover:text-[#183331]'
                 )}
               >
+                {active && (
+                  <motion.div
+                    layoutId="workspace-nav-active-mobile"
+                    className="absolute inset-0 rounded-lg bg-[#e8f1ea] -z-10"
+                    transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                  />
+                )}
                 {item.label}
               </Link>
             );
           })}
         </nav>
 
-        {/* Page Content */}
+        {/* Page Content with subtle transition */}
         <main className="flex-1 w-full max-w-[1240px] mx-auto px-4 sm:px-6 md:px-10 py-6 sm:py-8">
-          {children}
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            {children}
+          </motion.div>
         </main>
       </div>
 
       {/* Floating Nora Assistant */}
       <AIAssistant caseId={caseId} />
-
-      {/* Auth Modal */}
-      <AuthModal isOpen={authOpen} onClose={() => setAuthOpen(false)} />
     </div>
   );
 };

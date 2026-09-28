@@ -94,11 +94,8 @@ export async function resolveSession(req: NextRequest): Promise<BridgewellSessio
     }
   }
 
-  // 4. Guest session cookie resolution (HttpOnly anonymous draft token)
-  const guestCookie =
-    req.cookies.get(GUEST_COOKIE_NAME)?.value ||
-    req.cookies.get(SESSION_COOKIE_NAME)?.value ||
-    req.cookies.get(LEGACY_COOKIE_NAME)?.value;
+  // 4. Guest session cookie resolution (HttpOnly anonymous draft token strictly from bridgewell_guest_session)
+  const guestCookie = req.cookies.get(GUEST_COOKIE_NAME)?.value;
 
   if (guestCookie && guestCookie.trim().length > 0) {
     return {

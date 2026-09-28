@@ -135,6 +135,43 @@ export class Repository {
   }
 
   async getCasesByMemberUserId(userId: string): Promise<TransitionCase[]> {
+    if (supabase) {
+      try {
+        const { data: memberRows, error: memberErr } = await supabase
+          .from('case_members')
+          .select('case_id')
+          .eq('user_id', userId);
+
+        if (!memberErr && memberRows && memberRows.length > 0) {
+          const caseIds = Array.from(new Set(memberRows.map((r: any) => r.case_id)));
+          const { data: caseRows, error: casesErr } = await supabase
+            .from('transition_cases')
+            .select('*')
+            .in('id', caseIds)
+            .neq('owner_user_id', userId);
+
+          if (!casesErr && caseRows) {
+            return caseRows.map((d: any) => ({
+              id: d.id,
+              ownerUserId: d.owner_user_id || undefined,
+              transitionType: d.transition_type,
+              urgency: d.urgency,
+              zipCode: d.zip_code && d.zip_code !== 'UNSET' && d.zip_code !== '' ? d.zip_code : undefined,
+              targetDate: d.target_date || undefined,
+              dischargeDate: d.discharge_date || undefined,
+              housingStatus: d.housing_status || undefined,
+              destinationStatus: d.destination_status || undefined,
+              budget: d.budget && Number(d.budget) > 0 ? Number(d.budget) : undefined,
+              createdAt: d.created_at,
+              updatedAt: d.updated_at,
+            }));
+          }
+        }
+      } catch (err) {
+        console.error('Supabase getCasesByMemberUserId error:', err);
+      }
+    }
+
     const members = Array.from(memoryStore.caseMembers.values()).filter((m) => m.userId === userId);
     const caseIds = new Set(members.map((m) => m.caseId));
     const all = await this.listCases();
@@ -142,6 +179,37 @@ export class Repository {
   }
 
   async getPlanDraftsByOwnerUserId(ownerUserId: string): Promise<PlanDraft[]> {
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('plan_drafts')
+          .select('*')
+          .eq('owner_user_id', ownerUserId);
+
+        if (!error && data) {
+          return data.map((d: any) => ({
+            id: d.id,
+            ownerUserId: d.owner_user_id,
+            intakeDraftId: d.intake_draft_id || undefined,
+            seniorProfile: d.senior_profile,
+            dischargeTiming: d.discharge_timing || undefined,
+            proposedTasks: d.proposed_tasks || [],
+            proposedMembers: d.proposed_members || [],
+            proposedBudget: d.proposed_budget !== null && d.proposed_budget !== undefined ? Number(d.proposed_budget) : undefined,
+            budgetStatus: d.budget_status || 'UNSET',
+            proposedLocations: d.proposed_locations || [],
+            proposedResourceNeeds: d.proposed_resource_needs || [],
+            status: d.status,
+            caseId: d.case_id || undefined,
+            createdAt: d.created_at,
+            updatedAt: d.updated_at,
+          }));
+        }
+      } catch (err) {
+        console.error('Supabase getPlanDraftsByOwnerUserId error:', err);
+      }
+    }
+
     return Array.from(memoryStore.planDrafts.values()).filter(
       (d) => d.ownerUserId === ownerUserId
     );

@@ -52,6 +52,26 @@ function GetStartedContent() {
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
 
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem('bridgewell_intake_notes_open');
+      if (saved !== null) {
+        setNotesOpen(saved === 'true');
+      }
+    } catch {
+      // sessionStorage unavailable
+    }
+  }, []);
+
+  const handleToggleNotes = (open: boolean) => {
+    setNotesOpen(open);
+    try {
+      sessionStorage.setItem('bridgewell_intake_notes_open', String(open));
+    } catch {
+      // sessionStorage unavailable
+    }
+  };
+
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const initialProcessedRef = useRef(false);
@@ -69,7 +89,7 @@ function GetStartedContent() {
     const el = textareaRef.current;
     if (el) {
       el.style.height = 'auto';
-      el.style.height = `${Math.min(Math.max(el.scrollHeight, 72), 180)}px`;
+      el.style.height = `${Math.min(Math.max(el.scrollHeight, 64), 180)}px`;
     }
   };
 
@@ -84,7 +104,7 @@ function GetStartedContent() {
     setChatError(null);
     setInputValue('');
     if (textareaRef.current) {
-      textareaRef.current.style.height = '72px';
+      textareaRef.current.style.height = '64px';
     }
 
     const userMessage: ChatMessage = {
@@ -319,9 +339,9 @@ function GetStartedContent() {
     <div className="min-h-screen bg-sand text-ink flex flex-col font-sans selection:bg-sage selection:text-ink">
       <Navbar />
 
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Nora Intake Header */}
-        <div className="flex items-center justify-between pb-6 mb-6 border-b border-line">
+        <div className="flex items-center justify-between pb-5 mb-6 border-b border-line">
           <div className="flex items-center gap-3">
             <span className="w-10 h-10 rounded-xl bg-sage text-evergreen flex items-center justify-center font-bold text-lg shadow-2xs">
               ✦
@@ -351,7 +371,7 @@ function GetStartedContent() {
         </div>
 
         {/* Mobile Notes Toggle */}
-        <div className="lg:hidden mb-4">
+        <div className="lg:hidden mb-5">
           <button
             type="button"
             onClick={() => setMobilePanelOpen(!mobilePanelOpen)}
@@ -389,26 +409,26 @@ function GetStartedContent() {
           )}
         </div>
 
-        {/* Desktop Layout: Centered Chat + Collapsible Nora's Notes */}
-        <div className="flex items-start gap-8 relative">
+        {/* Layout: Natural Top-to-Bottom Conversation Flow + Sticky Notes Rail */}
+        <div className="flex items-start justify-center gap-8 relative">
           {/* Main Conversation Column */}
           <div
-            className={`flex-1 transition-all duration-250 flex flex-col justify-between min-h-[540px] ${
-              notesOpen ? 'max-w-[760px]' : 'max-w-[860px] mx-auto'
+            className={`flex-1 transition-all duration-200 flex flex-col space-y-5 ${
+              notesOpen ? 'max-w-2xl' : 'max-w-3xl'
             }`}
           >
             {/* Message Thread */}
-            <div className="space-y-4 overflow-y-auto mb-6 pr-1 max-h-[520px]">
+            <div className="space-y-4">
               {messages.map((msg) => (
                 <div
                   key={msg.id}
                   className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
                 >
                   <div
-                    className={`max-w-[88%] sm:max-w-[82%] rounded-2xl p-4.5 text-sm leading-relaxed ${
+                    className={`max-w-[90%] sm:max-w-[85%] rounded-2xl p-4.5 text-sm leading-relaxed ${
                       msg.role === 'user'
                         ? 'bg-evergreen text-white rounded-br-xs font-normal shadow-xs'
-                        : 'bg-white border border-line text-ink rounded-bl-xs shadow-xs'
+                        : 'bg-white border border-line text-ink rounded-bl-xs shadow-2xs'
                     }`}
                   >
                     <div className="whitespace-pre-line">{msg.content}</div>
@@ -459,7 +479,7 @@ function GetStartedContent() {
 
             {/* Error banner if any */}
             {chatError && (
-              <div className="mb-4 p-3 bg-amber-bg border border-amber/30 rounded-xl text-xs text-amber font-medium flex items-center gap-2">
+              <div className="p-3 bg-amber-bg border border-amber/30 rounded-xl text-xs text-amber font-medium flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{chatError}</span>
               </div>
@@ -467,9 +487,9 @@ function GetStartedContent() {
 
             {/* Suggestions Chips */}
             {suggestions.length > 0 && !submittingTurn && (
-              <div className="mb-4">
-                <span className="text-[11px] font-semibold text-muted-ink block mb-1.5 uppercase tracking-wider">
-                  Try saying:
+              <div className="pt-1">
+                <span className="text-[11px] font-semibold text-muted-ink block mb-2 uppercase tracking-wider">
+                  Suggested responses:
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {suggestions.map((s, idx) => (
@@ -477,7 +497,7 @@ function GetStartedContent() {
                       key={idx}
                       type="button"
                       onClick={() => handleSendMessage(s.prompt)}
-                      className="text-xs font-medium px-3 py-1.5 rounded-xl bg-white hover:bg-cream border border-line text-ink transition-colors cursor-pointer shadow-2xs hover:border-evergreen/40"
+                      className="text-xs font-medium px-3.5 py-2 rounded-xl bg-white hover:bg-cream border border-line text-ink transition-all cursor-pointer shadow-2xs hover:border-evergreen/40 active:scale-[0.99]"
                     >
                       {s.text}
                     </button>
@@ -487,13 +507,13 @@ function GetStartedContent() {
             )}
 
             {/* Auto-growing Textarea Composer */}
-            <div className="space-y-2 sticky bottom-4">
+            <div className="space-y-1.5 pt-2">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
                   handleSendMessage();
                 }}
-                className="relative bg-white border border-line rounded-2xl p-2.5 shadow-md focus-within:border-evergreen transition-all"
+                className="relative bg-white border border-line rounded-2xl p-2.5 shadow-sm focus-within:border-evergreen focus-within:ring-1 focus-within:ring-evergreen/30 transition-all"
               >
                 <textarea
                   ref={textareaRef}
@@ -508,12 +528,12 @@ function GetStartedContent() {
                   }}
                   placeholder="Tell Nora what's happening..."
                   disabled={submittingTurn}
-                  className="w-full min-h-[72px] max-h-[180px] p-2 pr-14 text-sm text-ink placeholder:text-muted-ink/60 bg-transparent focus:outline-none resize-none leading-relaxed"
+                  className="w-full min-h-[64px] max-h-[180px] p-2 pr-14 text-sm text-ink placeholder:text-muted-ink/60 bg-transparent focus:outline-none resize-none leading-relaxed"
                 />
                 <button
                   type="submit"
                   disabled={submittingTurn || !inputValue.trim()}
-                  className="absolute right-3.5 bottom-3.5 w-10 h-10 rounded-xl bg-evergreen hover:bg-evergreen-dark disabled:opacity-40 text-white flex items-center justify-center transition-colors shrink-0 shadow-xs cursor-pointer"
+                  className="absolute right-3 bottom-3 w-9 h-9 rounded-xl bg-evergreen hover:bg-evergreen-dark disabled:opacity-30 text-white flex items-center justify-center transition-colors shrink-0 shadow-xs cursor-pointer"
                   aria-label="Send message"
                 >
                   <Send className="w-4 h-4" />
@@ -526,15 +546,15 @@ function GetStartedContent() {
             </div>
           </div>
 
-          {/* Nora's Notes Rail (Desktop, Collapsible) */}
+          {/* Nora's Notes Rail (Desktop, Collapsible & Sticky) */}
           <div className="hidden lg:block shrink-0">
             {notesOpen ? (
               <motion.div
-                initial={{ opacity: 0, x: 20 }}
+                initial={{ opacity: 0, x: 15 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.25 }}
-                className="w-[320px] bg-white border border-line rounded-2xl p-5 shadow-xs space-y-5 sticky top-8"
+                exit={{ opacity: 0, x: 15 }}
+                transition={{ duration: 0.2 }}
+                className="w-[300px] bg-white border border-line rounded-2xl p-4.5 shadow-xs space-y-4 sticky top-6"
               >
                 <div className="flex items-center justify-between pb-3 border-b border-line">
                   <div className="flex items-center gap-2">
@@ -545,7 +565,7 @@ function GetStartedContent() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setNotesOpen(false)}
+                    onClick={() => handleToggleNotes(false)}
                     className="text-muted-ink hover:text-ink p-1 rounded-md hover:bg-cream transition-colors cursor-pointer"
                     title="Collapse notes rail"
                   >
@@ -560,13 +580,13 @@ function GetStartedContent() {
                 </div>
 
                 {/* Compact Structured Items */}
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {understoodItems.map((item) => (
                     <div
                       key={item.label}
                       className={`p-2.5 rounded-xl border text-xs flex items-start gap-2.5 transition-colors ${
                         item.known
-                          ? 'bg-sage/30 border-evergreen/20 text-ink'
+                          ? 'bg-sage/25 border-evergreen/20 text-ink'
                           : 'bg-cream/40 border-line/60 text-muted-ink/70'
                       }`}
                     >
@@ -593,7 +613,7 @@ function GetStartedContent() {
                 <AnimatePresence>
                   {isReady && (
                     <motion.div
-                      initial={{ opacity: 0, y: 8 }}
+                      initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
                       className="pt-3 border-t border-line space-y-2"
                     >
@@ -601,7 +621,7 @@ function GetStartedContent() {
                         type="button"
                         onClick={handleCreateDraft}
                         disabled={creatingDraft}
-                        className="w-full py-3 px-4 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-semibold text-xs shadow-xs transition-all cursor-pointer"
+                        className="w-full py-2.5 px-4 rounded-xl bg-evergreen hover:bg-evergreen-dark text-white font-semibold text-xs shadow-xs transition-all cursor-pointer"
                       >
                         {creatingDraft ? 'Generating proposal...' : 'Review proposed plan →'}
                       </button>
@@ -616,13 +636,13 @@ function GetStartedContent() {
               /* Collapsed Button */
               <button
                 type="button"
-                onClick={() => setNotesOpen(true)}
-                className="flex items-center gap-2 py-2.5 px-3 rounded-xl bg-white border border-line text-xs font-semibold text-ink shadow-xs hover:border-evergreen/40 hover:bg-cream transition-all sticky top-8 cursor-pointer"
+                onClick={() => handleToggleNotes(true)}
+                className="flex items-center gap-2 py-2.5 px-3 rounded-xl bg-white border border-line text-xs font-semibold text-ink shadow-xs hover:border-evergreen/40 hover:bg-cream transition-all sticky top-6 cursor-pointer"
                 title="Expand Nora's notes"
               >
                 <ChevronLeft className="w-4 h-4 text-evergreen" />
                 <span className="text-evergreen">✦</span>
-                <span>Notes {knownCount}/{understoodItems.length}</span>
+                <span>Notes ({knownCount}/{understoodItems.length})</span>
               </button>
             )}
           </div>

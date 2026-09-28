@@ -50,10 +50,11 @@ export async function PATCH(
     }
 
     const body = await req.json();
+    const actorName = access.currentMember?.name || 'Family Coordinator';
     const result = await caseService.updateCase(
       params.caseId,
       body,
-      'Family Coordinator',
+      actorName,
       access.userId
     );
 

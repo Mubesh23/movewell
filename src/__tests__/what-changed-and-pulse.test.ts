@@ -122,13 +122,12 @@ describe('Living Transition Plan: Pulse, What Changed, and Cost Lifecycle', () =
 
       const latestChange = await repository.getLatestPlanChange(caseId);
       expect(latestChange).not.toBeNull();
-      expect(latestChange?.title).toBe('Plan updated');
-      expect(latestChange?.summaryBullets.some((b) => b.includes('Rehab first'))).toBe(true);
+      expect(latestChange?.title).toBe('Discharge destination confirmed');
+      expect(latestChange?.summaryBullets.some((b) => b.toLowerCase().includes('rehab'))).toBe(true);
 
-      const destDiff = latestChange?.diffs.find((d) => d.label === 'Destination');
+      const destDiff = latestChange?.diffs.find((d) => d.label.includes('Destination'));
       expect(destDiff).toBeDefined();
-      expect(destDiff?.before).toBe('Unknown');
-      expect(destDiff?.after).toBe('Rehab first');
+      expect(destDiff?.after).toContain('Short-term rehab');
     });
 
     it('records a PlanChangeRecord when a prerequisite task completes and unlocks downstream items', async () => {

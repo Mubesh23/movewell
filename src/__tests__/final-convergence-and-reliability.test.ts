@@ -27,7 +27,8 @@ describe('Final Convergence & Demo Reliability Suite', () => {
       const session = await resolveSession(req);
       expect(session.kind).toBe('GUEST');
       if (session.kind === 'GUEST') {
-        expect(session.guestToken).toBe(fakeUuid);
+        expect(session.guestToken).not.toBe(fakeUuid);
+        expect(session.guestToken).toMatch(/^anon_/);
       }
     });
 
@@ -264,12 +265,23 @@ describe('Final Convergence & Demo Reliability Suite', () => {
   });
 
   describe('P0: Geographic Evidence Truthfulness', () => {
+    it('resolves geography tiers accurately across Houston, Texas, and National ZIPs', async () => {
+      const { resolveGeographyTier } = await import('../services/evidence-service');
+      expect(resolveGeographyTier('77004')).toBe('HOUSTON_HARRIS');
+      expect(resolveGeographyTier('Houston, TX')).toBe('HOUSTON_HARRIS');
+      expect(resolveGeographyTier('78701')).toBe('TEXAS');
+      expect(resolveGeographyTier('Austin, TX')).toBe('TEXAS');
+      expect(resolveGeographyTier('90210')).toBe('NATIONAL');
+      expect(resolveGeographyTier(undefined)).toBe('NATIONAL');
+    });
+
     it('unsupported external geographies gracefully fall back without claiming local status', () => {
       const summary = evidenceService.getEvidenceForCategory('moving', '78701');
       expect(summary).toBeDefined();
       if (summary) {
-        // Since 78701 is Austin, TX, it falls back to Texas/National without pretending to be a local 78701 tariff
-        expect(summary.geography).toBeDefined();
+        // Since 78701 is Austin, TX, it falls back to Texas without pretending to be a local Houston tariff
+        expect(summary.geography).toBe('Texas');
+        expect(summary.geography).not.toBe('Houston, TX');
         expect(summary.sources.length).toBeGreaterThan(0);
         expect(summary.sources[0].url).toMatch(/^https?:\/\//);
       }
@@ -305,4 +317,37 @@ describe('Final Convergence & Demo Reliability Suite', () => {
       expect(overview?.caseData.budget).toBeUndefined();
     });
   });
+
+  describe('P0: Cross-Device Persistence & Repository Queries', () => {
+    it('getCasesByMemberUserId retrieves cases where user is a care circle member', async () => {
+      const testUserId = 'test-member-user-' + Math.random().toString(36).substring(2, 7);
+      const testCaseId = 'case-member-query-' + Math.random().toString(36).substring(2, 7);
+
+      const caseData: TransitionCase = {
+        id: testCaseId,
+        ownerUserId: 'different-owner-id',
+        transitionType: 'POST_HOSPITAL',
+        urgency: 'URGENT',
+        zipCode: '77004',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      await repository.saveCase(caseData);
+
+      const member: CaseMember = {
+        id: 'member-' + testCaseId,
+        caseId: testCaseId,
+        name: 'Jennifer',
+        role: 'HELPER',
+        isLocal: true,
+        userId: testUserId,
+        createdAt: new Date().toISOString(),
+      };
+      await repository.saveCaseMember(member);
+
+      const cases = await repository.getCasesByMemberUserId(testUserId);
+      expect(cases.some((c) => c.id === testCaseId)).toBe(true);
+    });
+  });
 });
+

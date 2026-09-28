@@ -21,7 +21,7 @@ export async function PATCH(
     const { note, completionNotes, assigneeId, memberId, assigneeName, dueDate } = body;
     const action = (body.action || (body.status === 'COMPLETED' ? 'COMPLETE' : body.status === 'READY' ? 'REOPEN' : undefined)) as TaskAction;
     // Resolve real actor name from authenticated member or case owner, not untrusted client payload
-    const effectiveActorName = access.currentMember?.name || (access.role === 'OWNER' ? 'Sarah' : 'Care Circle Member');
+    const effectiveActorName = access.currentMember?.name || (access.role === 'OWNER' ? 'Family Coordinator' : 'Care Circle Member');
 
     if (action === 'COMPLETE') {
       const task = await taskService.getTaskById(params.taskId);

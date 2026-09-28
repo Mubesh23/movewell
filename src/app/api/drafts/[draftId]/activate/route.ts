@@ -36,10 +36,7 @@ export async function POST(
     // If draft is owned by the user, proceed.
     // If draft is owned by a guest session matching the user's cookies, auto-claim it.
     if (draft.ownerUserId !== session.userId) {
-      const guestCookie =
-        req.cookies.get(GUEST_COOKIE_NAME)?.value ||
-        req.cookies.get(SESSION_COOKIE_NAME)?.value ||
-        req.cookies.get(LEGACY_COOKIE_NAME)?.value;
+      const guestCookie = req.cookies.get(GUEST_COOKIE_NAME)?.value;
 
       if (guestCookie && draft.ownerUserId === guestCookie.trim()) {
         await draftService.claimDraft(draftId, guestCookie.trim(), session.userId);

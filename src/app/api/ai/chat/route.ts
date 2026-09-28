@@ -7,7 +7,7 @@ export const revalidate = 0;
 
 export async function POST(req: NextRequest) {
   try {
-    const { caseId, prompt, messages } = await req.json();
+    const { caseId, prompt, messages, context } = await req.json();
     if (!caseId) {
       return NextResponse.json(
         { success: false, error: 'caseId is required' },
@@ -23,7 +23,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const response = await aiOrchestrator.processConversation(caseId, messages, prompt);
+    const actorName = access.currentMember?.name || (access.role === 'OWNER' ? 'Family Coordinator' : 'Care Circle Member');
+    const response = await aiOrchestrator.processConversation(
+      caseId,
+      messages,
+      prompt,
+      {
+        context,
+        actorName,
+        userId: access.userId,
+      }
+    );
     return NextResponse.json({ success: true, data: response });
   } catch (error: any) {
     return NextResponse.json(

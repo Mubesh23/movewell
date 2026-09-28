@@ -369,6 +369,52 @@ export class CaseService {
         after: caseData.budget ? `$${caseData.budget.toLocaleString()}` : 'Open',
       });
       diffItems.push(`✓ Budget target updated`);
+
+      await eventService.recordEvent(
+        caseId,
+        'BUDGET_UPDATED',
+        { previousBudget, budget: caseData.budget },
+        'USER',
+        actorUserId
+      );
+    }
+
+    if (updates.targetDate !== undefined && updates.targetDate !== caseData.targetDate) {
+      const previousTarget = caseData.targetDate;
+      caseData.targetDate = updates.targetDate || undefined;
+      diffs.push({
+        label: 'Target Transition Date',
+        before: previousTarget || 'Unset',
+        after: caseData.targetDate || 'Unset',
+      });
+      diffItems.push(`✓ Target transition date updated to ${caseData.targetDate || 'open'}`);
+
+      await eventService.recordEvent(
+        caseId,
+        'TARGET_DATE_CHANGED',
+        { previousTargetDate: previousTarget, targetDate: caseData.targetDate },
+        'USER',
+        actorUserId
+      );
+    }
+
+    if (updates.dischargeDate !== undefined && updates.dischargeDate !== caseData.dischargeDate) {
+      const previousDischarge = caseData.dischargeDate;
+      caseData.dischargeDate = updates.dischargeDate || undefined;
+      diffs.push({
+        label: 'Hospital Discharge Date',
+        before: previousDischarge || 'Unset',
+        after: caseData.dischargeDate || 'Unset',
+      });
+      diffItems.push(`✓ Hospital discharge date updated to ${caseData.dischargeDate || 'open'}`);
+
+      await eventService.recordEvent(
+        caseId,
+        'DISCHARGE_DATE_CHANGED',
+        { previousDischargeDate: previousDischarge, dischargeDate: caseData.dischargeDate },
+        'USER',
+        actorUserId
+      );
     }
 
     caseData.updatedAt = new Date().toISOString();

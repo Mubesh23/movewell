@@ -67,7 +67,7 @@ describe('aiTools.update_case_context Event Semantics', () => {
     });
 
     expect(res.success).toBe(true);
-    expect(res.message).toContain('Updated discharge destination status to short-term rehab (REHAB_FIRST).');
+    expect(res.message).toContain('Discharge destination confirmed');
     expect(res.message).not.toContain('budget');
 
     const events = await repository.getCaseEvents(caseId);

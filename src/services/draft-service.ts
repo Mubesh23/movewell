@@ -280,7 +280,7 @@ export class DraftService {
     const seniorProfileId = 'prof-' + Math.random().toString(36).substring(2, 9);
 
     const homeLocation = draft.proposedLocations.find((l) => l.type === 'HOME') || draft.proposedLocations[0];
-    const zipCode = homeLocation?.zipCode?.trim() || 'UNSET';
+    const zipCode = homeLocation?.zipCode?.trim() || undefined;
 
     // 3. Create TransitionCase
     const caseData: TransitionCase = {

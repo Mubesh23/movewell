@@ -116,6 +116,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [assistantContext, setAssistantContext] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -162,6 +163,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
   const handleClearHistory = () => {
     const defaultList = [initialWelcomeMessage];
     setMessages(defaultList);
+    setAssistantContext(null);
     if (typeof window !== 'undefined' && caseId) {
       localStorage.removeItem(`movewell_chat_${caseId}`);
     }
@@ -188,6 +190,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
           caseId,
           prompt: promptText,
           messages: conversationHistory,
+          context: assistantContext,
         }),
       });
       const data = await res.json();
@@ -235,6 +238,9 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ caseId, onPlanUpdated 
   useEffect(() => {
     const handleOpenNora = (e: any) => {
       setIsOpen(true);
+      if (e?.detail?.context) {
+        setAssistantContext(e.detail.context);
+      }
       if (e?.detail?.draftPrompt) {
         setInput(e.detail.draftPrompt);
       }

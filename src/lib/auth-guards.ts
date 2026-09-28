@@ -84,15 +84,21 @@ export async function canAccessCase(
     return { canAccess: false, canManage: false };
   }
 
-  // Case owner always has full access and management
-  if (caseData.ownerUserId === userId) {
-    return { canAccess: true, canManage: true, role: 'OWNER' };
-  }
-
-  // Check if user is an aligned care circle member
   const members = await repository.getCaseMembers(caseId);
   const matchedMember = members.find((m) => m.userId === userId);
 
+  // Case owner always has full access and management
+  if (caseData.ownerUserId === userId) {
+    const ownerMember = matchedMember || members.find((m) => m.role === 'OWNER') || members[0];
+    return {
+      canAccess: true,
+      canManage: true,
+      role: 'OWNER',
+      member: ownerMember,
+    };
+  }
+
+  // Check if user is an aligned care circle member
   if (matchedMember) {
     const isOwner = matchedMember.role === 'OWNER';
     return {

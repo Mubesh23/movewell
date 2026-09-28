@@ -216,6 +216,28 @@ export const REAL_COST_OBSERVATIONS: CostEvidenceObservation[] = [
   },
 ];
 
+export type GeographyTier = 'HOUSTON_HARRIS' | 'TEXAS' | 'NATIONAL';
+
+export function resolveGeographyTier(geoInput?: string): GeographyTier {
+  if (!geoInput) return 'NATIONAL';
+  const clean = geoInput.toLowerCase().trim();
+
+  // Houston / Harris county zip codes and explicit strings
+  const houstonZips = ['770', '772', '773', '774', '775'];
+  const isHoustonZip = houstonZips.some((prefix) => clean.startsWith(prefix) || clean.includes(prefix));
+  if (isHoustonZip || clean.includes('houston') || clean.includes('harris')) {
+    return 'HOUSTON_HARRIS';
+  }
+
+  // Texas zip code range: 75000-79999 or 'tx' / 'texas'
+  const isTexasZip = /^(75|76|77|78|79)\d{3}/.test(clean) || /\b(75|76|77|78|79)\d{3}\b/.test(clean);
+  if (isTexasZip || clean.includes('texas') || clean.includes('tx') || clean.includes('austin') || clean.includes('dallas') || clean.includes('san antonio')) {
+    return 'TEXAS';
+  }
+
+  return 'NATIONAL';
+}
+
 export class EvidenceService {
   private sourcesMap = new Map<string, EvidenceSource>();
 
@@ -226,11 +248,8 @@ export class EvidenceService {
   }
 
   /**
-   * Looks up structured evidence for a category, prioritizing:
-   * 1. Houston/Harris County local evidence
-   * 2. Texas state evidence
-   * 3. National evidence
-   * Returns null if no external evidence exists (allowing clean workflow fallback).
+   * Looks up structured evidence for a category, prioritizing user's geography tier:
+   * Returns null if no external evidence exists.
    */
   public getEvidenceForCategory(
     categoryInput: string,
@@ -257,17 +276,28 @@ export class EvidenceService {
       return null;
     }
 
-    // Sort observations by geographical relevance:
-    // Houston/Harris County (3) > Texas (2) > National (1) > Other (0)
+    const userTier = resolveGeographyTier(geographyPreference);
+
+    // Score observations based on match to userTier
     const scoredObservations = matchingObservations.map((obs) => {
-      let geoScore = 1;
-      const obsGeo = obs.geography.toLowerCase();
-      if (obsGeo.includes('houston') || obsGeo.includes('harris') || obsGeo.includes('77004')) {
-        geoScore = 3;
-      } else if (obsGeo.includes('texas') || obsGeo.includes('tx')) {
-        geoScore = 2;
+      const obsTier = resolveGeographyTier(obs.geography);
+      let geoScore = 0;
+
+      if (userTier === 'HOUSTON_HARRIS') {
+        if (obsTier === 'HOUSTON_HARRIS') geoScore = 3;
+        else if (obsTier === 'TEXAS') geoScore = 2;
+        else geoScore = 1;
+      } else if (userTier === 'TEXAS') {
+        if (obsTier === 'TEXAS') geoScore = 3;
+        else if (obsTier === 'NATIONAL') geoScore = 2;
+        else geoScore = 1; // Houston-specific is lower relevance for general Texas (e.g. Austin)
+      } else {
+        // NATIONAL
+        if (obsTier === 'NATIONAL') geoScore = 3;
+        else geoScore = 1;
       }
-      return { obs, geoScore };
+
+      return { obs, geoScore, obsTier };
     });
 
     scoredObservations.sort((a, b) => {
@@ -276,7 +306,6 @@ export class EvidenceService {
     });
 
     const highestGeoScore = scoredObservations[0].geoScore;
-    // Prefer highest geography tier observations
     const topTier = scoredObservations.filter((item) => item.geoScore === highestGeoScore);
     const selectedObservations = topTier.map((item) => item.obs);
 
@@ -305,17 +334,18 @@ export class EvidenceService {
       selectedObservations[0].observedDate
     );
 
+    const topObsTier = topTier[0].obsTier;
     const geoLabel =
-      highestGeoScore === 3
+      topObsTier === 'HOUSTON_HARRIS'
         ? 'Houston, TX'
-        : highestGeoScore === 2
+        : topObsTier === 'TEXAS'
         ? 'Texas'
         : 'National';
 
     const confidence: 'High' | 'Medium' | 'Low' =
-      highestGeoScore === 3 && selectedObservations.length >= 1
+      topObsTier === 'HOUSTON_HARRIS' && selectedObservations.length >= 1
         ? 'Medium'
-        : highestGeoScore === 2
+        : topObsTier === 'TEXAS'
         ? 'Medium'
         : 'Low';
 
@@ -354,7 +384,7 @@ export class EvidenceService {
     if (!summary) {
       return {
         explanation:
-          'This figure is a preliminary workflow planning estimate. Specific local provider rate sheets are not yet published for this category in Harris County. We recommend requesting quotes from local providers to obtain a verified current price.',
+          'This figure is a preliminary workflow planning estimate. Specific local provider rate sheets are not yet published for this category in your region. We recommend requesting quotes from local providers to obtain a verified current price.',
         summary: null,
       };
     }
@@ -365,7 +395,7 @@ export class EvidenceService {
       .join('\n');
 
     const explanation =
-      `This planning estimate of **$${summary.minAmount.toLocaleString()}–$${summary.maxAmount.toLocaleString()}** (${summary.unit}) is grounded in ${summary.geography} pricing published by **${primarySource.publisher}**.\n\n` +
+      `This planning estimate of **$${summary.minAmount.toLocaleString()}–$${summary.maxAmount.toLocaleString()}** (${summary.unit}) is grounded in ${summary.geography} pricing published by **${primarySource?.publisher || 'Published sources'}**.\n\n` +
       `**Evidence details:**\n` +
       `• Geography: ${summary.geography}\n` +
       `• Observed range: $${summary.minAmount.toLocaleString()} to $${summary.maxAmount.toLocaleString()}\n` +
